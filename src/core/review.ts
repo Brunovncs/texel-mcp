@@ -181,7 +181,7 @@ function asciiViews(tex: Image, model: CompileResult['model'], palette: Record<s
 
 /** Markdown rendering of a review — what "Copy for LLM" puts on the clipboard. */
 export function reviewToMarkdown(r: Review, opts: { includeAscii?: boolean } = {}): string {
-  const lines = [`## Skinsmith review — score ${r.score}/100 ${r.ok ? '(valid)' : '(has errors)'}`, ''];
+  const lines = [`## Texel review — score ${r.score}/100 ${r.ok ? '(valid)' : '(has errors)'}`, ''];
   const s = r.stats;
   lines.push(`- model: ${s.model} · layers: ${s.layers}${s.disabledLayers ? ` (${s.disabledLayers} disabled)` : ''} · colors used: ${s.colorsUsed} · base coverage: ${s.baseCoverage}% · overlay pixels: ${s.overlayPixels}`, '');
   if (r.issues.length) {

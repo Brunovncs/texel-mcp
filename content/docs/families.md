@@ -53,7 +53,7 @@ Matrix patches are applied in axis order, so later axes win on conflicts.
 
 | Interface | How |
 | --- | --- |
-| MCP | `skinsmith_render_family` (lineup image + score table), `skinsmith_save_family` |
-| CLI | `node skinsmith.mjs family guild.json -o skins/ --lineup lineup.png` |
+| MCP | `texel_render_family` (lineup image + score table), `texel_save_family` |
+| CLI | `node texel.mjs family guild.json -o skins/ --lineup lineup.png` |
 
 The **lineup** shows each member's front and back, in expansion order (variants first, then matrix combinations).

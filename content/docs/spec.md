@@ -1,6 +1,6 @@
 # Skin spec reference
 
-> Complete reference for the Skinsmith skin spec (`version: 1`): structure, colors, selectors, coordinates and all 13 operations.
+> Complete reference for the Texel skin spec (`version: 1`): structure, colors, selectors, coordinates and all 13 operations.
 
 ## Shape
 

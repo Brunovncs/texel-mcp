@@ -13,4 +13,4 @@ export * from './import';
 export * from './diff';
 
 export const SPEC_VERSION = 1;
-export const PROTOCOL = 'skinsmith/1';
+export const PROTOCOL = 'texel/1';

@@ -1,9 +1,9 @@
 {
   "mcpServers": {
-    "skinsmith": {
+    "texel": {
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/server/skinsmith-mcp.mjs"],
-      "env": { "SKINSMITH_WORKSPACE": "${CLAUDE_PROJECT_DIR}" }
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/texel-mcp.mjs"],
+      "env": { "TEXEL_WORKSPACE": "${CLAUDE_PROJECT_DIR}" }
     }
   }
 }

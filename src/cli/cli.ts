@@ -17,17 +17,17 @@ import {
   textureToSpec,
 } from '../core';
 
-const HELP = `skinsmith — compile Skinsmith skin specs (${PROTOCOL}) into Minecraft skins
+const HELP = `texel — compile Texel skin specs (${PROTOCOL}) into Minecraft skins
 
 usage:
-  node skinsmith.mjs build  <spec.json|-> [-o skin.png] [--sheet sheet.png]
-  node skinsmith.mjs review <spec.json|-> [--json]
-  node skinsmith.mjs sheet  <spec.json|-> [-o sheet.png]
-  node skinsmith.mjs family <family.json|-> [-o out-dir] [--lineup lineup.png]
-  node skinsmith.mjs import <skin.png> [-o spec.json]
-  node skinsmith.mjs diff   <before.json> <after.json>
-  node skinsmith.mjs format <spec.json|->
-  node skinsmith.mjs init
+  node texel.mjs build  <spec.json|-> [-o skin.png] [--sheet sheet.png]
+  node texel.mjs review <spec.json|-> [--json]
+  node texel.mjs sheet  <spec.json|-> [-o sheet.png]
+  node texel.mjs family <family.json|-> [-o out-dir] [--lineup lineup.png]
+  node texel.mjs import <skin.png> [-o spec.json]
+  node texel.mjs diff   <before.json> <after.json>
+  node texel.mjs format <spec.json|->
+  node texel.mjs init
 
 "-" reads the spec from stdin. Exit code is 1 when the spec has errors.
 Docs: /llms.txt · /docs/spec.md · /docs/protocol.md`;

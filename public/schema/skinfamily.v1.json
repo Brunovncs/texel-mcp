@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "/schema/skinfamily.v1.json",
-  "title": "Skinsmith skin family v1",
+  "title": "Texel skin family v1",
   "description": "Many related skins from one base spec: explicit variants and/or a cartesian matrix of axes. Docs: /docs/families.md",
   "type": "object",
   "required": ["version", "kind", "base"],

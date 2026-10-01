@@ -24,23 +24,23 @@ import {
 import { DOC_PAGES, DOCS, EXAMPLE_IDS, EXAMPLES, FAMILY_EXAMPLES, SCHEMAS } from './content';
 import { Workspace } from './workspace';
 
-export const SERVER_VERSION = typeof __SKINSMITH_VERSION__ === 'string' ? __SKINSMITH_VERSION__ : '0.0.0-dev';
-export const VIEWER_URI = 'ui://skinsmith/viewer';
+export const SERVER_VERSION = typeof __TEXEL_VERSION__ === 'string' ? __TEXEL_VERSION__ : '0.0.0-dev';
+export const VIEWER_URI = 'ui://texel/viewer';
 export const VIEWER_MIME = 'text/html;profile=mcp-app';
 /** Key under which render results carry the texture for the MCP App viewer (kept out of model context). */
-export const TEXTURE_META_KEY = 'skinsmith/texture';
+export const TEXTURE_META_KEY = 'texel/texture';
 
-const INSTRUCTIONS = `Skinsmith compiles Minecraft skin specs (JSON: palette + ordered drawing ops) into 64×64 PNGs. Protocol ${PROTOCOL}.
-Workflow: read the "spec" docs (skinsmith_read_docs or resource skinsmith://docs/spec), draft a spec, call skinsmith_render, look at the returned review sheet image and the issues, patch the spec, render again, then skinsmith_save.
-For many related skins (teams, factions, tiers), write a family (kind: "family") and use skinsmith_render_family / skinsmith_save_family.
+const INSTRUCTIONS = `Texel compiles Minecraft skin specs (JSON: palette + ordered drawing ops) into 64×64 PNGs. Protocol ${PROTOCOL}.
+Workflow: read the "spec" docs (texel_read_docs or resource texel://docs/spec), draft a spec, call texel_render, look at the returned review sheet image and the issues, patch the spec, render again, then texel_save.
+For many related skins (teams, factions, tiers), write a family (kind: "family") and use texel_render_family / texel_save_family.
 The score only measures technical hygiene; judge appearance from the sheet image against the brief.`;
 
 const specInput = z
   .union([z.string(), z.record(z.string(), z.unknown())])
-  .describe('A Skinsmith skin spec (version 1) as a JSON object or JSON text. Format: skinsmith://docs/spec, schema: skinsmith://schema/skinspec.v1');
+  .describe('A Texel skin spec (version 1) as a JSON object or JSON text. Format: texel://docs/spec, schema: texel://schema/skinspec.v1');
 const familyInput = z
   .union([z.string(), z.record(z.string(), z.unknown())])
-  .describe('A skin family ({ kind: "family", base, variants?, matrix? }) as a JSON object or JSON text. Format: skinsmith://docs/families');
+  .describe('A skin family ({ kind: "family", base, variants?, matrix? }) as a JSON object or JSON text. Format: texel://docs/families');
 
 const issueShape = z.object({ level: z.enum(['error', 'warning', 'info']), code: z.string(), path: z.string(), message: z.string(), hint: z.string().optional() });
 const reviewShape = z.object({
@@ -69,13 +69,13 @@ function toolError(message: string): CallToolResult {
 }
 
 /** Build a fully configured server. Called once per connection by the transport entry point. */
-export function createSkinsmithServer(workspace = new Workspace()): McpServer {
-  const server = new McpServer({ name: 'skinsmith', title: 'Skinsmith', version: SERVER_VERSION }, { instructions: INSTRUCTIONS });
+export function createTexelServer(workspace = new Workspace()): McpServer {
+  const server = new McpServer({ name: 'texel', title: 'Texel', version: SERVER_VERSION }, { instructions: INSTRUCTIONS });
 
   // ---- tools --------------------------------------------------------------
 
   server.registerTool(
-    'skinsmith_render',
+    'texel_render',
     {
       title: 'Render skin',
       description:
@@ -103,7 +103,7 @@ export function createSkinsmithServer(workspace = new Workspace()): McpServer {
   );
 
   server.registerTool(
-    'skinsmith_validate',
+    'texel_validate',
     {
       title: 'Validate skin spec',
       description: 'Check a spec for errors and warnings without rendering images. Cheap; use it after every edit.',
@@ -119,7 +119,7 @@ export function createSkinsmithServer(workspace = new Workspace()): McpServer {
   );
 
   server.registerTool(
-    'skinsmith_save',
+    'texel_save',
     {
       title: 'Save skin',
       description: `Compile a spec and write <path>.png (the skin), <path>.skin.json (the source) and optionally <path>.sheet.png into the workspace (${workspace.root}). Refuses specs with errors.`,
@@ -147,7 +147,7 @@ export function createSkinsmithServer(workspace = new Workspace()): McpServer {
   );
 
   server.registerTool(
-    'skinsmith_render_family',
+    'texel_render_family',
     {
       title: 'Render skin family',
       description: 'Expand a family (base spec + variants and/or a matrix of axes) and review every member. Returns a lineup image (front and back of each member, in order) and a per-member score table.',
@@ -176,7 +176,7 @@ export function createSkinsmithServer(workspace = new Workspace()): McpServer {
   );
 
   server.registerTool(
-    'skinsmith_save_family',
+    'texel_save_family',
     {
       title: 'Save skin family',
       description: `Expand a family and write <directory>/<member-id>.png and .skin.json for every member, plus <directory>/lineup.png, into the workspace (${workspace.root}). Refuses families with errors.`,
@@ -205,7 +205,7 @@ export function createSkinsmithServer(workspace = new Workspace()): McpServer {
   );
 
   server.registerTool(
-    'skinsmith_import_png',
+    'texel_import_png',
     {
       title: 'Import skin PNG',
       description: 'Convert an existing skin PNG (64×64 or legacy 64×32) in the workspace into an editable spec — one layer per painted face, palette keys c01…cNN. Rename palette keys to material names before editing.',
@@ -228,7 +228,7 @@ export function createSkinsmithServer(workspace = new Workspace()): McpServer {
   );
 
   server.registerTool(
-    'skinsmith_diff',
+    'texel_diff',
     {
       title: 'Diff two skins',
       description: 'Compare two specs pixel by pixel and report which faces changed. Use it to confirm a patch touched only what you intended. Returns the changed-pixel mask over the texture map (magenta = changed).',
@@ -246,7 +246,7 @@ export function createSkinsmithServer(workspace = new Workspace()): McpServer {
   );
 
   server.registerTool(
-    'skinsmith_get_example',
+    'texel_get_example',
     {
       title: 'Get example spec',
       description: `Return a complete, working example spec to learn from or fork. Skins: ${EXAMPLE_IDS.join(', ')}. Family: guild.`,
@@ -260,9 +260,9 @@ export function createSkinsmithServer(workspace = new Workspace()): McpServer {
   );
 
   server.registerTool(
-    'skinsmith_read_docs',
+    'texel_read_docs',
     {
-      title: 'Read Skinsmith docs',
+      title: 'Read Texel docs',
       description: `Read a documentation page as markdown. Pages: ${DOC_PAGES.map((p) => `${p} (${DOCS[p].title})`).join(', ')}. Read "spec" before writing your first spec.`,
       inputSchema: z.object({ page: z.enum(DOC_PAGES) }),
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
@@ -274,10 +274,10 @@ export function createSkinsmithServer(workspace = new Workspace()): McpServer {
 
   server.registerResource(
     'docs',
-    new ResourceTemplate('skinsmith://docs/{page}', {
-      list: async () => ({ resources: DOC_PAGES.map((p) => ({ uri: `skinsmith://docs/${p}`, name: p, title: DOCS[p].title, mimeType: 'text/markdown' })) }),
+    new ResourceTemplate('texel://docs/{page}', {
+      list: async () => ({ resources: DOC_PAGES.map((p) => ({ uri: `texel://docs/${p}`, name: p, title: DOCS[p].title, mimeType: 'text/markdown' })) }),
     }),
-    { title: 'Skinsmith documentation', description: 'Protocol, spec reference, art guide, families and interfaces.', mimeType: 'text/markdown' },
+    { title: 'Texel documentation', description: 'Protocol, spec reference, art guide, families and interfaces.', mimeType: 'text/markdown' },
     async (uri, { page }) => {
       const doc = DOCS[String(page) as keyof typeof DOCS];
       if (!doc) throw new Error(`unknown docs page "${page}"`);
@@ -287,8 +287,8 @@ export function createSkinsmithServer(workspace = new Workspace()): McpServer {
 
   server.registerResource(
     'examples',
-    new ResourceTemplate('skinsmith://examples/{id}', {
-      list: async () => ({ resources: [...EXAMPLE_IDS, 'guild'].map((id) => ({ uri: `skinsmith://examples/${id}`, name: id, mimeType: 'application/json' })) }),
+    new ResourceTemplate('texel://examples/{id}', {
+      list: async () => ({ resources: [...EXAMPLE_IDS, 'guild'].map((id) => ({ uri: `texel://examples/${id}`, name: id, mimeType: 'application/json' })) }),
     }),
     { title: 'Example specs', description: 'Complete skin specs and one family.', mimeType: 'application/json' },
     async (uri, { id }) => {
@@ -300,12 +300,12 @@ export function createSkinsmithServer(workspace = new Workspace()): McpServer {
   );
 
   for (const [name, schema] of Object.entries(SCHEMAS))
-    server.registerResource(`schema-${name}`, `skinsmith://schema/${name}`, { title: `JSON Schema: ${name}`, mimeType: 'application/schema+json' }, async (uri) => ({
+    server.registerResource(`schema-${name}`, `texel://schema/${name}`, { title: `JSON Schema: ${name}`, mimeType: 'application/schema+json' }, async (uri) => ({
       contents: [{ uri: uri.href, mimeType: 'application/schema+json', text: JSON.stringify(schema, null, 2) }],
     }));
 
-  server.registerResource('viewer', VIEWER_URI, { title: 'Skin viewer', description: 'Interactive 3D preview for skinsmith_render results (MCP Apps).', mimeType: VIEWER_MIME }, async (uri) => ({
-    contents: [{ uri: uri.href, mimeType: VIEWER_MIME, text: typeof __SKINSMITH_VIEWER_HTML__ === 'string' ? __SKINSMITH_VIEWER_HTML__ : '<!doctype html><p>Viewer not bundled.</p>', _meta: { ui: { prefersBorder: true, csp: { resourceDomains: [], connectDomains: [] } } } }],
+  server.registerResource('viewer', VIEWER_URI, { title: 'Skin viewer', description: 'Interactive 3D preview for texel_render results (MCP Apps).', mimeType: VIEWER_MIME }, async (uri) => ({
+    contents: [{ uri: uri.href, mimeType: VIEWER_MIME, text: typeof __TEXEL_VIEWER_HTML__ === 'string' ? __TEXEL_VIEWER_HTML__ : '<!doctype html><p>Viewer not bundled.</p>', _meta: { ui: { prefersBorder: true, csp: { resourceDomains: [], connectDomains: [] } } } }],
   }));
 
   // ---- prompts ---------------------------------------------------------------
@@ -323,7 +323,7 @@ export function createSkinsmithServer(workspace = new Workspace()): McpServer {
           role: 'user' as const,
           content: {
             type: 'text' as const,
-            text: `Design a Minecraft skin with Skinsmith.\n\nBrief: ${brief}\nModel: ${model ?? 'your choice (classic = 4px arms, slim = 3px)'}\n\n1. Read skinsmith://docs/spec and skinsmith://docs/art-guide (or call skinsmith_read_docs).\n2. Put the brief in "description". Define the palette first: 2–4 tones per material.\n3. Draft layers broad → fine. Give layers you may revisit an "id".\n4. Call skinsmith_render. Fix every error and warning. Then judge the sheet image against rubric R1–R8 in skinsmith://docs/protocol.\n5. Patch the weakest area and render again; use skinsmith_diff to confirm what changed. Stop when R1–R8 pass (≈3–6 iterations).\n6. Save with skinsmith_save (sheet: true) and report the files and final score.`,
+            text: `Design a Minecraft skin with Texel.\n\nBrief: ${brief}\nModel: ${model ?? 'your choice (classic = 4px arms, slim = 3px)'}\n\n1. Read texel://docs/spec and texel://docs/art-guide (or call texel_read_docs).\n2. Put the brief in "description". Define the palette first: 2–4 tones per material.\n3. Draft layers broad → fine. Give layers you may revisit an "id".\n4. Call texel_render. Fix every error and warning. Then judge the sheet image against rubric R1–R8 in texel://docs/protocol.\n5. Patch the weakest area and render again; use texel_diff to confirm what changed. Stop when R1–R8 pass (≈3–6 iterations).\n6. Save with texel_save (sheet: true) and report the files and final score.`,
           },
         },
       ],
@@ -343,7 +343,7 @@ export function createSkinsmithServer(workspace = new Workspace()): McpServer {
           role: 'user' as const,
           content: {
             type: 'text' as const,
-            text: `Design a family of Minecraft skins with Skinsmith.\n\nBrief: ${brief}\n\n1. Read skinsmith://docs/families and skinsmith://docs/spec; study the "guild" example (skinsmith_get_example).\n2. Perfect the base spec first with skinsmith_render. Name shared colors semantically (primary, trim) so variants only override the palette.\n3. Give optional details layer ids and toggle them per variant with enable/disable.\n4. Express the set as a matrix when it is a product of axes (team × kit), otherwise as explicit variants.\n5. Call skinsmith_render_family and check the lineup: members must be distinguishable at a glance and share one visual language.\n6. Save with skinsmith_save_family.`,
+            text: `Design a family of Minecraft skins with Texel.\n\nBrief: ${brief}\n\n1. Read texel://docs/families and texel://docs/spec; study the "guild" example (texel_get_example).\n2. Perfect the base spec first with texel_render. Name shared colors semantically (primary, trim) so variants only override the palette.\n3. Give optional details layer ids and toggle them per variant with enable/disable.\n4. Express the set as a matrix when it is a product of axes (team × kit), otherwise as explicit variants.\n5. Call texel_render_family and check the lineup: members must be distinguishable at a glance and share one visual language.\n6. Save with texel_save_family.`,
           },
         },
       ],
@@ -363,7 +363,7 @@ export function createSkinsmithServer(workspace = new Workspace()): McpServer {
           role: 'user' as const,
           content: {
             type: 'text' as const,
-            text: `Critique this Skinsmith spec. Call skinsmith_render on it, then score each rubric item R1–R8 from skinsmith://docs/protocol as pass/fail with one sentence of evidence from the sheet image. For every failure, propose the exact layer JSON to add or change.\n\n\`\`\`json\n${spec}\n\`\`\``,
+            text: `Critique this Texel spec. Call texel_render on it, then score each rubric item R1–R8 from texel://docs/protocol as pass/fail with one sentence of evidence from the sheet image. For every failure, propose the exact layer JSON to add or change.\n\n\`\`\`json\n${spec}\n\`\`\``,
           },
         },
       ],

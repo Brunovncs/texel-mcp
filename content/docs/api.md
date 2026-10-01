@@ -1,8 +1,8 @@
 # Agent interfaces
 
-> Four ways to render a Skinsmith spec — browser JavaScript API, WebMCP tools, URL, and a zero-dependency Node CLI. All share the same deterministic compiler.
+> Four ways to render a Texel spec — browser JavaScript API, WebMCP tools, URL, and a zero-dependency Node CLI. All share the same deterministic compiler.
 
-## 1. Browser: `window.skinsmith`
+## 1. Browser: `window.texel`
 
 Open `/studio/`. Every method is synchronous unless noted and returns plain JSON-serializable data.
 
@@ -28,11 +28,11 @@ Open `/studio/`. Every method is synchronous unless noted and returns plain JSON
 | `loadExample(id)` | Promise&lt;Review&gt; | Load `explorer`, `knight`, `robot`, `astronaut`. |
 
 ```js
-const r = skinsmith.setSpec(mySpec);
+const r = texel.setSpec(mySpec);
 if (!r.ok) console.log(r.issues);
-skinsmith.updateLayer('eyes', { rows: ['SWESSEWS'] });
-skinsmith.setView({ yaw: -30, pitch: -10 });   // then screenshot
-skinsmith.download('ranger.png');
+texel.updateLayer('eyes', { rows: ['SWESSEWS'] });
+texel.setView({ yaw: -30, pitch: -10 });   // then screenshot
+texel.download('ranger.png');
 ```
 
 The studio also exposes stable DOM hooks: `#spec-input` (the JSON textarea), `#preview-3d`, `#review-sheet`, `#review-json` (a `<script type="application/json">` kept in sync with the latest review), and `[data-action]` buttons.
@@ -43,13 +43,13 @@ On browsers that implement [WebMCP](https://github.com/webmachinelearning/webmcp
 
 | Tool | Input |
 | --- | --- |
-| `skinsmith_get_spec` | — |
-| `skinsmith_set_spec` | `{ spec }` |
-| `skinsmith_patch_layers` | `{ add?, update?: [{ ref, patch }], remove?: [ref] }` |
-| `skinsmith_review` | `{ format?: "json" \| "markdown" }` |
-| `skinsmith_set_view` | `{ yaw?, pitch?, overlay?, animate? }` |
-| `skinsmith_share_url` | — |
-| `skinsmith_docs` | `{ page: "protocol" \| "spec" \| "art-guide" \| "api" }` |
+| `texel_get_spec` | — |
+| `texel_set_spec` | `{ spec }` |
+| `texel_patch_layers` | `{ add?, update?: [{ ref, patch }], remove?: [ref] }` |
+| `texel_review` | `{ format?: "json" \| "markdown" }` |
+| `texel_set_view` | `{ yaw?, pitch?, overlay?, animate? }` |
+| `texel_share_url` | — |
+| `texel_docs` | `{ page: "protocol" \| "spec" \| "art-guide" \| "api" }` |
 
 ## 3. URL
 
@@ -65,17 +65,17 @@ Combine them: `/studio/?view=inspect#spec=...` → open, wait for `document.body
 ## 4. CLI (Node 18+, no dependencies)
 
 ```bash
-curl -O https://<site>/skinsmith.mjs
-node skinsmith.mjs init > spec.json                 # starter spec
-node skinsmith.mjs build spec.json -o skin.png --sheet sheet.png
-node skinsmith.mjs review spec.json                 # markdown + text render
-node skinsmith.mjs review spec.json --json          # machine-readable
-cat spec.json | node skinsmith.mjs build - -o skin.png
+curl -O https://<site>/texel.mjs
+node texel.mjs init > spec.json                 # starter spec
+node texel.mjs build spec.json -o skin.png --sheet sheet.png
+node texel.mjs review spec.json                 # markdown + text render
+node texel.mjs review spec.json --json          # machine-readable
+cat spec.json | node texel.mjs build - -o skin.png
 ```
 
 Exit code `1` means the spec has errors. Open `sheet.png` to look at the result (front | back | right | left | texture).
 
-A DOM-free ES module with the compiler is also published at `/skinsmith-core.mjs` (`compile`, `review`, `renderSheet`, `encodePNG`, `formatSpec`, …).
+A DOM-free ES module with the compiler is also published at `/texel-core.mjs` (`compile`, `review`, `renderSheet`, `encodePNG`, `formatSpec`, …).
 
 ## 5. Machine-readable manifest
 

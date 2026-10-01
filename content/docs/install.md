@@ -1,31 +1,31 @@
 # Install as a tool
 
-> Give any agent native Skinsmith tools: an MCP server (with an interactive 3D viewer for MCP Apps hosts), a Claude Code plugin, and a portable Agent Skill.
+> Give any agent native Texel tools: an MCP server (with an interactive 3D viewer for MCP Apps hosts), a Claude Code plugin, and a portable Agent Skill.
 
 ## MCP server
 
-`skinsmith-mcp.mjs` is a single file with no install step: the compiler, docs, examples, schemas and the 3D viewer are embedded. Requires Node 18+.
+`texel-mcp.mjs` is a single file with no install step: the compiler, docs, examples, schemas and the 3D viewer are embedded. Requires Node 18+.
 
 ```bash
-curl -O https://<site>/skinsmith-mcp.mjs
+curl -O https://<site>/texel-mcp.mjs
 ```
 
 ### Claude Code
 
 ```bash
-claude mcp add skinsmith --scope user -- node /absolute/path/skinsmith-mcp.mjs
+claude mcp add texel --scope user -- node /absolute/path/texel-mcp.mjs
 ```
 
-Files are written to the directory the server runs in. Pin it with `--env SKINSMITH_WORKSPACE=/path/to/skins` or the `--workspace <dir>` flag.
+Files are written to the directory the server runs in. Pin it with `--env TEXEL_WORKSPACE=/path/to/skins` or the `--workspace <dir>` flag.
 
 ### Claude Desktop, Cursor, VS Code and other clients
 
 ```json
 {
   "mcpServers": {
-    "skinsmith": {
+    "texel": {
       "command": "node",
-      "args": ["/absolute/path/skinsmith-mcp.mjs", "--workspace", "/absolute/path/skins"]
+      "args": ["/absolute/path/texel-mcp.mjs", "--workspace", "/absolute/path/skins"]
     }
   }
 }
@@ -35,16 +35,16 @@ Files are written to the directory the server runs in. Pin it with `--env SKINSM
 
 | Kind | Name | Purpose |
 | --- | --- | --- |
-| tool | `skinsmith_render` | Compile + review; returns the review sheet image. Opens the 3D viewer in MCP Apps hosts. |
-| tool | `skinsmith_validate` | Fast error check, no images. |
-| tool | `skinsmith_save` | Write `.png`, `.skin.json` and optional sheet to the workspace. |
-| tool | `skinsmith_render_family` | Expand a family; lineup image + per-member scores. |
-| tool | `skinsmith_save_family` | Write every member plus `lineup.png`. |
-| tool | `skinsmith_import_png` | Turn an existing skin PNG into an editable spec. |
-| tool | `skinsmith_diff` | Which faces a change touched, with a pixel mask. |
-| tool | `skinsmith_get_example`, `skinsmith_read_docs` | Offline examples and docs. |
-| resource | `skinsmith://docs/{page}`, `skinsmith://examples/{id}`, `skinsmith://schema/{name}` | Same content as resources. |
-| resource | `ui://skinsmith/viewer` | MCP App: interactive 3D preview with a feedback box that posts back to the chat. |
+| tool | `texel_render` | Compile + review; returns the review sheet image. Opens the 3D viewer in MCP Apps hosts. |
+| tool | `texel_validate` | Fast error check, no images. |
+| tool | `texel_save` | Write `.png`, `.skin.json` and optional sheet to the workspace. |
+| tool | `texel_render_family` | Expand a family; lineup image + per-member scores. |
+| tool | `texel_save_family` | Write every member plus `lineup.png`. |
+| tool | `texel_import_png` | Turn an existing skin PNG into an editable spec. |
+| tool | `texel_diff` | Which faces a change touched, with a pixel mask. |
+| tool | `texel_get_example`, `texel_read_docs` | Offline examples and docs. |
+| resource | `texel://docs/{page}`, `texel://examples/{id}`, `texel://schema/{name}` | Same content as resources. |
+| resource | `ui://texel/viewer` | MCP App: interactive 3D preview with a feedback box that posts back to the chat. |
 | prompt | `design_skin`, `design_family`, `critique_skin` | Protocol runbooks with arguments. |
 
 All write tools are confined to the workspace directory; paths outside it are rejected.
@@ -54,8 +54,8 @@ All write tools are confined to the workspace directory; paths outside it are re
 The repository is also a plugin marketplace. The plugin bundles the MCP server and the `minecraft-skin-design` skill:
 
 ```bash
-claude plugin marketplace add Brunovncs/skinsmith
-claude plugin install skinsmith@skinsmith
+claude plugin marketplace add Brunovncs/texel
+claude plugin install texel@texel
 ```
 
 ## Agent Skill

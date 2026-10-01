@@ -1,6 +1,6 @@
 # Skin Agent Protocol
 
-> The loop an AI agent follows to design, test and ship a Minecraft skin with Skinsmith. Version `skinsmith/1`.
+> The loop an AI agent follows to design, test and ship a Minecraft skin with Texel. Version `texel/1`.
 
 A skin is **data, not pixels**: a JSON *spec* made of a palette and an ordered list of drawing operations. The spec compiles deterministically to a 64×64 PNG. Because the source is structured, an agent can reason about it, diff it, patch one layer at a time, and verify every step.
 
@@ -41,9 +41,9 @@ Write down what you are making before touching pixels. Put it in the spec's `des
 
 Pick whichever interface your runtime has — they all run the same compiler:
 
-- **Browser agent:** open `/studio/`, then call `window.skinsmith.setSpec(spec)` (or the WebMCP tool `skinsmith_set_spec`).
+- **Browser agent:** open `/studio/`, then call `window.texel.setSpec(spec)` (or the WebMCP tool `texel_set_spec`).
 - **URL only:** open `/studio/?view=inspect#spec=<encodeURIComponent(JSON)>` and take a screenshot.
-- **Code execution:** `curl -O https://<site>/skinsmith.mjs && node skinsmith.mjs build spec.json -o skin.png --sheet sheet.png`.
+- **Code execution:** `curl -O https://<site>/texel.mjs && node texel.mjs build spec.json -o skin.png --sheet sheet.png`.
 
 ### 5. Review
 
@@ -64,7 +64,7 @@ Then look at it. The score only checks hygiene; it cannot tell whether the skin 
 
 ### 6. Patch
 
-Change the smallest thing that fixes the weakest rubric item, then render again. In the browser: `skinsmith.updateLayer("eyes", { rows: [...] })`, `skinsmith.addLayers([...])`, `skinsmith.toggleLayer(3)`. With files: edit the JSON and rebuild.
+Change the smallest thing that fixes the weakest rubric item, then render again. In the browser: `texel.updateLayer("eyes", { rows: [...] })`, `texel.addLayers([...])`, `texel.toggleLayer(3)`. With files: edit the JSON and rebuild.
 
 Stop when R1–R8 all pass, or after ~6 iterations with diminishing returns.
 
@@ -72,9 +72,9 @@ Stop when R1–R8 all pass, or after ~6 iterations with diminishing returns.
 
 Deliver three things:
 
-1. The **PNG** (`skinsmith.download()` or the CLI `build` output) — upload it at minecraft.net or any launcher.
+1. The **PNG** (`texel.download()` or the CLI `build` output) — upload it at minecraft.net or any launcher.
 2. The **spec JSON** — the editable source.
-3. The **share link** (`skinsmith.shareURL()`) — opens the exact skin in the studio.
+3. The **share link** (`texel.shareURL()`) — opens the exact skin in the studio.
 
 ## Contract
 

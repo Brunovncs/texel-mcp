@@ -31,7 +31,7 @@ function reportSize() {
 }
 
 function show(result: RenderResult) {
-  const texture = result._meta?.['skinsmith/texture'];
+  const texture = result._meta?.['texel/texture'];
   const s = result.structuredContent ?? {};
   if (typeof texture !== 'string') {
     $('status').textContent = 'No texture in this result.';
@@ -92,13 +92,13 @@ new ResizeObserver(() => {
 
 async function init() {
   if (!bridge.embedded) {
-    $('status').textContent = 'This view runs inside an MCP Apps host (skinsmith_render).';
+    $('status').textContent = 'This view runs inside an MCP Apps host (texel_render).';
     return;
   }
   try {
     const res = await bridge.request<{ hostContext?: HostContext }>('ui/initialize', {
       protocolVersion: '2026-01-26',
-      clientInfo: { name: 'skinsmith-viewer', version: '1' },
+      clientInfo: { name: 'texel-viewer', version: '1' },
       capabilities: {},
       appCapabilities: { availableDisplayModes: ['inline'] },
     });

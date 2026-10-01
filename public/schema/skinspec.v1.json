@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "/schema/skinspec.v1.json",
-  "title": "Skinsmith skin spec v1",
+  "title": "Texel skin spec v1",
   "description": "Declarative description of a 64x64 Minecraft Java skin. Layers are applied in order (painter's model) and compile deterministically to a PNG. Docs: /docs/spec.md",
   "type": "object",
   "required": ["version", "layers"],

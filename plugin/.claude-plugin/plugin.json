@@ -1,5 +1,5 @@
 {
-  "name": "skinsmith",
+  "name": "texel",
   "version": "0.2.0",
   "description": "Design, render, review and export Minecraft skins as JSON specs. MCP tools with an interactive 3D viewer, plus the minecraft-skin-design skill.",
   "author": { "name": "Bruno Veronez" },

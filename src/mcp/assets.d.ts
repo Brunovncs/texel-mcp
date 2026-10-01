@@ -4,5 +4,5 @@ declare module '*.md' {
 }
 
 /** Self-contained MCP App viewer document, injected at bundle time. */
-declare const __SKINSMITH_VIEWER_HTML__: string;
-declare const __SKINSMITH_VERSION__: string;
+declare const __TEXEL_VIEWER_HTML__: string;
+declare const __TEXEL_VERSION__: string;

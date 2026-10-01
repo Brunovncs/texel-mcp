@@ -23,12 +23,12 @@ async function bundleText(options: BuildOptions): Promise<string> {
 
 /** Zero-dependency Node CLI. */
 export function bundleCli() {
-  return bundleText({ entryPoints: [resolve(root, 'src/cli/cli.ts')], platform: 'node', format: 'esm', banner: { js: `// Skinsmith CLI ${version} — generated file. Docs: /llms.txt` } });
+  return bundleText({ entryPoints: [resolve(root, 'src/cli/cli.ts')], platform: 'node', format: 'esm', banner: { js: `// Texel CLI ${version} — generated file. Docs: /llms.txt` } });
 }
 
 /** DOM-free compiler module. */
 export function bundleCore() {
-  return bundleText({ entryPoints: [resolve(root, 'src/core/index.ts')], platform: 'neutral', format: 'esm', banner: { js: `// Skinsmith core ${version} — generated file. Docs: /llms.txt` } });
+  return bundleText({ entryPoints: [resolve(root, 'src/core/index.ts')], platform: 'neutral', format: 'esm', banner: { js: `// Texel core ${version} — generated file. Docs: /llms.txt` } });
 }
 
 /** Self-contained MCP App document: inlined CSS + JS, no network access required. */
@@ -50,7 +50,7 @@ export async function bundleMcp() {
     format: 'esm',
     plugins: [markdownText],
     minify: true,
-    define: { __SKINSMITH_VIEWER_HTML__: JSON.stringify(viewer), __SKINSMITH_VERSION__: JSON.stringify(version) },
-    banner: { js: `#!/usr/bin/env node\n// Skinsmith MCP server ${version} — generated file.\nimport { createRequire as __createRequire } from 'node:module';\nconst require = __createRequire(import.meta.url);` },
+    define: { __TEXEL_VIEWER_HTML__: JSON.stringify(viewer), __TEXEL_VERSION__: JSON.stringify(version) },
+    banner: { js: `#!/usr/bin/env node\n// Texel MCP server ${version} — generated file.\nimport { createRequire as __createRequire } from 'node:module';\nconst require = __createRequire(import.meta.url);` },
   });
 }

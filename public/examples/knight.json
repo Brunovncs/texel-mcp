@@ -3,7 +3,7 @@
   "version": 1,
   "name": "Knight",
   "description": "Plate-armored knight with a visored helmet, red plume and blue tabard with a gold cross.",
-  "author": "skinsmith",
+  "author": "texel",
   "tags": ["classic", "armor", "medieval"],
   "model": "classic",
   "palette": {

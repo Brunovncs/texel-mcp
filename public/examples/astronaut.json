@@ -3,7 +3,7 @@
   "version": 1,
   "name": "Astronaut",
   "description": "Slim-armed astronaut in a white EVA suit with orange accents, a reflective visor and a life-support pack.",
-  "author": "skinsmith",
+  "author": "texel",
   "tags": ["slim", "space", "sci-fi"],
   "model": "slim",
   "palette": {
