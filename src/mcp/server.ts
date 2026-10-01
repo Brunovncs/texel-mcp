@@ -167,9 +167,9 @@ export function createTexelServer(workspace = new Workspace()): McpServer {
         return { m, result, r: review(result) };
       });
       const members = built.map(({ m, r }) => ({ id: m.id, name: String(m.spec.name), score: r.score, ok: r.ok, issues: r.issues.filter((i) => i.level !== 'info').map((i) => `${i.code} at ${i.path}`) }));
-      const table = ['| # | id | score | issues |', '| --- | --- | --- | --- |', ...members.map((m, i) => `| ${i + 1} | ${m.id} | ${m.score} | ${m.issues.join('; ') || '—'} |`)].join('\n');
-      const familyIssues = f.issues.map((i) => `- ${i.level} \`${i.code}\` at \`${i.path}\`: ${i.message}${i.hint ? ` — ${i.hint}` : ''}`).join('\n');
-      const content: CallToolResult['content'] = [textBlock(`## ${f.name} — ${members.length} members (lineup order = table order)\n\n${table}${familyIssues ? `\n\n### Family issues\n${familyIssues}` : ''}`)];
+      const table = ['| # | id | score | issues |', '| --- | --- | --- | --- |', ...members.map((m, i) => `| ${i + 1} | ${m.id} | ${m.score} | ${m.issues.join('; ') || '-'} |`)].join('\n');
+      const familyIssues = f.issues.map((i) => `- ${i.level} \`${i.code}\` at \`${i.path}\`: ${i.message}${i.hint ? `. ${i.hint}` : ''}`).join('\n');
+      const content: CallToolResult['content'] = [textBlock(`## ${f.name}: ${members.length} members (lineup order = table order)\n\n${table}${familyIssues ? `\n\n### Family issues\n${familyIssues}` : ''}`)];
       if (built.length) content.push(imageBlock(renderLineup(built.map(({ result }) => ({ texture: result.texture, model: result.model })), 6)));
       return { content, structuredContent: { ok: f.ok && members.every((m) => m.ok), name: f.name, members, issues: f.issues } };
     },
@@ -208,7 +208,7 @@ export function createTexelServer(workspace = new Workspace()): McpServer {
     'texel_import_png',
     {
       title: 'Import skin PNG',
-      description: 'Convert an existing skin PNG (64×64 or legacy 64×32) in the workspace into an editable spec — one layer per painted face, palette keys c01…cNN. Rename palette keys to material names before editing.',
+      description: 'Convert an existing skin PNG (64×64 or legacy 64×32) in the workspace into an editable spec, one layer per painted face, palette keys c01…cNN. Rename palette keys to material names before editing.',
       inputSchema: z.object({ path: z.string().min(1).describe('Path to a .png file, relative to the workspace.') }),
       outputSchema: z.object({ spec: z.record(z.string(), z.unknown()), lossy: z.boolean(), model: z.enum(['classic', 'slim']) }),
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },

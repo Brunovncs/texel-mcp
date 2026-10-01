@@ -16,7 +16,7 @@ export interface ReviewStats {
 
 export interface Review {
   ok: boolean;
-  /** 0–100 technical health score: validity + in-game hygiene. It does NOT judge artistic quality — look at the render for that. */
+  /** 0–100 technical health score: validity + in-game hygiene. It does NOT judge artistic quality; look at the render for that. */
   score: number;
   issues: Issue[];
   stats: ReviewStats;
@@ -83,7 +83,7 @@ export function review(result: CompileResult): Review {
     const i = (y * 16 + x) * 4;
     faceFront.add(key([...front.data.subarray(i, i + 4)]));
   }
-  if (faceFront.size < 3) add('warning', 'blank-face', 'head.front', 'the face (head.front) uses fewer than 3 colors — it will read as blank', 'draw eyes, brows and a mouth with a "pixels" op on head.front');
+  if (faceFront.size < 3) add('warning', 'blank-face', 'head.front', 'the face (head.front) uses fewer than 3 colors and will read as blank', 'draw eyes, brows and a mouth with a "pixels" op on head.front');
 
   const hat = pixelsOf(tex, { part: 'head', face: 'front', layer: 'overlay' }, model);
   if (hat.every((p) => p[3] === 255)) add('info', 'hat-covers-face', 'head.front@overlay', 'the hat layer fully covers the face; fine for helmets, a mistake otherwise');
@@ -108,7 +108,7 @@ export function review(result: CompileResult): Review {
   const ascii = asciiViews(tex, model, palette, spec?.legend);
   const ok = !issues.some((i) => i.level === 'error');
   const next: string[] = [];
-  if (!ok) next.push('Fix the errors first — ops with errors are skipped entirely.');
+  if (!ok) next.push('Fix the errors first: ops with errors are skipped entirely.');
   if (issues.some((i) => i.code === 'base-transparent')) next.push('Cover every base pixel (fill "all" first, then paint on top).');
   if (issues.some((i) => i.code === 'blank-face')) next.push('Give the face readable features: 2px-wide eyes, a darker brow row, a mouth.');
   if (issues.some((i) => i.code === 'flat-surface')) next.push('Add shading: darker bottom rows, lighter top row, and subtle noise.');
@@ -179,14 +179,14 @@ function asciiViews(tex: Image, model: CompileResult['model'], palette: Record<s
   return { front: frontTxt, back: backTxt, key: keyOut };
 }
 
-/** Markdown rendering of a review — what "Copy for LLM" puts on the clipboard. */
+/** Markdown rendering of a review: what "Copy for LLM" puts on the clipboard. */
 export function reviewToMarkdown(r: Review, opts: { includeAscii?: boolean } = {}): string {
-  const lines = [`## Texel review — score ${r.score}/100 ${r.ok ? '(valid)' : '(has errors)'}`, ''];
+  const lines = [`## Texel review: score ${r.score}/100 ${r.ok ? '(valid)' : '(has errors)'}`, ''];
   const s = r.stats;
   lines.push(`- model: ${s.model} · layers: ${s.layers}${s.disabledLayers ? ` (${s.disabledLayers} disabled)` : ''} · colors used: ${s.colorsUsed} · base coverage: ${s.baseCoverage}% · overlay pixels: ${s.overlayPixels}`, '');
   if (r.issues.length) {
     lines.push('### Issues');
-    for (const i of r.issues) lines.push(`- **${i.level}** \`${i.code}\` at \`${i.path}\`: ${i.message}${i.hint ? ` — _${i.hint}_` : ''}`);
+    for (const i of r.issues) lines.push(`- **${i.level}** \`${i.code}\` at \`${i.path}\`: ${i.message}${i.hint ? `. _${i.hint}_` : ''}`);
     lines.push('');
   } else lines.push('No issues found.', '');
   if (opts.includeAscii !== false) {

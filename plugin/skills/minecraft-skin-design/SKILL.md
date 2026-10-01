@@ -8,13 +8,13 @@ metadata:
 
 # Minecraft skin design with Texel
 
-A skin is a JSON **spec** — a palette plus an ordered list of drawing operations that target faces of the player model — compiled deterministically to a PNG. Never hand-edit PNG bytes; always work on the spec.
+A skin is a JSON **spec**, a palette plus an ordered list of drawing operations that target faces of the player model, compiled deterministically to a PNG. Never hand-edit PNG bytes; always work on the spec.
 
 ## Tools
 
 Prefer the Texel MCP tools when they are available (`texel_render`, `texel_validate`, `texel_save`, `texel_render_family`, `texel_save_family`, `texel_import_png`, `texel_diff`, `texel_read_docs`, `texel_get_example`).
 
-Without MCP, use the CLI (Node 18+) — download `texel.mjs` from the Texel site, then:
+Without MCP, use the CLI (Node 18+): download `texel.mjs` from the Texel site, then:
 
 ```bash
 node texel.mjs review spec.json               # issues + text render
@@ -45,4 +45,4 @@ For several related skins, write one family document (`kind: "family"`) instead 
 - `right`/`left` are the character's sides: `rightArm` is on the viewer's left in the front view.
 - Slim arm fronts are 3 px wide; classic 4 px.
 - Base layer pixels must be opaque; overlay pixels opaque or `transparent`, never semi-transparent.
-- The review score measures hygiene only — a 100 can still look bad. Always look at the image.
+- The review score measures hygiene only; a 100 can still look bad. Always look at the image.

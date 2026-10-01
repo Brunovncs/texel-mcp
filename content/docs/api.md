@@ -1,6 +1,6 @@
 # Agent interfaces
 
-> Four ways to render a Texel spec — browser JavaScript API, WebMCP tools, URL, and a zero-dependency Node CLI. All share the same deterministic compiler.
+> Four ways to render a Texel spec: browser JavaScript API, WebMCP tools, URL, and a zero-dependency Node CLI. All share the same deterministic compiler.
 
 ## 1. Browser: `window.texel`
 
@@ -43,12 +43,12 @@ On browsers that implement [WebMCP](https://github.com/webmachinelearning/webmcp
 
 | Tool | Input |
 | --- | --- |
-| `texel_get_spec` | — |
+| `texel_get_spec` | none |
 | `texel_set_spec` | `{ spec }` |
 | `texel_patch_layers` | `{ add?, update?: [{ ref, patch }], remove?: [ref] }` |
 | `texel_review` | `{ format?: "json" \| "markdown" }` |
 | `texel_set_view` | `{ yaw?, pitch?, overlay?, animate? }` |
-| `texel_share_url` | — |
+| `texel_share_url` | none |
 | `texel_docs` | `{ page: "protocol" \| "spec" \| "art-guide" \| "api" }` |
 
 ## 3. URL

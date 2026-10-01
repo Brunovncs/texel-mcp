@@ -15,7 +15,7 @@ BRIEF → READ → DRAFT → RENDER → REVIEW → PATCH ──┐
 
 ### 1. Brief
 
-Write down what you are making before touching pixels. Put it in the spec's `description` — reviewers (you, later) compare the render against it.
+Write down what you are making before touching pixels. Put it in the spec's `description`: reviewers (you, later) compare the render against it.
 
 > "A desert ranger: tan skin, sun-bleached cloak with hood on the hat layer, leather belt with pouches, dusty boots. Classic arms."
 
@@ -39,7 +39,7 @@ Write down what you are making before touching pixels. Put it in the spec's `des
 
 ### 4. Render
 
-Pick whichever interface your runtime has — they all run the same compiler:
+Pick whichever interface your runtime has. They all run the same compiler:
 
 - **Browser agent:** open `/studio/`, then call `window.texel.setSpec(spec)` (or the WebMCP tool `texel_set_spec`).
 - **URL only:** open `/studio/?view=inspect#spec=<encodeURIComponent(JSON)>` and take a screenshot.
@@ -47,7 +47,7 @@ Pick whichever interface your runtime has — they all run the same compiler:
 
 ### 5. Review
 
-Every render returns a **review**: `score` (0–100 technical health), `issues` (with `path`, `code` and a `hint`), `stats`, and a **text render** of the front and back views — so even text-only agents can see the result.
+Every render returns a **review**: `score` (0–100 technical health), `issues` (with `path`, `code` and a `hint`), `stats`, and a **text render** of the front and back views, so even text-only agents can see the result.
 
 Then look at it. The score only checks hygiene; it cannot tell whether the skin looks good. Screenshot `/studio/?view=inspect` (3D angles + flat sheet) or open the `--sheet` PNG and judge it against the rubric:
 
@@ -72,9 +72,9 @@ Stop when R1–R8 all pass, or after ~6 iterations with diminishing returns.
 
 Deliver three things:
 
-1. The **PNG** (`texel.download()` or the CLI `build` output) — upload it at minecraft.net or any launcher.
-2. The **spec JSON** — the editable source.
-3. The **share link** (`texel.shareURL()`) — opens the exact skin in the studio.
+1. The **PNG** (`texel.download()` or the CLI `build` output). Upload it at minecraft.net or any launcher.
+2. The **spec JSON**: the editable source.
+3. The **share link** (`texel.shareURL()`), which opens the exact skin in the studio.
 
 ## Contract
 

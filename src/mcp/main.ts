@@ -8,7 +8,7 @@ if (args.includes('--version')) {
   process.exit(0);
 }
 if (args.includes('--help')) {
-  process.stdout.write(`texel-mcp ${SERVER_VERSION} — Texel MCP server (stdio)
+  process.stdout.write(`texel-mcp ${SERVER_VERSION}: Texel MCP server (stdio)
 
   claude mcp add texel -- node /path/to/texel-mcp.mjs
   options: --workspace <dir>   directory for saved files (default: $TEXEL_WORKSPACE or cwd)

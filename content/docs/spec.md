@@ -37,7 +37,7 @@ A color expression is one of:
 - `#rgb`, `#rrggbb`, `#rrggbbaa`
 - `transparent`
 - a palette key: `"shirt"`
-- any of the above plus `:<n>` — shift HSL lightness by *n* points: `"shirt:-12"`, `"#88aaff:+6"`
+- any of the above plus `:<n>`: shift HSL lightness by *n* points: `"shirt:-12"`, `"#88aaff:+6"`
 
 Palette entries may reference each other, which is the idiomatic way to build tone ramps:
 
@@ -45,7 +45,7 @@ Palette entries may reference each other, which is the idiomatic way to build to
 "palette": { "cloth": "#7a5c3e", "clothLight": "cloth:+10", "clothDark": "cloth:-12", "clothDeep": "cloth:-24" }
 ```
 
-Base-layer pixels must be opaque (Minecraft renders transparent base pixels black). Overlay pixels are either opaque or `transparent` — avoid partial alpha.
+Base-layer pixels must be opaque (Minecraft renders transparent base pixels black). Overlay pixels are either opaque or `transparent`. Avoid partial alpha.
 
 ## Model anatomy
 
@@ -147,7 +147,7 @@ Bresenham line between two points (inclusive).
 ```
 
 ### gradient
-Linear blend `from` → `to`, `vertical` (top→bottom, default) or `horizontal`. `steps` posterizes into N bands — pixel art usually wants 3–5.
+Linear blend `from` → `to`, `vertical` (top→bottom, default) or `horizontal`. `steps` posterizes into N bands; pixel art usually wants 3–5.
 ```json
 { "op": "gradient", "target": "legs.sides", "from": "steelLight", "to": "steelDark", "steps": 4 }
 ```

@@ -60,4 +60,4 @@ claude plugin install texel@texel
 
 ## Agent Skill
 
-The [`minecraft-skin-design`](/skills/minecraft-skin-design/SKILL.md) skill follows the open Agent Skills format (a `SKILL.md` with `name` and `description` frontmatter). Copy the folder into your agent's skills directory — for Claude Code, `~/.claude/skills/minecraft-skin-design/`. It teaches the protocol and works with either the MCP tools or the CLI.
+The [`minecraft-skin-design`](/skills/minecraft-skin-design/SKILL.md) skill follows the open Agent Skills format (a `SKILL.md` with `name` and `description` frontmatter). Copy the folder into your agent's skills directory. For Claude Code, `~/.claude/skills/minecraft-skin-design/`. It teaches the protocol and works with either the MCP tools or the CLI.

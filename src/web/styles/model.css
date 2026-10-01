@@ -126,7 +126,6 @@
   height: 12%;
   transform: translateX(-50%);
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgb(var(--accent-rgb) / 0.28), transparent);
-  filter: blur(6px);
+  background: radial-gradient(closest-side, rgb(var(--accent-rgb) / 0.24), rgb(var(--accent-rgb) / 0.08) 60%, transparent);
   pointer-events: none;
 }

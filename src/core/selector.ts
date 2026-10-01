@@ -28,7 +28,7 @@ const SELECTOR = /^([^.@]+)(?:\.([^.@]+))?(?:@([^.@]+))?$/;
 
 export type SelectorResult = { ok: true; refs: FaceRef[] } | { ok: false; error: string; hint?: string };
 
-/** Parse "<parts>[.<faces>][@<layer>]" — parts and faces may be joined with "+". Arrays are unions. */
+/** Parse "<parts>[.<faces>][@<layer>]". Parts and faces may be joined with "+". Arrays are unions. */
 export function parseSelector(sel: unknown): SelectorResult {
   const list = Array.isArray(sel) ? sel : [sel];
   if (list.length === 0) return { ok: false, error: 'target is empty' };

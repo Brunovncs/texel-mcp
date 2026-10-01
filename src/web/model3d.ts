@@ -41,6 +41,9 @@ function buildBox(part: PartName, layer: LayerName, model: Model): HTMLElement {
     const sx = dw / r.w, sy = dh / r.h;
     const el = document.createElement('div');
     el.className = `sm-face sm-${face}`;
+    el.dataset.part = part;
+    el.dataset.face = face;
+    el.dataset.layer = layer;
     el.style.cssText = [
       `width:${u(dw)}`,
       `height:${u(dh)}`,
@@ -142,11 +145,15 @@ export class SkinModel {
     return { ...this.state };
   }
 
-  /** Drag to rotate (pointer + keyboard). */
-  enableControls(target: HTMLElement = this.root) {
+  /**
+   * Drag to rotate (pointer + keyboard). Pointer-downs on interactive children are ignored, and
+   * `allowDrag` can veto a drag (e.g. while the pointer is used to paint).
+   */
+  enableControls(target: HTMLElement = this.root, allowDrag: (e: PointerEvent) => boolean = () => true) {
     let start: { x: number; y: number; yaw: number; pitch: number } | null = null;
     target.style.touchAction = 'none';
     target.addEventListener('pointerdown', (e) => {
+      if ((e.target as HTMLElement).closest('button, a, input, select, label, textarea, [data-no-drag]') || !allowDrag(e)) return;
       this.freeze();
       start = { x: e.clientX, y: e.clientY, yaw: this.state.yaw, pitch: this.state.pitch };
       target.setPointerCapture(e.pointerId);

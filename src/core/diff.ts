@@ -14,7 +14,7 @@ export interface TextureDiff {
   mask: Image;
 }
 
-/** Pixel-level diff of two textures, grouped by face — lets an agent verify a patch touched only what it meant to. */
+/** Pixel-level diff of two textures, grouped by face, so an agent can verify a patch touched only what it meant to. */
 export function diffTextures(before: Image, after: Image, model: Model): TextureDiff {
   const mask: Image = { width: SKIN_SIZE, height: SKIN_SIZE, data: new Uint8ClampedArray(SKIN_SIZE * SKIN_SIZE * 4) };
   const faces: FaceChange[] = [];

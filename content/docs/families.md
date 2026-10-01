@@ -1,6 +1,6 @@
 # Skin families
 
-> Generate many related skins — teams, factions, rarity tiers, colorways — from one base spec and a small set of patches. One file, dozens of consistent skins.
+> Generate many related skins (teams, factions, rarity tiers, colorways) from one base spec and a small set of patches. One file, dozens of consistent skins.
 
 A **family** is a document with `"kind": "family"`, a `base` skin spec, and members defined by `variants` (explicit list), a `matrix` (cartesian product of axes), or both.
 
@@ -31,7 +31,7 @@ Every variant (and every matrix axis value) is a patch applied to a copy of the 
 
 | Key | Effect |
 | --- | --- |
-| `palette` | Merged over the base palette — the main way to recolor. |
+| `palette` | Merged over the base palette. The main way to recolor. |
 | `legend` | Merged over the base legend. |
 | `enable` | Layer ids to switch on (removes `enabled: false`). |
 | `disable` | Layer ids to switch off. |
@@ -44,7 +44,7 @@ Matrix patches are applied in axis order, so later axes win on conflicts.
 ## Designing a good family
 
 1. **Perfect the base first.** Render it alone until it passes the rubric; every flaw is multiplied by the member count.
-2. **Name colors by role, not hue.** `primary`, `secondary`, `trim`, `accent` — so variants only swap values. Derive shades from them (`"primaryDark": "primary:-12"`) and the whole ramp follows.
+2. **Name colors by role, not hue.** `primary`, `secondary`, `trim`, `accent`, so variants only swap values. Derive shades from them (`"primaryDark": "primary:-12"`) and the whole ramp follows.
 3. **Optional details get ids.** Capes, badges, helmets, rank stripes: add them to the base with `"enabled": false` and an `id`, then `enable` them per variant. Several layers can share one id and toggle together.
 4. **Distinguishable at a glance.** Check the lineup: members should differ in value or silhouette, not just hue.
 5. **Member ids** are lowercase letters, digits and `-`. Matrix ids join axis values with `-`. The limit is 256 members.

@@ -17,7 +17,7 @@ import {
   textureToSpec,
 } from '../core';
 
-const HELP = `texel — compile Texel skin specs (${PROTOCOL}) into Minecraft skins
+const HELP = `texel: compile Texel skin specs (${PROTOCOL}) into Minecraft skins
 
 usage:
   node texel.mjs build  <spec.json|-> [-o skin.png] [--sheet sheet.png]
@@ -107,12 +107,12 @@ function main(argv: string[]) {
       const dir = flag(rest, '-o') ?? 'skins';
       mkdirSync(dir, { recursive: true });
       const built = family.members.map((m) => ({ ...m, result: compile(m.spec) }));
-      const lines = [`## ${family.name} — ${built.length} members`, '', '| id | name | score | issues |', '| --- | --- | --- | --- |'];
+      const lines = [`## ${family.name}: ${built.length} members`, '', '| id | name | score | issues |', '| --- | --- | --- | --- |'];
       for (const m of built) {
         const r = review(m.result);
         writeFileSync(join(dir, `${m.id}.png`), png(m.result.texture));
         writeFileSync(join(dir, `${m.id}.skin.json`), formatSpec(m.spec));
-        lines.push(`| ${m.id} | ${m.spec.name} | ${r.score} | ${r.issues.filter((i) => i.level !== 'info').map((i) => i.code).join(', ') || '—'} |`);
+        lines.push(`| ${m.id} | ${m.spec.name} | ${r.score} | ${r.issues.filter((i) => i.level !== 'info').map((i) => i.code).join(', ') || '-'} |`);
       }
       const lineup = flag(rest, '--lineup');
       if (lineup) writeFileSync(lineup, png(renderLineup(built.map((m) => ({ texture: m.result.texture, model: m.result.model })), 6)));
