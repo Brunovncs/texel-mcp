@@ -1,6 +1,6 @@
 # Agent interfaces
 
-> Four ways to render a Texel spec: browser JavaScript API, WebMCP tools, URL, and a zero-dependency Node CLI. All share the same deterministic compiler.
+> Four ways to render a Texel spec: browser JavaScript API, WebMCP tools, URL, and a zero-dependency Node CLI. All share the same deterministic compiler. Plus live sessions (the person watches while the agent works) and short share links.
 
 ## 1. Browser: `window.texel`
 
@@ -22,7 +22,7 @@ Open `/studio/`. Every method is synchronous unless noted and returns plain JSON
 | `setView({ yaw, pitch, overlay, animate })` | void | Pose the 3D preview for screenshots. |
 | `textureDataURL()` | string | The 64×64 skin PNG as a data URL. |
 | `sheetDataURL()` | string | Review sheet (front, back, right, left, texture) PNG. |
-| `shareURL()` | Promise&lt;string&gt; | Compressed link that reopens this exact spec. |
+| `shareURL()` | Promise&lt;string&gt; | Short link (`/s/<id>`) that reopens this exact spec; falls back to a long `#z=` link offline. |
 | `download(filename?)` | void | Save the PNG. |
 | `examples()` | Promise&lt;object&gt; | The example index. |
 | `loadExample(id)` | Promise&lt;Review&gt; | Load `explorer`, `knight`, `robot`, `astronaut`. |
@@ -55,6 +55,8 @@ On browsers that implement [WebMCP](https://github.com/webmachinelearning/webmcp
 
 | URL | Effect |
 | --- | --- |
+| `/s/<id>` | A short share link (see *Share links*). |
+| `/studio/?live=<port>` | Follow a live session on this machine (see *Live sessions*). |
 | `/studio/#spec=<encodeURIComponent(JSON)>` | Load a spec. Easiest for agents to construct. |
 | `/studio/#z=<base64url(deflate-raw(JSON))>` | Compressed form (what share links use). |
 | `/studio/?example=knight` | Load an example. |
@@ -70,6 +72,8 @@ node texel.mjs init > spec.json                 # starter spec
 node texel.mjs build spec.json -o skin.png --sheet sheet.png
 node texel.mjs review spec.json                 # markdown + text render
 node texel.mjs review spec.json --json          # machine-readable
+node texel.mjs live spec.json --open            # live session (see below)
+node texel.mjs share spec.json                  # short share link
 cat spec.json | node texel.mjs build - -o skin.png
 ```
 
@@ -77,6 +81,28 @@ Exit code `1` means the spec has errors. Open `sheet.png` to look at the result 
 
 A DOM-free ES module with the compiler is also published at `/texel-core.mjs` (`compile`, `review`, `renderSheet`, `encodePNG`, `formatSpec`, …).
 
-## 5. Machine-readable manifest
+## 5. Live sessions
+
+A person watching the skin take shape can steer it while you work. The CLI and the MCP server run a tiny local server (127.0.0.1 only) that the studio follows over Server-Sent Events:
+
+```bash
+node texel.mjs live skin.json --open      # run in the background; prints https://<site>/studio/?live=4747
+# …edit skin.json as usual: every save appears in the person's tab
+```
+
+With MCP, call `texel_live` once; each `texel_render` is pushed to the open tab. The port defaults to 4747 (the next free one is used if busy). Chromium-based browsers may ask once to allow the page to reach the local network: that is the studio connecting to `127.0.0.1`.
+
+## 6. Share links
+
+`node texel.mjs share skin.json`, the MCP tool `texel_share` and `texel.shareURL()` store the spec and return `https://<site>/s/<id>`. The id is a hash of the spec, so the same spec always gets the same link and a link never changes. Raw API:
+
+| Request | Response |
+| --- | --- |
+| `POST /api/s/` with the spec JSON as the body (≤ 48 KB) | `201 { id, url }` |
+| `GET /api/s/?id=<id>` | The spec JSON |
+
+When the service is unreachable every interface falls back to the long, self-contained `/studio/#z=` link (`share --long` forces it).
+
+## 7. Machine-readable manifest
 
 `/protocol.json` lists every resource, interface and tool above in JSON.

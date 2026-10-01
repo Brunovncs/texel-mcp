@@ -12,6 +12,7 @@ const markdownText: Plugin = {
   },
 };
 
+const siteDefine = { __TEXEL_SITE__: JSON.stringify((process.env.SITE_URL ?? '').replace(/\/$/, '')) };
 const version = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')).version as string;
 
 async function bundleText(options: BuildOptions): Promise<string> {
@@ -23,7 +24,7 @@ async function bundleText(options: BuildOptions): Promise<string> {
 
 /** Zero-dependency Node CLI. */
 export function bundleCli() {
-  return bundleText({ entryPoints: [resolve(root, 'src/cli/cli.ts')], platform: 'node', format: 'esm', banner: { js: `// Texel CLI ${version}. Generated file. Docs: /llms.txt` } });
+  return bundleText({ entryPoints: [resolve(root, 'src/cli/cli.ts')], platform: 'node', format: 'esm', define: siteDefine, banner: { js: `// Texel CLI ${version}. Generated file. Docs: /llms.txt` } });
 }
 
 /** DOM-free compiler module. */
@@ -50,7 +51,7 @@ export async function bundleMcp() {
     format: 'esm',
     plugins: [markdownText],
     minify: true,
-    define: { __TEXEL_VIEWER_HTML__: JSON.stringify(viewer), __TEXEL_VERSION__: JSON.stringify(version) },
+    define: { __TEXEL_VIEWER_HTML__: JSON.stringify(viewer), __TEXEL_VERSION__: JSON.stringify(version), ...siteDefine },
     banner: { js: `#!/usr/bin/env node\n// Texel MCP server ${version}. Generated file.\nimport { createRequire as __createRequire } from 'node:module';\nconst require = __createRequire(import.meta.url);` },
   });
 }

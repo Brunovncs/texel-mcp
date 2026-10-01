@@ -16,6 +16,7 @@ import {
   review,
   reviewToMarkdown,
   scaleImage,
+  shareURL,
   textureToSpec,
   type CompileResult,
   type Image,
@@ -23,6 +24,8 @@ import {
 } from '../core';
 import { DOC_PAGES, DOCS, EXAMPLE_IDS, EXAMPLES, FAMILY_EXAMPLES, SCHEMAS } from './content';
 import { Workspace } from './workspace';
+import { openBrowser, startLive, type LiveSession } from '../live/server';
+import { SITE_ORIGIN } from '../live/site';
 
 export const SERVER_VERSION = typeof __TEXEL_VERSION__ === 'string' ? __TEXEL_VERSION__ : '0.0.0-dev';
 export const VIEWER_URI = 'ui://texel/viewer';
@@ -31,7 +34,8 @@ export const VIEWER_MIME = 'text/html;profile=mcp-app';
 export const TEXTURE_META_KEY = 'texel/texture';
 
 const INSTRUCTIONS = `Texel compiles Minecraft skin specs (JSON: palette + ordered drawing ops) into 64×64 PNGs. Protocol ${PROTOCOL}.
-Workflow: read the "spec" docs (texel_read_docs or resource texel://docs/spec), draft a spec, call texel_render, look at the returned review sheet image and the issues, patch the spec, render again, then texel_save.
+Workflow: read the "spec" docs (texel_read_docs or resource texel://docs/spec), draft a spec, call texel_render, look at the returned review sheet image and the issues, patch the spec, render again, then texel_save and texel_share.
+When a person is waiting on the result, call texel_live first and give them the URL: every texel_render then appears in their open studio tab, so they can watch and steer while you work.
 For many related skins (teams, factions, tiers), write a family (kind: "family") and use texel_render_family / texel_save_family.
 The score only measures technical hygiene; judge appearance from the sheet image against the brief.`;
 
@@ -71,6 +75,7 @@ function toolError(message: string): CallToolResult {
 /** Build a fully configured server. Called once per connection by the transport entry point. */
 export function createTexelServer(workspace = new Workspace()): McpServer {
   const server = new McpServer({ name: 'texel', title: 'Texel', version: SERVER_VERSION }, { instructions: INSTRUCTIONS });
+  let live: LiveSession | null = null;
 
   // ---- tools --------------------------------------------------------------
 
@@ -91,6 +96,7 @@ export function createTexelServer(workspace = new Workspace()): McpServer {
     async ({ spec, include }) => {
       const result = compile(spec);
       const r = review(result);
+      if (live && result.spec) live.push(formatSpec(result.spec));
       const content: CallToolResult['content'] = [textBlock(reviewToMarkdown(r, { includeAscii: include.includes('ascii') }))];
       if (include.includes('sheet')) content.push(imageBlock(renderSheet(result.texture, result.model).image));
       if (include.includes('texture')) content.push(imageBlock(scaleImage(result.texture, 4)));
@@ -143,6 +149,51 @@ export function createTexelServer(workspace = new Workspace()): McpServer {
       } catch (e) {
         return toolError((e as Error).message);
       }
+    },
+  );
+
+  server.registerTool(
+    'texel_live',
+    {
+      title: 'Start live preview',
+      description:
+        'Start (or reuse) a live session and return a studio URL for the user. While it runs, every texel_render result appears in their open browser tab immediately, so they can watch the skin evolve and give feedback mid-way. Call it before the first render and share the URL with the user.',
+      inputSchema: z.object({
+        open: z.boolean().default(false).describe('Also open the URL in the default browser of the machine running this server.'),
+        port: z.number().int().min(1024).max(65535).optional().describe('Preferred local port (default 4747; the next free one is used if busy).'),
+      }),
+      outputSchema: z.object({ url: z.string(), port: z.number(), viewers: z.number() }),
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ open, port }) => {
+      try {
+        live ??= await startLive({ site: SITE_ORIGIN, port });
+      } catch (e) {
+        return toolError(`Could not start the live session: ${(e as Error).message}`);
+      }
+      if (open) openBrowser(live.url);
+      return {
+        content: [textBlock(`Live preview: ${live.url}
+Give this URL to the user. Each texel_render now updates their studio tab (${live.clients()} viewer(s) connected).`)],
+        structuredContent: { url: live.url, port: live.port, viewers: live.clients() },
+      };
+    },
+  );
+
+  server.registerTool(
+    'texel_share',
+    {
+      title: 'Share skin',
+      description: `Store the spec on ${SITE_ORIGIN} and return a short link (${SITE_ORIGIN}/s/<id>) that opens the exact skin in the studio. Falls back to a long self-contained link when offline.`,
+      inputSchema: z.object({ spec: specInput }),
+      outputSchema: z.object({ url: z.string(), short: z.boolean() }),
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+    },
+    async ({ spec }) => {
+      const result = compile(spec);
+      if (!result.ok || !result.spec) return toolError('Not shared: the spec has errors. Run texel_validate.');
+      const link = await shareURL(SITE_ORIGIN, JSON.stringify(result.spec));
+      return { content: [textBlock(link.url)], structuredContent: link };
     },
   );
 
@@ -323,7 +374,7 @@ export function createTexelServer(workspace = new Workspace()): McpServer {
           role: 'user' as const,
           content: {
             type: 'text' as const,
-            text: `Design a Minecraft skin with Texel.\n\nBrief: ${brief}\nModel: ${model ?? 'your choice (classic = 4px arms, slim = 3px)'}\n\n1. Read texel://docs/spec and texel://docs/art-guide (or call texel_read_docs).\n2. Put the brief in "description". Define the palette first: 2–4 tones per material.\n3. Draft layers broad → fine. Give layers you may revisit an "id".\n4. Call texel_render. Fix every error and warning. Then judge the sheet image against rubric R1–R8 in texel://docs/protocol.\n5. Patch the weakest area and render again; use texel_diff to confirm what changed. Stop when R1–R8 pass (≈3–6 iterations).\n6. Save with texel_save (sheet: true) and report the files and final score.`,
+            text: `Design a Minecraft skin with Texel.\n\nBrief: ${brief}\nModel: ${model ?? 'your choice (classic = 4px arms, slim = 3px)'}\n\n1. Read texel://docs/spec and texel://docs/art-guide (or call texel_read_docs).\n2. Call texel_live and give me the URL, so I can watch every render.\n3. Put the brief in "description", in the language I wrote it in (answer me in it too). Decide whatever the brief leaves open and state your choices in one line instead of asking. Define the palette first: 2–4 tones per material.\n4. Draft layers broad → fine, texture (gradient/shade/noise) before small details. Give layers you may revisit an "id".\n5. Call texel_render. Fix every error and warning. Then judge the sheet image against rubric R1–R8 in texel://docs/protocol.\n6. Patch the weakest area and render again; use texel_diff to confirm what changed. Stop when R1–R8 pass (≈3–6 iterations).\n7. Save with texel_save (sheet: true), call texel_share, and report the link, the files and the final score.`,
           },
         },
       ],

@@ -214,5 +214,6 @@ UV origin of each box in the 64×64 PNG. Within a box of size w×h×d at (u, v):
 | `few-colors` | info | Fewer than 6 colors overall. |
 | `hat-covers-face` | info | Hat layer is fully opaque over the face. |
 | `unused-palette` | info | Palette keys never referenced. |
+| `overwritten-layer` | info | A layer is completely painted over by later layers, so it does nothing. The `fill` on `all` safety net is exempt. |
 
 Score = 100 − 25 per error − 8 per warning − 2 per info (transparent-base penalty capped at 20).

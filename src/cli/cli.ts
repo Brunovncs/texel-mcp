@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, watchFile, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { deflateSync, inflateSync } from 'node:zlib';
 import {
@@ -9,25 +9,35 @@ import {
   encodePNG,
   expandFamily,
   formatSpec,
+  longShareURL,
   PROTOCOL,
   renderLineup,
   renderSheet,
   review,
   reviewToMarkdown,
+  shareURL,
   textureToSpec,
 } from '../core';
+import { openBrowser, startLive } from '../live/server';
+import { SITE_ORIGIN } from '../live/site';
 
 const HELP = `texel: compile Texel skin specs (${PROTOCOL}) into Minecraft skins
 
 usage:
+  node texel.mjs live   <spec.json> [--port 4747] [--open]
   node texel.mjs build  <spec.json|-> [-o skin.png] [--sheet sheet.png]
   node texel.mjs review <spec.json|-> [--json]
   node texel.mjs sheet  <spec.json|-> [-o sheet.png]
   node texel.mjs family <family.json|-> [-o out-dir] [--lineup lineup.png]
   node texel.mjs import <skin.png> [-o spec.json]
   node texel.mjs diff   <before.json> <after.json>
+  node texel.mjs share  <spec.json|-> [--long]
   node texel.mjs format <spec.json|->
   node texel.mjs init
+
+live   serves the spec to the studio and re-pushes it on every save, so the user can watch while
+       you work. Run it in the background, give the user the printed URL, then just edit the file.
+share  prints a short link (${SITE_ORIGIN}/s/<id>) that opens the skin in the studio.
 
 "-" reads the spec from stdin. Exit code is 1 when the spec has errors.
 Docs: /llms.txt · /docs/spec.md · /docs/protocol.md`;
@@ -68,7 +78,39 @@ function fail(msg: string): never {
 
 const png = (img: Parameters<typeof encodePNG>[0]) => encodePNG(img, (raw) => deflateSync(raw, { level: 9 }));
 
-function main(argv: string[]) {
+function summary(text: string) {
+  const r = review(compile(text));
+  const count = (l: string) => r.issues.filter((i) => i.level === l).length;
+  return `score ${r.score}/100, ${count('error')} errors, ${count('warning')} warnings`;
+}
+
+async function live(file: string, args: string[]) {
+  const read = () => {
+    try {
+      const text = readFileSync(file, 'utf8');
+      JSON.parse(text);
+      return text;
+    } catch {
+      return null;
+    }
+  };
+  const session = await startLive({ site: SITE_ORIGIN, port: Number(flag(args, '--port') ?? 4747), initial: read() ?? undefined });
+  process.stdout.write(`Live session for ${file}\nOpen (and share with the user): ${session.url}\nEvery save of the file is pushed to the studio. Ctrl+C to stop.\n`);
+  if (!existsSync(file)) process.stdout.write(`waiting for ${file} to be created…\n`);
+  if (args.includes('--open')) openBrowser(session.url);
+  let last = '';
+  const check = () => {
+    const text = read();
+    if (text === null || text === last) return;
+    last = text;
+    session.push(text);
+    process.stdout.write(`[${new Date().toLocaleTimeString()}] pushed: ${summary(text)} · ${session.clients()} viewer(s)\n`);
+  };
+  check();
+  watchFile(file, { interval: 250 }, check);
+}
+
+async function main(argv: string[]) {
   const [cmd, file, ...rest] = argv;
   switch (cmd) {
     case 'build': {
@@ -136,6 +178,18 @@ function main(argv: string[]) {
       process.stdout.write(diffToMarkdown(diffTextures(a.texture, b.texture, b.model)) + '\n');
       return;
     }
+    case 'live':
+      if (!file || file === '-') fail('live needs a spec file to watch');
+      return live(file, rest);
+    case 'share': {
+      const text = readSpec(file);
+      if (!compile(text).ok) fail('the spec has errors; fix them before sharing (node texel.mjs review)');
+      if (rest.includes('--long')) return void process.stdout.write(`${await longShareURL(SITE_ORIGIN, text)}\n`);
+      const { url, short } = await shareURL(SITE_ORIGIN, text);
+      process.stdout.write(`${url}\n`);
+      if (!short) process.stderr.write('note: the share service was unreachable, so this is a long self-contained link\n');
+      return;
+    }
     case 'format': {
       const text = readSpec(file);
       try {
@@ -159,4 +213,4 @@ function main(argv: string[]) {
   }
 }
 
-main(process.argv.slice(2));
+void main(process.argv.slice(2));

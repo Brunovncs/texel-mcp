@@ -21,6 +21,7 @@ export const OP_KEYS: Record<string, { required: string[]; optional: string[] }>
 const COMMON_KEYS = ['op', 'id', 'note', 'enabled'];
 const SPEC_KEYS = ['$schema', 'version', 'name', 'description', 'author', 'tags', 'model', 'palette', 'legend', 'layers'];
 const RESERVED_CHARS = new Set(['.', '_']);
+const NO_LAYERS: ReadonlySet<number> = new Set();
 
 export interface CompileResult {
   ok: boolean;
@@ -30,6 +31,8 @@ export interface CompileResult {
   issues: Issue[];
   /** Palette keys that were referenced at least once. */
   usedPalette: string[];
+  /** Indices of layers that drew pixels, none of which survive later layers. */
+  deadLayers: number[];
 }
 
 type Json = Record<string, unknown>;
@@ -38,6 +41,11 @@ class Ctx {
   readonly data = new Uint8ClampedArray(SKIN_SIZE * SKIN_SIZE * 4);
   readonly issues: Issue[] = [];
   readonly used = new Set<string>();
+  /** Layers whose paint is still visible in each texel, for dead-layer detection. */
+  contrib: ReadonlySet<number>[] = Array.from({ length: SKIN_SIZE * SKIN_SIZE }, () => NO_LAYERS);
+  readonly drew = new Set<number>();
+  private own: ReadonlySet<number> = NO_LAYERS;
+  private current = -1;
   palette: Record<string, string> = {};
   legend: Record<string, string> = {};
   constructor(public model: Model) {}
@@ -51,7 +59,23 @@ class Ctx {
     return [this.data[i], this.data[i + 1], this.data[i + 2], this.data[i + 3]];
   }
 
-  set(x: number, y: number, c: RGBA) {
+  get layer() {
+    return this.current;
+  }
+
+  set layer(i: number) {
+    this.current = i;
+    this.own = new Set([i]);
+  }
+
+  /**
+   * Write a texel. By default the current layer replaces whatever was there; `keep` lists earlier
+   * layers that still show through (shade/noise adjust a pixel, copies carry their source's layers).
+   */
+  set(x: number, y: number, c: RGBA, keep?: ReadonlySet<number>) {
+    const t = y * SKIN_SIZE + x;
+    this.contrib[t] = keep ? new Set([...keep, this.current]) : this.own;
+    this.drew.add(this.current);
     const i = (y * SKIN_SIZE + x) * 4;
     this.data[i] = c[0];
     this.data[i + 1] = c[1];
@@ -127,12 +151,22 @@ export function compile(input: unknown): CompileResult {
   if (!Array.isArray(spec.layers)) {
     ctx.issue('error', 'no-layers', '$.layers', '"layers" must be an array of operations');
   } else {
-    spec.layers.forEach((op, i) => applyOp(ctx, op, i));
+    spec.layers.forEach((op, i) => {
+      ctx.layer = i;
+      applyOp(ctx, op, i);
+    });
   }
   return finish(ctx, spec as unknown as SkinSpec);
 }
 
+/** The usual `fill` on `all` is a safety net against transparent base pixels, so it never counts as dead. */
+const isSafetyFill = (op: unknown) => isObj(op) && op.op === 'fill' && op.target === 'all';
+
 function finish(ctx: Ctx, spec: SkinSpec | null): CompileResult {
+  const survivors = new Set<number>();
+  for (const c of ctx.contrib) for (const i of c) survivors.add(i);
+  const layers = Array.isArray(spec?.layers) ? spec.layers : [];
+  const deadLayers = [...ctx.drew].filter((i) => !survivors.has(i) && !isSafetyFill(layers[i])).sort((a, b) => a - b);
   return {
     ok: !ctx.issues.some((i) => i.level === 'error'),
     spec,
@@ -140,6 +174,7 @@ function finish(ctx: Ctx, spec: SkinSpec | null): CompileResult {
     texture: { width: SKIN_SIZE, height: SKIN_SIZE, data: ctx.data },
     issues: ctx.issues,
     usedPalette: [...ctx.used],
+    deadLayers,
   };
 }
 
@@ -373,7 +408,7 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
         if (colors && rnd() < density) ctx.set(tx, ty, colors[Math.floor(rnd() * colors.length)] as RGBA);
         if (jitter) {
           const cur = ctx.get(tx, ty);
-          if (cur[3] > 0) ctx.set(tx, ty, shiftLightness(cur, Math.round((rnd() * 2 - 1) * jitter)));
+          if (cur[3] > 0) ctx.set(tx, ty, shiftLightness(cur, Math.round((rnd() * 2 - 1) * jitter)), ctx.contrib[ty * SKIN_SIZE + tx]);
         }
       });
       return;
@@ -382,7 +417,7 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
       const refs = ctx.targets(op.target, `${path}.target`);
       const amount = num(ctx, op.amount, `${path}.amount`, { min: -100, max: 100 });
       if (!checkArea(ctx, op, path) || !refs || amount === null) return;
-      eachPixel(ctx, refs, op, (tx, ty) => ctx.set(tx, ty, shiftLightness(ctx.get(tx, ty), amount)));
+      eachPixel(ctx, refs, op, (tx, ty) => ctx.set(tx, ty, shiftLightness(ctx.get(tx, ty), amount), ctx.contrib[ty * SKIN_SIZE + tx]));
       return;
     }
     case 'copy': {
@@ -405,7 +440,7 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
       const layers: LayerName[] = layerOpt === 'both' ? ['base', 'overlay'] : [layerOpt as LayerName];
       const swap: Record<FaceName, FaceName> = { top: 'top', bottom: 'bottom', front: 'front', back: 'back', right: 'left', left: 'right' };
       for (const layer of layers) {
-        const snapshot = new Uint8ClampedArray(ctx.data);
+        const snapshot = { data: new Uint8ClampedArray(ctx.data), contrib: ctx.contrib.slice() };
         for (const face of Object.keys(swap) as FaceName[])
           blit(ctx, { part: from, face: swap[face], layer }, { part: to, face, layer }, true, false, snapshot);
       }
@@ -421,8 +456,8 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
         for (let y = 0; y < face.h; y++)
           for (let x = 0; x < Math.floor(face.w / 2); x++) {
             const l = face.x + x, r = face.x + face.w - 1 - x, ty = face.y + y;
-            if (keepLeft) ctx.set(r, ty, ctx.get(l, ty));
-            else ctx.set(l, ty, ctx.get(r, ty));
+            const [src, dst] = keepLeft ? [l, r] : [r, l];
+            ctx.set(dst, ty, ctx.get(src, ty), ctx.contrib[ty * SKIN_SIZE + src]);
           }
       }
       return;
@@ -431,16 +466,17 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
 }
 
 /** Copy one face onto another with optional flips; nearest-neighbour resampling when sizes differ. */
-function blit(ctx: Ctx, src: FaceRef, dst: FaceRef, flipH: boolean, flipV: boolean, snapshot?: Uint8ClampedArray) {
+function blit(ctx: Ctx, src: FaceRef, dst: FaceRef, flipH: boolean, flipV: boolean, snapshot?: { data: Uint8ClampedArray; contrib: ReadonlySet<number>[] }) {
   const s = ctx.rect(src), d = ctx.rect(dst);
-  const from = snapshot ?? new Uint8ClampedArray(ctx.data);
+  const from = snapshot?.data ?? new Uint8ClampedArray(ctx.data);
+  const fromContrib = snapshot?.contrib ?? ctx.contrib.slice();
   for (let y = 0; y < d.h; y++)
     for (let x = 0; x < d.w; x++) {
       let sx = Math.floor((x * s.w) / d.w), sy = Math.floor((y * s.h) / d.h);
       if (flipH) sx = s.w - 1 - sx;
       if (flipV) sy = s.h - 1 - sy;
-      const i = ((s.y + sy) * SKIN_SIZE + s.x + sx) * 4;
-      ctx.set(d.x + x, d.y + y, [from[i], from[i + 1], from[i + 2], from[i + 3]]);
+      const t = (s.y + sy) * SKIN_SIZE + s.x + sx, i = t * 4;
+      ctx.set(d.x + x, d.y + y, [from[i], from[i + 1], from[i + 2], from[i + 3]], fromContrib[t]);
     }
 }
 

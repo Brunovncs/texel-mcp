@@ -1,7 +1,7 @@
-import { resolveColor, toHex } from './color';
+import { resolveColor, rgbToHsl, toHex } from './color';
 import type { CompileResult } from './compile';
 import { faceRect, FACES, PARTS, refName, SKIN_SIZE } from './layout';
-import type { FaceRef, Image, Issue } from './types';
+import type { FaceRef, Image, Issue, RGBA } from './types';
 import { renderView } from './views';
 
 export interface ReviewStats {
@@ -98,6 +98,10 @@ export function review(result: CompileResult): Review {
   if (unused.length) add('info', 'unused-palette', '$.palette', `unused palette keys: ${unused.join(', ')}`);
 
   const layers = Array.isArray(spec?.layers) ? spec.layers : [];
+  for (const i of result.deadLayers) {
+    const id = (layers[i] as { id?: unknown } | undefined)?.id;
+    add('info', 'overwritten-layer', `$.layers[${i}]`, `layer ${i}${typeof id === 'string' ? ` ("${id}")` : ''} is completely painted over by later layers and has no visible effect`, 'delete it, or move it after the layers that cover it');
+  }
   const disabled = layers.filter((l) => l && typeof l === 'object' && (l as { enabled?: boolean }).enabled === false).length;
 
   const weight = { error: 25, warning: 8, info: 2 } as const;
@@ -148,6 +152,26 @@ function asciiViews(tex: Image, model: CompileResult['model'], palette: Record<s
     const r = resolveColor(expr, palette);
     if (r.ok && r.color[3] > 0 && !names.has(toHex(r.color))) names.set(toHex(r.color), name);
   }
+  const hsl = (hex: string) => rgbToHsl([1, 3, 5].map((o) => parseInt(hex.slice(o, o + 2), 16)).concat(255) as RGBA);
+  const named = [...names.keys()].map((hex) => ({ hex, hsl: hsl(hex) }));
+  /**
+   * Shade, gradient and jitter only move lightness, so a pixel with the hue and saturation of a named
+   * color is drawn with that color's char. Keeps the key short and the render readable.
+   */
+  const nearestNamed = (hex: string) => {
+    if (names.has(hex)) return hex;
+    const [h, s, l] = hsl(hex);
+    let best: string | null = null, bestD = Infinity;
+    for (const n of named) {
+      const [nh, ns, nl] = n.hsl;
+      const dh = s < 0.08 && ns < 0.08 ? 0 : Math.min(Math.abs(h - nh), 1 - Math.abs(h - nh));
+      const ds = Math.abs(s - ns), dl = Math.abs(l - nl);
+      if (dh > 0.035 || ds > 0.15 || dl > 0.16) continue;
+      const d = dl + dh * 2 + ds / 2;
+      if (d < bestD) (best = n.hex), (bestD = d);
+    }
+    return best ?? hex;
+  };
   let poolIdx = 0;
   const pick = (hex: string) => {
     let ch = charOf.get(hex);
@@ -165,7 +189,7 @@ function asciiViews(tex: Image, model: CompileResult['model'], palette: Record<s
       for (let x = 0; x < img.width; x++) {
         const i = (y * img.width + x) * 4;
         const a = img.data[i + 3];
-        const ch = a === 0 ? '.' : pick(toHex([img.data[i], img.data[i + 1], img.data[i + 2], 255]));
+        const ch = a === 0 ? '.' : pick(nearestNamed(toHex([img.data[i], img.data[i + 1], img.data[i + 2], 255])));
         line += ch + ch;
       }
       lines.push(line);
@@ -190,7 +214,7 @@ export function reviewToMarkdown(r: Review, opts: { includeAscii?: boolean } = {
     lines.push('');
   } else lines.push('No issues found.', '');
   if (opts.includeAscii !== false) {
-    lines.push('### Text render (front | back, each pixel = 2 chars, "." = transparent)', '```');
+    lines.push('### Text render (front | back, each pixel = 2 chars, "." = transparent; shaded tones shown as their nearest named color)', '```');
     const f = r.ascii.front.split('\n'), b = r.ascii.back.split('\n');
     for (let i = 0; i < f.length; i++) lines.push(`${f[i]}   ${b[i]}`);
     lines.push('```', '', 'Key: ' + Object.entries(r.ascii.key).map(([c, v]) => `\`${c}\`=${v}`).join(', '), '');

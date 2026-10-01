@@ -79,8 +79,8 @@ The overlay is a shell 0.5 px (head) / 0.25 px (body, limbs) outside the base. I
 2. Fill parts: head, body, arms, legs.
 3. Bands: sleeves, belt, pants, shoes.
 4. Head: `pixels` for the face, hair on top/back/sides (`copy` right → left with `flip: "h"`).
-5. Details on one side; `mirror` limbs; then asymmetric details.
-6. Shading pass: `shade` / `gradient` / `noise`.
+5. Shading and texture on the broad areas: `gradient` / `shade` / `noise`.
+6. Details on one side (they stay crisp because they come after the texture); `mirror` limbs; then asymmetric details.
 7. Overlay pass.
 8. Review, screenshot, patch.
 
@@ -93,4 +93,5 @@ The overlay is a shell 0.5 px (head) / 0.25 px (body, limbs) outside the base. I
 | Arms painted 4 px wide on a slim model | Slim arm fronts are 3 px wide; use `pixels` rows of 3 chars. |
 | Forgetting back and sides | Check `back`, `right` and `left` views in the review. |
 | Black outlines everywhere | Use darker tones of the local color instead. |
+| `noise` / `shade` as the last layers | They also hit eyes, collars and buttons. Texture broad areas first, then paint details. |
 | Same value head/body/legs | Vary lightness between parts. |

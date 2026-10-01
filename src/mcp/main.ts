@@ -18,6 +18,9 @@ if (args.includes('--help')) {
 const wsFlag = args.indexOf('--workspace');
 const workspace = new Workspace(wsFlag >= 0 ? args[wsFlag + 1] : undefined);
 
+// A live session's open browser connections must not outlive the client.
+process.stdin.on('end', () => process.exit(0));
+
 serveStdio(() => createTexelServer(workspace), {
   onerror: (e) => process.stderr.write(`[texel-mcp] ${e.message}\n`),
 });

@@ -19,10 +19,13 @@ Write down what you are making before touching pixels. Put it in the spec's `des
 
 > "A desert ranger: tan skin, sun-bleached cloak with hood on the hat layer, leather belt with pouches, dusty boots. Classic arms."
 
+Requests can arrive in any language. Answer the person in their language and write `description` in it too (the studio shows it to them); keep palette keys and layer `id`s in plain ASCII English. Don't open with a round of questions: make tasteful choices for anything unspecified, state them in one line, and let the person steer while they watch (see *Live session*).
+
 ### 2. Read
 
 | Resource | Why |
 | --- | --- |
+| [/agent.md](/agent.md) | This protocol, the spec reference and the art guide in **one file**. Fetch it instead of the three pages separately. |
 | [/docs/spec.md](/docs/spec.md) | The format: selectors, coordinates, every op. **Required.** |
 | [/docs/art-guide.md](/docs/art-guide.md) | Where eyes go, how to shade, what makes skins look good. |
 | [/schema/skinspec.v1.json](/schema/skinspec.v1.json) | JSON Schema for validation / structured output. |
@@ -32,7 +35,7 @@ Write down what you are making before touching pixels. Put it in the spec's `des
 ### 3. Draft
 
 1. **Palette first.** For each material (skin, hair, shirt, pants, shoes, metal…) define a base color plus derived tones: `"shirtDark": "shirt:-10"`. 2–4 tones per material.
-2. **Broad → fine.** Start with `fill` on `all` (so no base pixel is transparent), then fill whole parts, then bands (`rect` with only `y`/`h`), then details (`pixels`, `points`, `line`), then shading (`shade`, `gradient`, `noise`).
+2. **Broad → fine.** Start with `fill` on `all` (so no base pixel is transparent), then fill whole parts, then bands (`rect` with only `y`/`h`), then shading and texture on those broad areas (`gradient`, `shade`, `noise`), then small details (`pixels`, `points`, `line`). Texture goes *before* details: `noise` and `shade` change every pixel in their area, so running them last smears eyes, collars and buttons. Later layers overwrite earlier ones, so don't fill an area you repaint completely afterwards; the review flags those layers as `overwritten-layer`.
 3. **Paint one side, mirror the other.** Design `rightArm`/`rightLeg`, then `mirror` them. Add asymmetric details *after* the mirror.
 4. **Use the overlay** (`@overlay`) for things that stick out: hair tufts, hoods, helmets, jackets, backpacks.
 5. **Give layers `id`s** for anything you might revisit (`"id": "eyes"`), so patches are surgical.
@@ -41,9 +44,20 @@ Write down what you are making before touching pixels. Put it in the spec's `des
 
 Pick whichever interface your runtime has. They all run the same compiler:
 
+- **Code execution:** `curl -O https://<site>/texel.mjs && node texel.mjs build skin.json -o skin.png --sheet sheet.png`.
+- **MCP:** `texel_render` returns the review and the sheet image.
 - **Browser agent:** open `/studio/`, then call `window.texel.setSpec(spec)` (or the WebMCP tool `texel_set_spec`).
 - **URL only:** open `/studio/?view=inspect#spec=<encodeURIComponent(JSON)>` and take a screenshot.
-- **Code execution:** `curl -O https://<site>/texel.mjs && node texel.mjs build spec.json -o skin.png --sheet sheet.png`.
+
+#### Live session
+
+When a person is waiting on the skin, let them watch it being made instead of seeing only the end result. Start the session **before your first draft** and give them the URL:
+
+- **Code execution:** run `node texel.mjs live skin.json --open` in the background. It prints a studio URL (`/studio/?live=<port>`); every time you save `skin.json` their tab updates. Keep using `build` for your own review.
+- **MCP:** call `texel_live` and share the returned URL; every `texel_render` then shows up in their tab.
+- **Browser agent:** work in a studio tab the person can see; `window.texel` updates it directly.
+
+They can react mid-way ("shorter hair", "more pink") and you patch, instead of starting over after the reveal.
 
 ### 5. Review
 
@@ -72,9 +86,9 @@ Stop when R1–R8 all pass, or after ~6 iterations with diminishing returns.
 
 Deliver three things:
 
-1. The **PNG** (`texel.download()` or the CLI `build` output). Upload it at minecraft.net or any launcher.
-2. The **spec JSON**: the editable source.
-3. The **share link** (`texel.shareURL()`), which opens the exact skin in the studio.
+1. The **share link**: `node texel.mjs share skin.json`, `texel_share` or `texel.shareURL()`. It is short (`/s/<id>`) and opens the exact skin in the studio, where the person can also download the PNG.
+2. The **PNG** (CLI `build` output, `texel_save`, or `texel.download()`), uploaded at minecraft.net or any launcher with the model (classic/slim) matching `model`.
+3. The **spec JSON**, the editable source. Give the file path; paste the JSON into the chat only when you cannot save files.
 
 ## Contract
 
