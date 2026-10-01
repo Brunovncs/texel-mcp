@@ -15,5 +15,5 @@
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["api", "src", "plugins", "tests", "content", "vite.config.ts"]
+  "include": ["api", "src", "plugins", "scripts", "tests", "content", "vite.config.ts"]
 }

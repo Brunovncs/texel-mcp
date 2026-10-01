@@ -181,3 +181,11 @@ export class SkinModel {
     });
   }
 }
+
+/** Scale a model to fill its host, following resizes. */
+export function fitModel(model: SkinModel, host: HTMLElement, max = Infinity) {
+  new ResizeObserver(() => {
+    const { width, height } = host.getBoundingClientRect();
+    model.root.style.setProperty('--u', `${Math.max(4, Math.min(width / 22, height / 38, max)).toFixed(2)}px`);
+  }).observe(host);
+}
