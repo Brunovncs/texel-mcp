@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skinsmith viewer</title>
+<style>/*__STYLE__*/</style>
+</head>
+<body data-state="empty">
+<main class="viewer">
+  <div class="head"><h1 id="name">Skinsmith</h1><span class="score" id="score"></span></div>
+  <div class="stage" id="stage" aria-label="3D skin preview — drag or use arrow keys to rotate"><div class="stage-floor"></div></div>
+  <div class="controls" role="toolbar" aria-label="Preview controls">
+    <button type="button" data-view="front">Front</button>
+    <button type="button" data-view="three">3/4</button>
+    <button type="button" data-view="side">Side</button>
+    <button type="button" data-view="back">Back</button>
+    <span class="spacer"></span>
+    <button type="button" data-toggle="overlay" aria-pressed="true">Overlay</button>
+    <button type="button" data-toggle="walk" aria-pressed="false">Walk</button>
+  </div>
+  <form class="feedback" id="feedback">
+    <label class="visually-hidden" for="feedback-text">Feedback</label>
+    <input id="feedback-text" autocomplete="off" placeholder="Ask for a change, e.g. “darker boots, add a scarf”">
+    <button type="submit">Send</button>
+  </form>
+  <p class="status" id="status" role="status">Waiting for a render…</p>
+</main>
+<script>/*__SCRIPT__*/</script>
+</body>
+</html>

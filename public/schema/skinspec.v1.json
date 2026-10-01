@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "/schema/skinspec.v1.json",
+  "title": "Skinsmith skin spec v1",
+  "description": "Declarative description of a 64x64 Minecraft Java skin. Layers are applied in order (painter's model) and compile deterministically to a PNG. Docs: /docs/spec.md",
+  "type": "object",
+  "required": ["version", "layers"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "name": { "type": "string", "maxLength": 80 },
+    "description": { "type": "string", "description": "The brief this skin implements. Keep it: reviewers compare the render against it." },
+    "author": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "model": { "enum": ["classic", "slim"], "default": "classic", "description": "classic = 4px-wide arms, slim = 3px-wide arms." },
+    "palette": {
+      "type": "object",
+      "description": "Named colors. Values are color expressions and may reference other keys, e.g. \"skinShade\": \"skin:-10\".",
+      "propertyNames": { "pattern": "^[A-Za-z][\\w-]*$" },
+      "additionalProperties": { "$ref": "#/$defs/color" }
+    },
+    "legend": {
+      "type": "object",
+      "description": "Single character → color expression, used by \"pixels\" rows. \".\" (keep) and \"_\" (erase) are reserved.",
+      "propertyNames": { "pattern": "^[^._]$" },
+      "additionalProperties": { "$ref": "#/$defs/color" }
+    },
+    "layers": { "type": "array", "items": { "$ref": "#/$defs/op" } }
+  },
+  "$defs": {
+    "color": {
+      "type": "string",
+      "description": "\"#rgb\" | \"#rrggbb\" | \"#rrggbbaa\" | \"transparent\" | palette key, optionally followed by \":<n>\" to shift HSL lightness by n points (e.g. \"shirt:-12\", \"#88aaff:+5\")."
+    },
+    "selector": {
+      "description": "\"<parts>[.<faces>][@<layer>]\". parts: head, body, rightArm, leftArm, rightLeg, leftLeg, arms, legs, limbs, all. faces: top, bottom, right, front, left, back, sides, all. layer: base (default), overlay, both. Join alternatives with \"+\" (\"head.top+back\"). An array is a union.",
+      "oneOf": [
+        { "type": "string", "pattern": "^[A-Za-z*+]+(\\.[A-Za-z*+]+)?(@(base|overlay|both))?$" },
+        { "type": "array", "minItems": 1, "items": { "type": "string" } }
+      ]
+    },
+    "int": { "type": "integer", "description": "Face-local coordinate. Negative values count from the right/bottom edge (-1 = last column/row)." },
+    "size": { "type": "integer", "minimum": 0 },
+    "point": { "type": "array", "prefixItems": [{ "type": "integer" }, { "type": "integer" }], "minItems": 2, "maxItems": 2 },
+    "common": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Stable handle for patching this layer later." },
+        "note": { "type": "string", "description": "Why this layer exists. Free text for humans and agents." },
+        "enabled": { "type": "boolean", "default": true, "description": "false skips the layer without deleting it." }
+      }
+    },
+    "op": {
+      "type": "object",
+      "required": ["op"],
+      "properties": { "op": { "enum": ["fill", "rect", "clear", "pixels", "points", "line", "gradient", "pattern", "noise", "shade", "copy", "mirror", "symmetrize"] } },
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        { "if": { "properties": { "op": { "const": "fill" } } }, "then": { "required": ["target", "color"], "properties": { "target": { "$ref": "#/$defs/selector" }, "color": { "$ref": "#/$defs/color" } } } },
+        { "if": { "properties": { "op": { "const": "rect" } } }, "then": { "required": ["target", "color"], "properties": { "target": { "$ref": "#/$defs/selector" }, "color": { "$ref": "#/$defs/color" }, "x": { "$ref": "#/$defs/int" }, "y": { "$ref": "#/$defs/int" }, "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" } } } },
+        { "if": { "properties": { "op": { "const": "clear" } } }, "then": { "required": ["target"], "properties": { "target": { "$ref": "#/$defs/selector" }, "x": { "$ref": "#/$defs/int" }, "y": { "$ref": "#/$defs/int" }, "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" } } } },
+        { "if": { "properties": { "op": { "const": "pixels" } } }, "then": { "required": ["target", "rows"], "properties": { "target": { "$ref": "#/$defs/selector" }, "x": { "$ref": "#/$defs/int" }, "y": { "$ref": "#/$defs/int" }, "rows": { "type": "array", "items": { "type": "string" }, "description": "One string per pixel row. Each char is a legend key; \".\" keeps, \"_\" erases." }, "legend": { "type": "object", "additionalProperties": { "$ref": "#/$defs/color" } } } } },
+        { "if": { "properties": { "op": { "const": "points" } } }, "then": { "required": ["target", "points", "color"], "properties": { "target": { "$ref": "#/$defs/selector" }, "points": { "type": "array", "items": { "$ref": "#/$defs/point" } }, "color": { "$ref": "#/$defs/color" } } } },
+        { "if": { "properties": { "op": { "const": "line" } } }, "then": { "required": ["target", "from", "to", "color"], "properties": { "target": { "$ref": "#/$defs/selector" }, "from": { "$ref": "#/$defs/point" }, "to": { "$ref": "#/$defs/point" }, "color": { "$ref": "#/$defs/color" } } } },
+        { "if": { "properties": { "op": { "const": "gradient" } } }, "then": { "required": ["target", "from", "to"], "properties": { "target": { "$ref": "#/$defs/selector" }, "from": { "$ref": "#/$defs/color" }, "to": { "$ref": "#/$defs/color" }, "direction": { "enum": ["vertical", "horizontal"], "default": "vertical" }, "steps": { "type": "integer", "minimum": 2, "maximum": 64 }, "x": { "$ref": "#/$defs/int" }, "y": { "$ref": "#/$defs/int" }, "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" } } } },
+        { "if": { "properties": { "op": { "const": "pattern" } } }, "then": { "required": ["target", "kind", "colors"], "properties": { "target": { "$ref": "#/$defs/selector" }, "kind": { "enum": ["checker", "stripes-h", "stripes-v", "diagonal"] }, "colors": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/color" } }, "size": { "type": "integer", "minimum": 1, "maximum": 16 }, "x": { "$ref": "#/$defs/int" }, "y": { "$ref": "#/$defs/int" }, "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" } } } },
+        { "if": { "properties": { "op": { "const": "noise" } } }, "then": { "required": ["target"], "anyOf": [{ "required": ["colors"] }, { "required": ["jitter"] }], "properties": { "target": { "$ref": "#/$defs/selector" }, "colors": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/color" } }, "density": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.2 }, "jitter": { "type": "number", "minimum": 0, "maximum": 50 }, "seed": { "type": "integer" }, "x": { "$ref": "#/$defs/int" }, "y": { "$ref": "#/$defs/int" }, "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" } } } },
+        { "if": { "properties": { "op": { "const": "shade" } } }, "then": { "required": ["target", "amount"], "properties": { "target": { "$ref": "#/$defs/selector" }, "amount": { "type": "number", "minimum": -100, "maximum": 100 }, "x": { "$ref": "#/$defs/int" }, "y": { "$ref": "#/$defs/int" }, "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" } } } },
+        { "if": { "properties": { "op": { "const": "copy" } } }, "then": { "required": ["from", "to"], "properties": { "from": { "type": "string", "description": "Selector resolving to exactly one face." }, "to": { "$ref": "#/$defs/selector" }, "flip": { "enum": ["h", "v", "hv"] } } } },
+        { "if": { "properties": { "op": { "const": "mirror" } } }, "then": { "required": ["from", "to"], "properties": { "from": { "enum": ["head", "body", "rightArm", "leftArm", "rightLeg", "leftLeg"] }, "to": { "enum": ["head", "body", "rightArm", "leftArm", "rightLeg", "leftLeg"] }, "layer": { "enum": ["base", "overlay", "both"], "default": "both" } } } },
+        { "if": { "properties": { "op": { "const": "symmetrize" } } }, "then": { "required": ["target"], "properties": { "target": { "$ref": "#/$defs/selector" }, "source": { "enum": ["left", "right"], "default": "left" } } } }
+      ]
+    }
+  }
+}

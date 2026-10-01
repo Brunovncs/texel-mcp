@@ -1,0 +1,132 @@
+/* ---- 3D skin model ------------------------------------------------------ */
+
+.sm-scene {
+  --u: 10px;
+  --yaw: -28deg;
+  --pitch: -12deg;
+  position: relative;
+  width: calc(var(--u) * 20);
+  height: calc(var(--u) * 36);
+  perspective: calc(var(--u) * 180);
+  cursor: grab;
+  user-select: none;
+}
+
+.sm-scene.is-offscreen,
+.sm-scene.is-offscreen * {
+  animation-play-state: paused !important;
+}
+
+.sm-scene.dragging {
+  cursor: grabbing;
+}
+
+.sm-figure {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--pitch)) rotateY(var(--yaw));
+}
+
+.sm-scene.spin .sm-figure {
+  animation: sm-spin 14s linear infinite;
+}
+
+@keyframes sm-spin {
+  from {
+    transform: rotateX(var(--pitch)) rotateY(var(--yaw));
+  }
+  to {
+    transform: rotateX(var(--pitch)) rotateY(calc(var(--yaw) + 360deg));
+  }
+}
+
+.sm-joint,
+.sm-swing,
+.sm-holder,
+.sm-box {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.sm-face {
+  position: absolute;
+  background-image: var(--skin);
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  backface-visibility: hidden;
+}
+
+.sm-overlay .sm-face {
+  backface-visibility: visible;
+}
+
+.sm-scene.no-overlay .sm-overlay {
+  display: none;
+}
+
+.sm-scene[data-anim='walk'] .sm-rightArm .sm-swing,
+.sm-scene[data-anim='walk'] .sm-leftLeg .sm-swing {
+  animation: sm-walk 1.1s ease-in-out infinite alternate;
+}
+
+.sm-scene[data-anim='walk'] .sm-leftArm .sm-swing,
+.sm-scene[data-anim='walk'] .sm-rightLeg .sm-swing {
+  animation: sm-walk 1.1s ease-in-out infinite alternate-reverse;
+}
+
+.sm-scene[data-anim='idle'] .sm-rightArm .sm-swing {
+  animation: sm-idle-r 3.2s ease-in-out infinite;
+}
+
+.sm-scene[data-anim='idle'] .sm-leftArm .sm-swing {
+  animation: sm-idle-l 3.2s ease-in-out infinite;
+}
+
+.sm-scene[data-anim='idle'] .sm-head .sm-swing {
+  animation: sm-look 6s ease-in-out infinite;
+}
+
+@keyframes sm-walk {
+  from {
+    transform: rotateX(32deg);
+  }
+  to {
+    transform: rotateX(-32deg);
+  }
+}
+
+@keyframes sm-idle-r {
+  50% {
+    transform: rotateZ(4deg) rotateX(3deg);
+  }
+}
+
+@keyframes sm-idle-l {
+  50% {
+    transform: rotateZ(-4deg) rotateX(-3deg);
+  }
+}
+
+@keyframes sm-look {
+  30% {
+    transform: rotateY(14deg) rotateX(-4deg);
+  }
+  70% {
+    transform: rotateY(-10deg) rotateX(3deg);
+  }
+}
+
+.stage-floor {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  width: 70%;
+  height: 12%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(var(--accent-rgb) / 0.28), transparent);
+  filter: blur(6px);
+  pointer-events: none;
+}

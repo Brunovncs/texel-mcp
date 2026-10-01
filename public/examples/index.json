@@ -1,0 +1,11 @@
+{
+  "examples": [
+    { "id": "explorer", "name": "Explorer", "model": "classic", "url": "/examples/explorer.json", "teaches": ["fill-then-detail", "pixels face", "copy with flip", "mirror limbs", "overlay strap"] },
+    { "id": "knight", "name": "Knight", "model": "classic", "url": "/examples/knight.json", "teaches": ["helmet on hat layer", "clear to reveal base", "gradient shading", "pattern chainmail"] },
+    { "id": "robot", "name": "Unit-7", "model": "classic", "url": "/examples/robot.json", "teaches": ["noise grain", "screen face", "stripes vents", "joint bands"] },
+    { "id": "astronaut", "name": "Astronaut", "model": "slim", "url": "/examples/astronaut.json", "teaches": ["slim arms", "full-face visor", "asymmetric detail after mirror", "backpack overlay"] }
+  ],
+  "families": [
+    { "id": "guild", "name": "Guild uniforms", "members": 6, "url": "/examples/families/guild.json", "teaches": ["matrix axes", "palette overrides", "layer ids toggled per variant"] }
+  ]
+}

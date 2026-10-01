@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "/schema/skinfamily.v1.json",
+  "title": "Skinsmith skin family v1",
+  "description": "Many related skins from one base spec: explicit variants and/or a cartesian matrix of axes. Docs: /docs/families.md",
+  "type": "object",
+  "required": ["version", "kind", "base"],
+  "additionalProperties": false,
+  "anyOf": [{ "required": ["variants"] }, { "required": ["matrix"] }],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "kind": { "const": "family" },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "base": { "$ref": "/schema/skinspec.v1.json" },
+    "variants": {
+      "type": "object",
+      "description": "Member id → patch.",
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]*$" },
+      "additionalProperties": { "$ref": "#/$defs/patch" }
+    },
+    "matrix": {
+      "type": "object",
+      "description": "Axis name → { axis value → patch }. Members are the cartesian product; ids join values with '-'. At most 256 members.",
+      "additionalProperties": {
+        "type": "object",
+        "minProperties": 1,
+        "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "additionalProperties": { "$ref": "#/$defs/patch" }
+      }
+    }
+  },
+  "$defs": {
+    "patch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "model": { "enum": ["classic", "slim"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "palette": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Merged over the base palette." },
+        "legend": { "type": "object", "additionalProperties": { "type": "string" } },
+        "enable": { "type": "array", "items": { "type": "string" }, "description": "Base layer ids to enable." },
+        "disable": { "type": "array", "items": { "type": "string" }, "description": "Base layer ids to disable." },
+        "layers": { "type": "array", "items": { "type": "object" }, "description": "Layers appended after the base layers." }
+      }
+    }
+  }
+}

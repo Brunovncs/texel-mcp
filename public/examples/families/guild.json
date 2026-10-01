@@ -1,0 +1,78 @@
+{
+  "$schema": "/schema/skinfamily.v1.json",
+  "version": 1,
+  "kind": "family",
+  "name": "Guild uniforms",
+  "description": "Three guilds × two ranks from one base. Guilds recolor the uniform; captains add a cape and an insignia, recruits lose the trim.",
+  "base": {
+    "version": 1,
+    "name": "Guild member",
+    "model": "classic",
+    "palette": {
+      "skin": "#c98f63",
+      "skinShade": "skin:-8",
+      "hair": "#3a2718",
+      "hairLight": "hair:+8",
+      "eye": "#3b6fb6",
+      "primary": "#9b2f2f",
+      "primaryLight": "primary:+10",
+      "primaryDark": "primary:-12",
+      "trim": "#e0a940",
+      "belt": "#5b3a1f",
+      "pants": "#3b3530",
+      "boots": "#2a211c"
+    },
+    "legend": { "S": "skin", "s": "skinShade", "H": "hair", "h": "hairLight", "W": "#f2f2f2", "E": "eye", "M": "skin:-22" },
+    "layers": [
+      { "op": "fill", "target": "all", "color": "skin" },
+      { "op": "fill", "target": "head.top+back", "color": "hair" },
+      { "op": "noise", "target": "head.top+back", "colors": ["hairLight"], "density": 0.25, "seed": 3 },
+      {
+        "op": "pixels",
+        "target": "head.right",
+        "rows": ["HHHHHHHH", "HHHHHHHH", "HHHHHHHH", "HHHHHSSS", "HHHHSSSS", "HHHHssSS", "HHHSSSSS", "HHSSSSSS"]
+      },
+      { "op": "copy", "from": "head.right", "to": "head.left", "flip": "h" },
+      {
+        "op": "pixels",
+        "target": "head.front",
+        "id": "face",
+        "rows": ["HHHHHHHH", "HhHHHHhH", "HHSSSSHH", "SHHSSHHS", "SWESSEWS", "SSSssSSS", "SSSMMSSS", "SSSSSSSS"]
+      },
+      { "op": "fill", "target": "head.bottom", "color": "skinShade" },
+      { "op": "fill", "target": "body", "color": "primary" },
+      { "op": "gradient", "target": "body.sides", "h": 9, "from": "primaryLight", "to": "primaryDark", "steps": 4 },
+      { "op": "rect", "target": "body.sides", "y": 9, "h": 1, "color": "belt" },
+      { "op": "points", "target": "body.front", "points": [[3, 9], [4, 9]], "color": "trim" },
+      { "op": "rect", "target": "body.sides", "y": 10, "color": "pants" },
+      { "op": "rect", "target": "rightArm.sides", "h": 4, "color": "primary" },
+      { "op": "fill", "target": "rightArm.top", "color": "primary" },
+      { "op": "shade", "target": "rightArm.back+left", "amount": -7 },
+      { "op": "shade", "target": "rightArm.sides", "y": -1, "amount": -8 },
+      { "op": "fill", "target": "rightLeg", "color": "pants" },
+      { "op": "noise", "target": "rightLeg.sides", "h": 9, "jitter": 3, "seed": 11 },
+      { "op": "rect", "target": "rightLeg.sides", "y": -3, "color": "boots" },
+      { "op": "fill", "target": "rightLeg.bottom", "color": "boots:-8" },
+      { "op": "shade", "target": "rightLeg.back+left", "amount": -7 },
+      { "op": "mirror", "from": "rightArm", "to": "leftArm" },
+      { "op": "mirror", "from": "rightLeg", "to": "leftLeg" },
+      { "op": "rect", "target": "body.sides", "h": 1, "color": "trim", "id": "trim", "note": "collar trim" },
+      { "op": "rect", "target": "arms.sides", "y": 3, "h": 1, "color": "trim", "id": "trim", "note": "sleeve cuffs" },
+      { "op": "fill", "target": "body.back@overlay", "color": "primaryDark", "id": "cape", "enabled": false },
+      { "op": "rect", "target": "body.back@overlay", "h": 1, "color": "trim", "id": "cape", "enabled": false },
+      { "op": "shade", "target": "body.back@overlay", "y": -2, "amount": -8, "id": "cape", "enabled": false },
+      { "op": "points", "target": "body.front@overlay", "points": [[5, 2], [6, 2], [5, 3], [6, 3]], "color": "trim", "id": "insignia", "enabled": false }
+    ]
+  },
+  "matrix": {
+    "guild": {
+      "ember": { "name": "Ember", "palette": { "primary": "#9b2f2f", "trim": "#e0a940" } },
+      "tide": { "name": "Tide", "palette": { "primary": "#2c5d9b", "trim": "#d5dde8" } },
+      "grove": { "name": "Grove", "palette": { "primary": "#3d7a3a", "trim": "#cdb070" } }
+    },
+    "rank": {
+      "recruit": { "name": "Recruit", "disable": ["trim"] },
+      "captain": { "name": "Captain", "enable": ["cape", "insignia"] }
+    }
+  }
+}

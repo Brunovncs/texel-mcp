@@ -1,0 +1,72 @@
+{
+  "$schema": "/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Unit-7",
+  "description": "Brushed-metal robot with a screen face, glowing cyan eyes and a chest control panel.",
+  "author": "skinsmith",
+  "tags": ["classic", "robot", "sci-fi"],
+  "model": "classic",
+  "palette": {
+    "metal": "#b8c0c8",
+    "metalDark": "metal:-18",
+    "metalDeep": "metal:-34",
+    "screen": "#141c26",
+    "glow": "#39e5ff",
+    "glowDim": "glow:-22",
+    "red": "#ff4d4d",
+    "joint": "#3a414a",
+    "panel": "#6b7785"
+  },
+  "legend": {
+    "M": "metal",
+    "m": "metalDark",
+    "K": "screen",
+    "G": "glow",
+    "g": "glowDim",
+    "R": "red",
+    "P": "panel",
+    "J": "joint"
+  },
+  "layers": [
+    { "op": "fill", "target": "all", "color": "metal" },
+    { "op": "noise", "target": "all", "jitter": 3, "seed": 42, "note": "brushed metal grain" },
+    {
+      "op": "pixels",
+      "target": "head.front",
+      "rows": [
+        "mMMMMMMm",
+        "MKKKKKKM",
+        "MKGKKGKM",
+        "MKGKKGKM",
+        "MKKKKKKM",
+        "MKggggKM",
+        "MKKKKKKM",
+        "mmmmmmmm"
+      ]
+    },
+    { "op": "pixels", "target": "head.left+right", "x": 3, "y": 3, "rows": ["mm", "mG"] },
+    { "op": "rect", "target": "head.back", "x": 1, "y": 2, "w": 6, "h": 4, "color": "panel" },
+    { "op": "pattern", "target": "head.back", "x": 2, "y": 3, "w": 4, "h": 2, "kind": "stripes-h", "colors": ["metalDeep", "panel"] },
+    { "op": "shade", "target": "head.sides", "y": -1, "amount": -10 },
+    { "op": "fill", "target": "head.bottom", "color": "joint" },
+    { "op": "rect", "target": "body.front", "x": 1, "y": 1, "w": 6, "h": 5, "color": "panel" },
+    { "op": "pixels", "target": "body.front", "x": 2, "y": 2, "rows": ["GJRJ", "JJJJ", "gggg"] },
+    { "op": "pattern", "target": "body.front+back", "y": 7, "h": 3, "x": 1, "w": 6, "kind": "stripes-h", "colors": ["metalDeep", "metal"] },
+    { "op": "rect", "target": "body.sides", "y": 10, "h": 1, "color": "joint" },
+    { "op": "shade", "target": "body.front+back", "x": 0, "w": 1, "amount": -8 },
+    { "op": "shade", "target": "body.front+back", "x": -1, "w": 1, "amount": -8 },
+    { "op": "rect", "target": "rightArm.sides", "y": 4, "h": 1, "color": "joint" },
+    { "op": "rect", "target": "rightArm.sides", "y": 8, "h": 1, "color": "joint" },
+    { "op": "rect", "target": "rightArm.sides", "y": -2, "color": "metalDark" },
+    { "op": "fill", "target": "rightArm.bottom", "color": "metalDeep" },
+    { "op": "points", "target": "rightArm.front", "points": [[1, 1], [2, 1]], "color": "glow" },
+    { "op": "rect", "target": "rightLeg.sides", "y": 5, "h": 1, "color": "joint" },
+    { "op": "rect", "target": "rightLeg.sides", "y": -2, "color": "metalDeep" },
+    { "op": "fill", "target": "rightLeg.bottom", "color": "joint" },
+    { "op": "shade", "target": "rightArm.back+left", "amount": -8 },
+    { "op": "shade", "target": "rightLeg.back+left", "amount": -8 },
+    { "op": "mirror", "from": "rightArm", "to": "leftArm" },
+    { "op": "mirror", "from": "rightLeg", "to": "leftLeg" },
+    { "op": "points", "target": "head.top@overlay", "points": [[3, 3], [4, 3], [3, 4], [4, 4]], "color": "red", "note": "beacon light" }
+  ]
+}

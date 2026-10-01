@@ -1,0 +1,45 @@
+import { allFaceRefs, faceRect, refName, SKIN_SIZE } from './layout';
+import type { Image, Model } from './types';
+
+export interface FaceChange {
+  face: string;
+  changed: number;
+  total: number;
+}
+
+export interface TextureDiff {
+  changedPixels: number;
+  faces: FaceChange[];
+  /** Same size as the texture: changed pixels opaque magenta, unchanged transparent. */
+  mask: Image;
+}
+
+/** Pixel-level diff of two textures, grouped by face — lets an agent verify a patch touched only what it meant to. */
+export function diffTextures(before: Image, after: Image, model: Model): TextureDiff {
+  const mask: Image = { width: SKIN_SIZE, height: SKIN_SIZE, data: new Uint8ClampedArray(SKIN_SIZE * SKIN_SIZE * 4) };
+  const faces: FaceChange[] = [];
+  let changedPixels = 0;
+  for (const ref of allFaceRefs()) {
+    const r = faceRect(ref.part, ref.face, ref.layer, model);
+    let changed = 0;
+    for (let y = r.y; y < r.y + r.h; y++)
+      for (let x = r.x; x < r.x + r.w; x++) {
+        const i = (y * SKIN_SIZE + x) * 4;
+        const a = before.data, b = after.data;
+        const same = a[i + 3] === 0 && b[i + 3] === 0 ? true : a[i] === b[i] && a[i + 1] === b[i + 1] && a[i + 2] === b[i + 2] && a[i + 3] === b[i + 3];
+        if (!same) {
+          changed++;
+          mask.data.set([255, 0, 255, 255], i);
+        }
+      }
+    if (changed) faces.push({ face: refName(ref), changed, total: r.w * r.h });
+    changedPixels += changed;
+  }
+  faces.sort((a, b) => b.changed - a.changed);
+  return { changedPixels, faces, mask };
+}
+
+export function diffToMarkdown(d: TextureDiff): string {
+  if (!d.changedPixels) return 'No pixels changed.';
+  return [`${d.changedPixels} pixel(s) changed across ${d.faces.length} face(s):`, ...d.faces.map((f) => `- \`${f.face}\`: ${f.changed}/${f.total}`)].join('\n');
+}

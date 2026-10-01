@@ -1,0 +1,11 @@
+{
+  "name": "skinsmith",
+  "owner": { "name": "Bruno Veronez" },
+  "plugins": [
+    {
+      "name": "skinsmith",
+      "source": "./plugin",
+      "description": "Minecraft skin design tools: MCP server with 3D viewer and the minecraft-skin-design skill."
+    }
+  ]
+}
