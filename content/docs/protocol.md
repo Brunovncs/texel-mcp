@@ -90,6 +90,10 @@ Deliver three things:
 2. The **PNG** (CLI `build` output, `texel_save`, or `texel.download()`), uploaded at minecraft.net or any launcher with the model (classic/slim) matching `model`.
 3. The **spec JSON**, the editable source. Give the file path; paste the JSON into the chat only when you cannot save files.
 
+### Continuing a skin
+
+Asked to change an existing skin, start from its link: `node texel.mjs pull <link> -o skin.json` (MCP: `texel_pull`), keep a copy of the original, go live, and change only what was asked by patching the layers involved. Check with `diff` that nothing else moved, and ship a new link: links are immutable, so every version has its own.
+
 ## Contract
 
 - Compilation is deterministic: same spec → same PNG, byte for byte, in every interface.

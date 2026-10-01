@@ -16,6 +16,7 @@ import {
   review,
   reviewToMarkdown,
   scaleImage,
+  resolveShareLink,
   shareURL,
   textureToSpec,
   type CompileResult,
@@ -198,6 +199,27 @@ Give this URL to the user. Each texel_render now updates their studio tab (${liv
   );
 
   server.registerTool(
+    'texel_pull',
+    {
+      title: 'Load skin from link',
+      description: `Load the spec behind a Texel share link (${SITE_ORIGIN}/s/<id>, a bare id, or a long studio link with #z= / #spec=) so you can keep developing an existing skin. Returns the spec JSON.`,
+      inputSchema: z.object({ link: z.string().min(1).describe('A share link or short id.') }),
+      outputSchema: z.object({ spec: z.record(z.string(), z.unknown()) }),
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+    },
+    async ({ link }) => {
+      const text = await resolveShareLink(link, SITE_ORIGIN);
+      let spec: Record<string, unknown>;
+      try {
+        spec = JSON.parse(text ?? '');
+      } catch {
+        return toolError(`Could not load a spec from "${link}".`);
+      }
+      return { content: [textBlock(`\`\`\`json\n${formatSpec(spec)}\`\`\``)], structuredContent: { spec } };
+    },
+  );
+
+  server.registerTool(
     'texel_render_family',
     {
       title: 'Render skin family',
@@ -375,6 +397,26 @@ Give this URL to the user. Each texel_render now updates their studio tab (${liv
           content: {
             type: 'text' as const,
             text: `Design a Minecraft skin with Texel.\n\nBrief: ${brief}\nModel: ${model ?? 'your choice (classic = 4px arms, slim = 3px)'}\n\n1. Read texel://docs/spec and texel://docs/art-guide (or call texel_read_docs).\n2. Call texel_live and give me the URL, so I can watch every render.\n3. Put the brief in "description", in the language I wrote it in (answer me in it too). Decide whatever the brief leaves open and state your choices in one line instead of asking. Define the palette first: 2–4 tones per material.\n4. Draft layers broad → fine, texture (gradient/shade/noise) before small details. Give layers you may revisit an "id".\n5. Call texel_render. Fix every error and warning. Then judge the sheet image against rubric R1–R8 in texel://docs/protocol.\n6. Patch the weakest area and render again; use texel_diff to confirm what changed. Stop when R1–R8 pass (≈3–6 iterations).\n7. Save with texel_save (sheet: true), call texel_share, and report the link, the files and the final score.`,
+          },
+        },
+      ],
+    }),
+  );
+
+  server.registerPrompt(
+    'continue_skin',
+    {
+      title: 'Continue a skin',
+      description: 'Keep developing an existing skin from its share link, changing only what is asked.',
+      argsSchema: z.object({ link: z.string().describe('The skin share link (/s/<id>) or id.'), change: z.string().describe('What should change.') }),
+    },
+    ({ link, change }) => ({
+      messages: [
+        {
+          role: 'user' as const,
+          content: {
+            type: 'text' as const,
+            text: `Keep working on this Texel skin: ${link}\n\nWhat I want changed: ${change}\n\n1. Load it with texel_pull and keep the original for comparison.\n2. Call texel_live and give me the URL, so I can watch every render.\n3. Say in one line what you'll change, then patch only the layers involved (use their ids); leave everything else as it is.\n4. texel_render after each patch, judge the sheet against rubric R1–R8 in texel://docs/protocol, and use texel_diff against the original to confirm only the intended faces changed.\n5. Save with texel_save (sheet: true), call texel_share, and give me the new link and the files. Answer in the language of my request.`,
           },
         },
       ],

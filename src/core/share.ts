@@ -62,6 +62,29 @@ export async function shareURL(site: string, json: string): Promise<{ url: strin
   return short ? { url: short, short: true } : { url: await longShareURL(site, json), short: false };
 }
 
+const SHORT_ID = /^[A-Za-z0-9_-]{10}$/;
+
+/**
+ * Resolve any Texel link to its spec JSON: a short link (`/s/<id>`), a bare id, or a studio link
+ * carrying the spec in its hash (`#z=` / `#spec=`). Returns null when it can't be resolved.
+ */
+export async function resolveShareLink(link: string, defaultSite: string): Promise<string | null> {
+  const text = link.trim();
+  if (SHORT_ID.test(text)) return fetchSharedSpec(defaultSite, text);
+  let url: URL;
+  try {
+    url = new URL(text);
+  } catch {
+    return null;
+  }
+  const id = /^\/s\/([A-Za-z0-9_-]{10})\/?$/.exec(url.pathname)?.[1] ?? url.searchParams.get('s');
+  if (id) return fetchSharedSpec(url.origin, id);
+  const hash = new URLSearchParams(url.hash.replace(/^#/, ''));
+  const z = hash.get('z');
+  if (z) return decodeShare(z).catch(() => null);
+  return hash.get('spec');
+}
+
 /** Load a short-link spec by id. */
 export async function fetchSharedSpec(site: string, id: string): Promise<string | null> {
   try {

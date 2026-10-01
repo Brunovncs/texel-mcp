@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compile, decodeShare, encodeShare, longShareURL, review, type SkinSpec } from '../src/core';
+import { compile, decodeShare, encodeShare, longShareURL, resolveShareLink, review, type SkinSpec } from '../src/core';
 import { startLive } from '../src/live/server';
 
 const base = (layers: SkinSpec['layers'], extra: Partial<SkinSpec> = {}): SkinSpec => ({ version: 1, layers, ...extra });
@@ -41,6 +41,15 @@ describe('share links', () => {
     const json = JSON.stringify(base([{ op: 'fill', target: 'all', color: '#123456' }]));
     expect(await decodeShare(await encodeShare(json))).toBe(json);
     expect(await longShareURL('https://example.test', json)).toMatch(/^https:\/\/example\.test\/studio\/#z=/);
+  });
+});
+
+describe('resolveShareLink', () => {
+  it('turns long links back into their spec', async () => {
+    const json = JSON.stringify(base([{ op: 'fill', target: 'all', color: '#abcdef' }]));
+    expect(await resolveShareLink(await longShareURL('https://example.test', json), 'https://example.test')).toBe(json);
+    expect(await resolveShareLink(`https://example.test/studio/#spec=${encodeURIComponent(json)}`, 'https://example.test')).toBe(json);
+    expect(await resolveShareLink('not a link', 'https://example.test')).toBeNull();
   });
 });
 

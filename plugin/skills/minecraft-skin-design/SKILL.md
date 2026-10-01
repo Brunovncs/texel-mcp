@@ -21,6 +21,7 @@ node texel.mjs live spec.json --open          # background: the user watches eve
 node texel.mjs review spec.json               # issues + text render
 node texel.mjs build spec.json -o skin.png --sheet sheet.png
 node texel.mjs share spec.json                # short share link
+node texel.mjs pull <link> -o spec.json       # continue an existing skin from its link
 node texel.mjs family family.json -o skins/ --lineup lineup.png
 node texel.mjs import existing.png -o spec.json
 ```
@@ -38,6 +39,10 @@ Read `sheet.png` / `lineup.png` with your image-viewing tool to judge the result
    - R1 every brief feature visible · R2 face readable (eyes, brows, mouth) · R3 parts distinguishable by value · R4 light from above, darker undersides and inner faces · R5 no large flat areas · R6 back and sides designed · R7 overlay adds depth · R8 zero errors/warnings.
 6. **Patch the weakest item**, re-render, and use `texel_diff` to confirm the change touched only the intended faces. Stop when R1–R8 pass or after ~6 iterations.
 7. **Ship.** Save the PNG, the `.skin.json` source and the sheet, and create the short share link (`texel_share` / `texel.mjs share`). Give the user the link and the file paths (not the JSON itself), and how to upload the skin (minecraft.net → Profile → Skin, choosing classic or slim to match `model`).
+
+## Continuing an existing skin
+
+Given a share link (`/s/<id>`), load the spec (`texel_pull` or `texel.mjs pull <link> -o skin.json`), keep a copy of the original, go live, and change only what was asked: patch the layers involved by id, then use `texel_diff` / `texel.mjs diff` to confirm nothing else moved. Finish with a new share link (links are immutable; each version gets its own).
 
 ## Families
 

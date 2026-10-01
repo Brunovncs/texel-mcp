@@ -74,6 +74,7 @@ node texel.mjs review spec.json                 # markdown + text render
 node texel.mjs review spec.json --json          # machine-readable
 node texel.mjs live spec.json --open            # live session (see below)
 node texel.mjs share spec.json                  # short share link
+node texel.mjs pull <link> -o spec.json         # spec behind a share link
 cat spec.json | node texel.mjs build - -o skin.png
 ```
 
@@ -102,6 +103,8 @@ With MCP, call `texel_live` once; each `texel_render` is pushed to the open tab.
 | `GET /api/s/?id=<id>` | The spec JSON |
 
 When the service is unreachable every interface falls back to the long, self-contained `/studio/#z=` link (`share --long` forces it).
+
+To keep developing a shared skin, `node texel.mjs pull <link> -o skin.json` (MCP: `texel_pull`) turns any link back into its spec. The studio's *Keep working on it with an agent* box writes a ready-made prompt for that: the skin's link plus what should change.
 
 ## 7. Machine-readable manifest
 

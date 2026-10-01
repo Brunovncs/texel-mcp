@@ -38,6 +38,7 @@ Files are written to the directory the server runs in. Pin it with `--env TEXEL_
 | tool | `texel_render` | Compile + review; returns the review sheet image. Opens the 3D viewer in MCP Apps hosts. |
 | tool | `texel_live` | Start a live session: returns a studio URL where the person watches every `texel_render`. |
 | tool | `texel_share` | Short share link (`/s/<id>`) for a spec. |
+| tool | `texel_pull` | The spec behind a share link, to keep developing an existing skin. |
 | tool | `texel_validate` | Fast error check, no images. |
 | tool | `texel_save` | Write `.png`, `.skin.json` and optional sheet to the workspace. |
 | tool | `texel_render_family` | Expand a family; lineup image + per-member scores. |
@@ -47,7 +48,7 @@ Files are written to the directory the server runs in. Pin it with `--env TEXEL_
 | tool | `texel_get_example`, `texel_read_docs` | Offline examples and docs. |
 | resource | `texel://docs/{page}`, `texel://examples/{id}`, `texel://schema/{name}` | Same content as resources. |
 | resource | `ui://texel/viewer` | MCP App: interactive 3D preview with a feedback box that posts back to the chat. |
-| prompt | `design_skin`, `design_family`, `critique_skin` | Protocol runbooks with arguments. |
+| prompt | `design_skin`, `continue_skin`, `design_family`, `critique_skin` | Protocol runbooks with arguments. |
 
 All write tools are confined to the workspace directory; paths outside it are rejected.
 

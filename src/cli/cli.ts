@@ -11,6 +11,7 @@ import {
   formatSpec,
   longShareURL,
   PROTOCOL,
+  resolveShareLink,
   renderLineup,
   renderSheet,
   review,
@@ -32,12 +33,14 @@ usage:
   node texel.mjs import <skin.png> [-o spec.json]
   node texel.mjs diff   <before.json> <after.json>
   node texel.mjs share  <spec.json|-> [--long]
+  node texel.mjs pull   <link|id> [-o skin.json]
   node texel.mjs format <spec.json|->
   node texel.mjs init
 
 live   serves the spec to the studio and re-pushes it on every save, so the user can watch while
        you work. Run it in the background, give the user the printed URL, then just edit the file.
 share  prints a short link (${SITE_ORIGIN}/s/<id>) that opens the skin in the studio.
+pull   downloads the spec behind a share link (short /s/<id> or long #z= link) to keep editing it.
 
 "-" reads the spec from stdin. Exit code is 1 when the spec has errors.
 Docs: /llms.txt · /docs/spec.md · /docs/protocol.md`;
@@ -188,6 +191,23 @@ async function main(argv: string[]) {
       const { url, short } = await shareURL(SITE_ORIGIN, text);
       process.stdout.write(`${url}\n`);
       if (!short) process.stderr.write('note: the share service was unreachable, so this is a long self-contained link\n');
+      return;
+    }
+    case 'pull': {
+      if (!file) fail('pull needs a share link or id');
+      const text = await resolveShareLink(file, SITE_ORIGIN);
+      if (!text) fail(`could not load a spec from "${file}"`);
+      let formatted: string;
+      try {
+        formatted = formatSpec(JSON.parse(text));
+      } catch {
+        fail('the link did not contain a valid spec');
+      }
+      const out = flag(rest, '-o');
+      if (out) {
+        writeFileSync(out, formatted);
+        process.stderr.write(`wrote ${out} (${summary(formatted)})\n`);
+      } else process.stdout.write(formatted);
       return;
     }
     case 'format': {
