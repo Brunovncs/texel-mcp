@@ -1,6 +1,17 @@
 # Install as a tool
 
-> Give any agent native Texel tools: an MCP server (with an interactive 3D viewer for MCP Apps hosts), a Claude Code plugin, and a portable Agent Skill.
+> Give any agent native Texel tools: a portable Agent Skill and an MCP server (with an interactive 3D viewer for MCP Apps hosts). The quickest route is the prompt on the [developer page](/developers/): paste it into your agent and it installs the skill itself.
+
+## Agent Skill
+
+The [`minecraft-skin-design`](/skills/minecraft-skin-design/SKILL.md) skill follows the open Agent Skills format (a `SKILL.md` with `name` and `description` frontmatter). It teaches the protocol and works with either the MCP tools or the CLI. Save it in your agent's skills directory; for Claude Code:
+
+```bash
+mkdir -p ~/.claude/skills/minecraft-skin-design
+curl -o ~/.claude/skills/minecraft-skin-design/SKILL.md https://<site>/skills/minecraft-skin-design/SKILL.md
+```
+
+Agents without skill support can read [`/agent.md`](/agent.md) instead: the protocol, spec reference and art guide in one file.
 
 ## MCP server
 
@@ -51,16 +62,3 @@ Files are written to the directory the server runs in. Pin it with `--env TEXEL_
 | prompt | `design_skin`, `continue_skin`, `design_family`, `critique_skin` | Protocol runbooks with arguments. |
 
 All write tools are confined to the workspace directory; paths outside it are rejected.
-
-## Claude Code plugin
-
-The repository is also a plugin marketplace. The plugin bundles the MCP server and the `minecraft-skin-design` skill:
-
-```bash
-claude plugin marketplace add Brunovncs/texel
-claude plugin install texel@texel
-```
-
-## Agent Skill
-
-The [`minecraft-skin-design`](/skills/minecraft-skin-design/SKILL.md) skill follows the open Agent Skills format (a `SKILL.md` with `name` and `description` frontmatter). Copy the folder into your agent's skills directory. For Claude Code, `~/.claude/skills/minecraft-skin-design/`. It teaches the protocol and works with either the MCP tools or the CLI.
