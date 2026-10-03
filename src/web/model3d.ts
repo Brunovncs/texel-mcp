@@ -1,5 +1,5 @@
 import { type BoxDef, FACES, type Rig, rigFor } from '../core/layout';
-import type { FaceName, LayerName, Model, PartName } from '../core/types';
+import type { FaceName, LayerName, Model, PartName, Rect } from '../core/types';
 
 /** Pivot (joint) position in skin pixels, origin at the top-center of the head; plus box center offset from the pivot. */
 function rig(model: Model): Record<PartName, { pivot: [number, number]; offset: number }> {
@@ -62,9 +62,28 @@ function buildBox(rig: Rig, part: PartName, layer: LayerName, opts: { mirror?: b
       `background-position:${u(-r.x * sx)} ${u(-r.y * sy)}`,
       `transform:${faceTransform(face, w, h, d)}${flip ? ' scaleX(-1)' : ''}`,
     ].join(';');
+    if (r.m) el.append(turnedTexture(rig, r, sx, sy));
     box.appendChild(el);
   }
   return box;
+}
+
+/**
+ * A face of a turned part shows its texels turned too: the whole texture on an inner layer, mapped
+ * onto the face by the inverse of the face's texel map (a signed permutation, so its transpose).
+ */
+function turnedTexture(rig: Rig, r: Rect, sx: number, sy: number): HTMLElement {
+  const [a, b, c, d] = r.m!;
+  // Texture position of the face's (0, 0) corner: pixel centers map to pixel centers.
+  const cx = r.x + 0.5 - (a + b) / 2, cy = r.y + 0.5 - (c + d) / 2;
+  const inner = document.createElement('div');
+  inner.className = 'sm-face-texture';
+  inner.style.cssText = [
+    `width:${u(rig.width)}`,
+    `height:${u(rig.height)}`,
+    `transform:translate(${u(-sx * (a * cx + c * cy))}, ${u(-sy * (b * cx + d * cy))}) matrix(${sx * a}, ${sy * b}, ${sx * c}, ${sy * d}, 0, 0)`,
+  ].join(';');
+  return inner;
 }
 
 /** Pauses animations of models scrolled out of view. */

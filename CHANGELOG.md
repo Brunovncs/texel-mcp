@@ -2,6 +2,10 @@
 
 Each release's section is published as `notes` in `/version.json`, and installed tools show it in their update notice, so the agent knows what changed and whether to redo anything. Keep it to one or two lines, and say whether specs still render the same PNGs. A test fails when the current version has no section.
 
+## 0.4.0
+
+New layouts: `piglin` (also zombified piglin and brute), `pig` (temperate, warm and cold, with the cold pig's fur as body@overlay) and `cow` (temperate cow and mooshrooms). A pig's or cow's body lies along the animal, and its faces are named and drawn the way they face in game (`body.top` is the back). Two new examples: `winged-pig` (wings across faces with symmetrize and copy, a one-color body kept apart by value) and `mud-pig` (the pig layout). Art checks: R3 also weighs arms against the torso, and any weak check keeps the art score under 90. Specs for the existing layouts render the same PNGs; their art scores may shift a little.
+
 ## 0.3.5
 
 Docs and skill only. The art guide says how R3 measures (front faces, overlay included, passing at a gap of about 6 points, arms not measured) and how to paint ice and glass; the skill no longer reads `mirror` as mandatory for limbs that differ on purpose. Compiler unchanged.

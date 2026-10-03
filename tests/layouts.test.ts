@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { compile, diffTextures, LAYOUT_IDS, LAYOUTS, layoutsToMarkdown, polish, renderLineup, renderSheet, renderView, review, rigFor, textureToSpec, viewsOf, type SkinSpec } from '../src/core';
+import { compile, diffTextures, LAYOUT_IDS, LAYOUTS, layoutsToMarkdown, polish, renderLineup, renderSheet, renderView, review, locate, rigFor, texel, textureToSpec, viewsOf, type SkinSpec } from '../src/core';
 
 const spec = (layout: string, layers: SkinSpec['layers'], extra: Partial<SkinSpec> = {}): SkinSpec => ({ version: 1, layout, layers, ...extra });
 const px = (img: { width: number; data: Uint8ClampedArray }, x: number, y: number) => Array.from(img.data.subarray((y * img.width + x) * 4, (y * img.width + x) * 4 + 4));
@@ -25,6 +25,50 @@ describe('layouts', () => {
     expect(rect('cape', 'cape', 'front')).toEqual({ x: 1, y: 1, w: 10, h: 16 });
     expect(rect('cape', 'elytra', 'front')).toEqual({ x: 24, y: 2, w: 10, h: 20 });
     expect(rect('item', 'item', 'front')).toEqual({ x: 0, y: 0, w: 16, h: 16 });
+    expect(rect('piglin', 'head', 'front')).toEqual({ x: 8, y: 8, w: 10, h: 8 });
+    expect(rect('piglin', 'snout', 'front')).toEqual({ x: 32, y: 2, w: 4, h: 4 });
+    expect(rect('piglin', 'leftEar', 'right')).toEqual({ x: 51, y: 10, w: 4, h: 5 });
+    expect(rect('pig', 'snout', 'front')).toEqual({ x: 17, y: 17, w: 4, h: 3 });
+    expect(rect('pig', 'leg', 'front')).toEqual({ x: 4, y: 20, w: 4, h: 6 });
+    expect(rect('cow', 'head', 'front')).toEqual({ x: 6, y: 6, w: 8, h: 8 });
+    expect(rect('cow', 'muzzle', 'front')).toEqual({ x: 2, y: 34, w: 6, h: 3 });
+  });
+
+  it('name a lying body\'s faces the way they face in game', () => {
+    // Pig body: texture box 10×16×8 at (28, 8), turned 90° about x. Each face of the animal reads
+    // from the texture face Java puts there: back → texture back, chest → top, rump → bottom, belly → front.
+    const rig = rigFor('pig');
+    const region = (face: 'top' | 'front' | 'back' | 'bottom' | 'right' | 'left') => {
+      const r = rig.faceRect('body', face, 'base');
+      const xs: number[] = [], ys: number[] = [];
+      for (let y = 0; y < r.h; y++) for (let x = 0; x < r.w; x++) { const [tx, ty] = texel(r, x, y); xs.push(tx); ys.push(ty); }
+      return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs) + 1, h: Math.max(...ys) - Math.min(...ys) + 1, size: [r.w, r.h] };
+    };
+    expect(region('top')).toEqual({ x: 54, y: 16, w: 10, h: 16, size: [10, 16] });
+    expect(region('front')).toEqual({ x: 36, y: 8, w: 10, h: 8, size: [10, 8] });
+    expect(region('back')).toEqual({ x: 46, y: 8, w: 10, h: 8, size: [10, 8] });
+    expect(region('bottom')).toEqual({ x: 36, y: 16, w: 10, h: 16, size: [10, 16] });
+    expect(region('right')).toEqual({ x: 28, y: 16, w: 8, h: 16, size: [16, 8] });
+    expect(region('left')).toEqual({ x: 46, y: 16, w: 8, h: 16, size: [16, 8] });
+    expect(rig.part('body')!.box).toEqual([10, 8, 16]);
+    // The right side's top row (front on the viewer's right, as on every right face) is the texture
+    // right face's first column, which runs from the head at its row 0 to the rump.
+    const right = rig.faceRect('body', 'right', 'base');
+    expect(texel(right, 15, 0)).toEqual([28, 16]);
+    expect(texel(right, 0, 0)).toEqual([28, 31]);
+    expect(texel(right, 15, 7)).toEqual([35, 16]);
+    for (const ref of rig.refs()) {
+      const r = rig.faceRect(ref.part, ref.face, ref.layer);
+      for (const [x, y] of [[0, 0], [r.w - 1, 0], [0, r.h - 1], [r.w - 1, r.h - 1]]) expect(locate(...texel(r, x, y), rig)).toMatchObject({ ...ref, x, y });
+    }
+  });
+
+  it('paint a lying body by its in-game faces', () => {
+    const c = compile(spec('pig', [{ op: 'fill', target: 'all', color: '#f0a0a0' }, { op: 'rect', target: 'body.top', y: 0, h: 1, color: '#000000' }]));
+    expect(c.ok).toBe(true);
+    // Row 0 of the back is at the rump: on the texture back face that is its last row, reversed.
+    for (let x = 54; x < 64; x++) expect(px(c.texture, x, 31)).toEqual([0, 0, 0, 255]);
+    expect(px(c.texture, 54, 16)).toEqual([240, 160, 160, 255]);
   });
 
   it('keep every face inside the texture, and base faces apart', () => {
@@ -33,10 +77,11 @@ describe('layouts', () => {
       const seen = new Map<number, string>();
       for (const ref of rig.refs()) {
         const r = rig.faceRect(ref.part, ref.face, ref.layer);
-        expect(r.x >= 0 && r.y >= 0 && r.x + r.w <= rig.width && r.y + r.h <= rig.height, `${id} ${ref.part}.${ref.face}@${ref.layer}`).toBe(true);
-        if (ref.layer !== 'base') continue;
-        for (let y = r.y; y < r.y + r.h; y++)
-          for (let x = r.x; x < r.x + r.w; x++) {
+        for (let ly = 0; ly < r.h; ly++)
+          for (let lx = 0; lx < r.w; lx++) {
+            const [x, y] = texel(r, lx, ly);
+            expect(x >= 0 && y >= 0 && x < rig.width && y < rig.height, `${id} ${ref.part}.${ref.face}@${ref.layer}`).toBe(true);
+            if (ref.layer !== 'base') continue;
             const k = y * rig.width + x;
             expect(seen.get(k), `${id}: ${ref.part}.${ref.face} overlaps ${seen.get(k)}`).toBeUndefined();
             seen.set(k, `${ref.part}.${ref.face}`);

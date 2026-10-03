@@ -1,5 +1,5 @@
 import { luminance, toHex } from './color';
-import { type Rig, rigFor } from './layout';
+import { type Rig, rigFor, texel } from './layout';
 import type { FaceName, Image, Model, PartName, RGBA } from './types';
 
 /**
@@ -38,14 +38,14 @@ const lstar = (c: RGBA) => {
 function seen(tex: Image, rig: Rig, part: PartName, face: FaceName): RGBA[][] {
   const b = rig.faceRect(part, face, 'base');
   const o = rig.hasLayer(part, 'overlay') ? rig.faceRect(part, face, 'overlay') : null;
-  const at = (x: number, y: number): RGBA => {
+  const at = ([x, y]: [number, number]): RGBA => {
     const i = (y * tex.width + x) * 4;
     return [tex.data[i], tex.data[i + 1], tex.data[i + 2], tex.data[i + 3]];
   };
   return Array.from({ length: b.h }, (_, y) =>
     Array.from({ length: b.w }, (_, x) => {
-      const top = o ? at(o.x + x, o.y + y) : ([0, 0, 0, 0] as RGBA);
-      return top[3] > 0 ? top : at(b.x + x, b.y + y);
+      const top = o ? at(texel(o, x, y)) : ([0, 0, 0, 0] as RGBA);
+      return top[3] > 0 ? top : at(texel(b, x, y));
     }),
   );
 }
@@ -86,11 +86,22 @@ export function artReview(tex: Image, model: Model | Rig, overlayPixels: number,
     const faceColors = distinct(middle);
     add('face', 'R2', 0.4 * clamp((faceColors - 1) / 4) + 0.6 * clamp((contrast - 10) / 25), `${faceColors} colors on the face, strongest eye-area contrast ${Math.round(contrast)}`, 'make the eyes pop: a light eye white next to a dark iris on row 4 (the "face" op does this), brows a row above, a mouth in a darker skin tone');
 
-    // R3: head, body and legs should differ in lightness so the silhouette reads.
+    // R3: head, body and legs should differ in lightness so the silhouette reads, and the arms should
+    // stand off the torso. Arms count for less: sleeves the color of the shirt are a normal design.
     const head = meanL(face), torso = meanL(seen(tex, rig, 'body', 'front'));
     const legL = mean(legs.map((p) => meanL(seen(tex, rig, p, 'front'))));
+    const arms = (rig.def.groups?.arms ?? []).filter((p) => rig.faces(p).includes('front'));
+    const armL = arms.length ? mean(arms.map((p) => meanL(seen(tex, rig, p, 'front')))) : null;
     const sep = [Math.abs(head - torso), Math.abs(torso - legL)];
-    add('silhouette', 'R3', mean(sep.map((d) => clamp(d / 10))), `lightness gap head↔body ${Math.round(sep[0])}, body↔legs ${Math.round(sep[1])}`, 'vary lightness between parts: e.g. darker pants than the shirt, or a lighter shirt than the jacket');
+    const armGap = armL === null ? null : Math.abs(armL - torso);
+    const parts = mean(sep.map((d) => clamp(d / 10)));
+    add(
+      'silhouette',
+      'R3',
+      armGap === null ? parts : 0.8 * parts + 0.2 * clamp(armGap / 6),
+      `lightness gap head↔body ${Math.round(sep[0])}, body↔legs ${Math.round(sep[1])}${armGap === null ? '' : `, arms↔body ${Math.round(armGap)}`}`,
+      'vary lightness between parts: e.g. darker pants than the shirt, or a lighter shirt than the jacket; on a one-color character, darken the limbs a step and keep the head lightest',
+    );
   }
 
   // R4: light from above, so the top rows of each side face are lighter than the bottom rows.
@@ -144,9 +155,14 @@ export function artReview(tex: Image, model: Model | Rig, overlayPixels: number,
   add('colors', 'color', colorsUsed < few[0] ? 0.2 : colorsUsed < few[1] ? 0.6 : 1, `${colorsUsed} colors`, 'give each material 2–4 tones: "cloth~1" (lighter, warmer) and "cloth~-1" (darker, cooler)');
 
   const total = checks.length === Object.keys(WEIGHTS).length ? 1 : checks.reduce((s, c) => s + WEIGHTS[c.id], 0);
-  const score = Math.round((100 * checks.reduce((s, c) => s + c.score * WEIGHTS[c.id], 0)) / total);
+  const mean100 = Math.round((100 * checks.reduce((s, c) => s + c.score * WEIGHTS[c.id], 0)) / total);
+  // A weak check keeps the score under 90, so 90+ always means nothing is weak (a weighted mean of
+  // six good checks would otherwise hide a flat silhouette at 94).
+  const score = checks.some((c) => c.score < ART_WEAK) ? Math.min(mean100, ART_CAP_WHEN_WEAK) : mean100;
   return { score, checks };
 }
 
 /** Art checks below this are worth a fix round. */
 export const ART_WEAK = 0.6;
+/** The highest art score while any check is weak. */
+export const ART_CAP_WHEN_WEAK = 89;

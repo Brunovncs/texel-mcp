@@ -18,6 +18,12 @@ export interface PartDef {
   uv: [number, number];
   /** UV origin of the overlay (hat/jacket) layer, if the layout has one for this part. */
   overlay?: [number, number];
+  /**
+   * The box lies turned 90° about x in game (Java xRot = π/2), like a quadruped's body: `box` is
+   * the texture box [w, h, d] and the model box is [w, d, h]. Faces are named as they face in game
+   * (top is the back of the animal, front its chest) and read upright through `texel`.
+   */
+  turned?: boolean;
 }
 
 export interface BoxDef {
@@ -247,6 +253,101 @@ const LAYOUT_LIST: LayoutDef[] = [
     note: 'head@overlay is the hat (the .png.mcmeta "hat" field decides whether it shows). hatRim lies flat around the hat. The arms are crossed in game; the views show them unrotated in front of the body.',
   },
   {
+    id: 'piglin',
+    title: 'Piglin (64×64)',
+    size: [64, 64],
+    parts: {
+      head: { box: [10, 8, 8], uv: [0, 0] },
+      snout: { box: [4, 4, 1], uv: [31, 1] },
+      rightTusk: { box: [1, 2, 1], uv: [2, 0] },
+      leftTusk: { box: [1, 2, 1], uv: [2, 4] },
+      rightEar: { box: [1, 5, 4], uv: [39, 6] },
+      leftEar: { box: [1, 5, 4], uv: [51, 6] },
+      body: { ...BODY, overlay: [16, 32] },
+      rightArm: { box: [4, 12, 4], uv: [40, 16], overlay: [40, 32] },
+      leftArm: { box: [4, 12, 4], uv: [32, 48], overlay: [48, 48] },
+      rightLeg: { box: [4, 12, 4], uv: [0, 16], overlay: [0, 32] },
+      leftLeg: { box: [4, 12, 4], uv: [16, 48], overlay: [0, 48] },
+    },
+    groups: {
+      arms: ['rightArm', 'leftArm'],
+      legs: ['rightLeg', 'leftLeg'],
+      limbs: ['rightArm', 'leftArm', 'rightLeg', 'leftLeg'],
+      ears: ['rightEar', 'leftEar'],
+      tusks: ['rightTusk', 'leftTusk'],
+    },
+    boxes: [
+      { part: 'head', at: [-5, -8, -4] },
+      { part: 'snout', at: [-2, -4, -5] },
+      { part: 'rightTusk', at: [-3, -2, -5] },
+      { part: 'leftTusk', at: [2, -2, -5] },
+      { part: 'rightEar', at: [-6, -6, -2] },
+      { part: 'leftEar', at: [5, -6, -2] },
+      { part: 'body', at: [-4, 0, -2] },
+      { part: 'rightArm', at: [-8, 0, -2] },
+      { part: 'leftArm', at: [4, 0, -2] },
+      { part: 'rightLeg', at: [-4, 12, -2] },
+      { part: 'leftLeg', at: [0, 12, -2] },
+    ],
+    character: true,
+    opaque: true,
+    usedBy: ['textures/entity/piglin/piglin.png', 'piglin_brute.png', 'zombified_piglin.png'],
+    note: 'A player body (classic arms, with jacket, sleeve and pant overlays) under a 10×8×8 head without a hat layer. The snout and the tusks sit on head.front; the ears hang angled 30° in game and the views show them straight down.',
+  },
+  {
+    id: 'pig',
+    title: 'Pig (64×64)',
+    size: [64, 64],
+    parts: {
+      head: { box: [8, 8, 8], uv: [0, 0] },
+      snout: { box: [4, 3, 1], uv: [16, 16] },
+      body: { box: [10, 16, 8], uv: [28, 8], overlay: [28, 32], turned: true },
+      leg: { box: [4, 6, 4], uv: [0, 16] },
+    },
+    groups: { legs: ['leg'] },
+    boxes: [
+      { part: 'head', at: [-4, 8, -14] },
+      { part: 'snout', at: [-2, 12, -15] },
+      { part: 'body', at: [-5, 10, -8] },
+      { part: 'leg', at: [-5, 18, 5] },
+      { part: 'leg', at: [1, 18, 5], mirror: true },
+      { part: 'leg', at: [-5, 18, -7] },
+      { part: 'leg', at: [1, 18, -7], mirror: true },
+    ],
+    opaque: true,
+    usedBy: ['textures/entity/pig/temperate_pig.png', 'warm_pig.png', 'cold_pig.png (body@overlay is its fur coat)', 'pig.png before 1.21.5 (64×32, the same UVs)'],
+    note: 'The body lies along the pig: body.top is its back, body.front the chest, body.back the rump, body.bottom the belly, all named and drawn the way they face in game. body@overlay is the cold pig\'s fur coat; leave it transparent for the others. All four legs share one texture; the left ones are mirrored.',
+  },
+  {
+    id: 'cow',
+    title: 'Cow and mooshroom (64×64)',
+    size: [64, 64],
+    parts: {
+      head: { box: [8, 8, 6], uv: [0, 0] },
+      muzzle: { box: [6, 3, 1], uv: [1, 33] },
+      horn: { box: [1, 3, 1], uv: [22, 0] },
+      body: { box: [12, 18, 10], uv: [18, 4], turned: true },
+      udder: { box: [4, 6, 1], uv: [52, 0], turned: true },
+      leg: { box: [4, 12, 4], uv: [0, 16] },
+    },
+    groups: { legs: ['leg'] },
+    boxes: [
+      { part: 'head', at: [-4, 0, -14] },
+      { part: 'muzzle', at: [-3, 5, -15] },
+      { part: 'horn', at: [-5, -1, -13] },
+      { part: 'horn', at: [4, -1, -13] },
+      { part: 'body', at: [-6, 2, -8] },
+      { part: 'udder', at: [-2, 12, 4] },
+      { part: 'leg', at: [-6, 12, 5] },
+      { part: 'leg', at: [2, 12, 5], mirror: true },
+      { part: 'leg', at: [-6, 12, -7] },
+      { part: 'leg', at: [2, 12, -7], mirror: true },
+    ],
+    opaque: true,
+    usedBy: ['textures/entity/cow/temperate_cow.png', 'red_mooshroom.png', 'brown_mooshroom.png', 'cow.png and mooshroom textures before 1.21.5'],
+    note: 'The body lies along the cow: body.top is its back, body.front the chest, body.back the rump, body.bottom the belly; the udder hangs under the belly. Both horns share one texture. The cold and warm cows of 1.21.5 have other horns (and the cold one a fur coat), which this layout does not cover.',
+  },
+  {
     id: 'cape',
     title: 'Cape and elytra (64×32)',
     size: [64, 32],
@@ -299,6 +400,13 @@ export const LAYOUT_ALIASES: Readonly<Record<string, string>> = {
   wither_skeleton: 'skeleton',
   bogged: 'skeleton',
   elytra: 'cape',
+  zombified_piglin: 'piglin',
+  piglin_brute: 'piglin',
+  temperate_pig: 'pig',
+  warm_pig: 'pig',
+  cold_pig: 'pig',
+  temperate_cow: 'cow',
+  mooshroom: 'cow',
 };
 
 export function resolveLayout(id: unknown): LayoutDef | null {
@@ -339,7 +447,12 @@ export function rigFor(layout: LayoutDef | string = 'player', model: Model = 'cl
   const cached = rigs.get(key);
   if (cached) return cached;
   const parts: Record<string, PartDef> = {};
-  for (const [name, p] of Object.entries(def.parts)) parts[name] = slim && SLIM[name] ? { ...p, ...SLIM[name] } : p;
+  const texBox: Record<string, [number, number, number]> = {};
+  for (const [name, p] of Object.entries(def.parts)) {
+    const part = slim && SLIM[name] ? { ...p, ...SLIM[name] } : p;
+    texBox[name] = part.box;
+    parts[name] = part.turned ? { ...part, box: [part.box[0], part.box[2], part.box[1]] } : part;
+  }
   const boxes = slim ? def.boxes.map((b) => (SLIM_BOXES[b.part] ? { ...b, at: SLIM_BOXES[b.part] } : b)) : def.boxes;
   const names = Object.keys(parts);
   const faces = (part: PartName) => (parts[part]?.box[2] === 0 ? FLAT_FACES : FACES);
@@ -357,7 +470,7 @@ export function rigFor(layout: LayoutDef | string = 'player', model: Model = 'cl
     faceRect(part, face, layer) {
       const p = parts[part];
       const [u, v] = layer === 'overlay' ? (p.overlay ?? p.uv) : p.uv;
-      return boxFace(u, v, p.box, face);
+      return p.turned ? turnedFace(u, v, texBox[part], face) : boxFace(u, v, p.box, face);
     },
     refs() {
       const out: FaceRef[] = [];
@@ -367,6 +480,68 @@ export function rigFor(layout: LayoutDef | string = 'player', model: Model = 'cl
   };
   rigs.set(key, rig);
   return rig;
+}
+
+type Vec3 = [number, number, number];
+
+/**
+ * Where the center of face-local pixel (x, y) sits on an upright w×h×d box, in box coordinates: x
+ * toward the box's left, y down, z from front to back. It follows Java's cube UVs, so `boxFace`
+ * local (0, 0) is the top-left of the face seen from outside, and top and bottom have the back at row 0.
+ */
+function facePoint([w, h, d]: Vec3, face: FaceName, x: number, y: number): Vec3 {
+  const px = x + 0.5, py = y + 0.5;
+  switch (face) {
+    case 'front': return [px, py, 0];
+    case 'back': return [w - px, py, d];
+    case 'top': return [px, 0, d - py];
+    case 'bottom': return [px, h, d - py];
+    case 'right': return [0, py, d - px];
+    case 'left': return [w, py, px];
+  }
+}
+
+/** The face and local pixel a point on the surface of an upright box belongs to (inverse of `facePoint`). */
+function pointFace([w, h, d]: Vec3, [X, Y, Z]: Vec3): [FaceName, number, number] {
+  const px = (v: number) => Math.floor(v);
+  if (Z === 0) return ['front', px(X), px(Y)];
+  if (Z === d) return ['back', px(w - X), px(Y)];
+  if (Y === 0) return ['top', px(X), px(d - Z)];
+  if (Y === h) return ['bottom', px(X), px(d - Z)];
+  if (X === 0) return ['right', px(d - Z), px(Y)];
+  return ['left', px(Z), px(Y)];
+}
+
+/**
+ * A face of a part turned 90° about x (Java xRot = π/2: y' = −z, z' = y). `tex` is the texture
+ * box [w, h, d]; the model box is [w, d, h]. The face's pixels are found on the texture box by
+ * turning their positions back, and the result is an affine map from upright local pixels.
+ */
+function turnedFace(u: number, v: number, tex: Vec3, face: FaceName): Rect {
+  const [w, h, d] = tex;
+  const model: Vec3 = [w, d, h];
+  const at = (x: number, y: number): [number, number] => {
+    const [X, Y, Z] = facePoint(model, face, x, y);
+    const [src, sx, sy] = pointFace(tex, [X, Z, d - Y]);
+    const r = boxFace(u, v, tex, src);
+    return [r.x + sx, r.y + sy];
+  };
+  const [fw, fh] = face === 'front' || face === 'back' ? [w, d] : face === 'top' || face === 'bottom' ? [w, h] : [h, d];
+  const [ox, oy] = at(0, 0), [ax, ay] = at(1, 0), [bx, by] = at(0, 1);
+  return { x: ox, y: oy, w: fw, h: fh, m: [ax - ox, bx - ox, ay - oy, by - oy] };
+}
+
+/** Texture pixel of a face-local pixel; faces of turned parts map through `m`. */
+export function texel(r: Rect, x: number, y: number): [number, number] {
+  return r.m ? [r.x + r.m[0] * x + r.m[1] * y, r.y + r.m[2] * x + r.m[3] * y] : [r.x + x, r.y + y];
+}
+
+/** Face-local pixel of a texture pixel, or null when the pixel is outside the face. */
+function local(r: Rect, tx: number, ty: number): [number, number] | null {
+  const dx = tx - r.x, dy = ty - r.y;
+  // m is a signed permutation matrix, so its inverse is its transpose (+ 0 turns −0 into 0).
+  const [x, y] = r.m ? [r.m[0] * dx + r.m[2] * dy + 0, r.m[1] * dx + r.m[3] * dy + 0] : [dx, dy];
+  return x >= 0 && y >= 0 && x < r.w && y < r.h ? [x, y] : null;
 }
 
 function boxFace(u: number, v: number, [w, h, d]: [number, number, number], face: FaceName): Rect {
@@ -388,10 +563,10 @@ function boxFace(u: number, v: number, [w, h, d]: [number, number, number], face
 
 /** Markdown table of every layout with its parts and face sizes: the CLI's `layouts` and the spec reference. */
 export function layoutsToMarkdown(): string {
-  const lines = ['| layout | size | parts (box w×h×d; * has @overlay) | used by |', '| --- | --- | --- | --- |'];
+  const lines = ['| layout | size | parts (box w×h×d as in game; * has @overlay) | used by |', '| --- | --- | --- | --- |'];
   for (const def of LAYOUT_LIST) {
     const aliases = Object.entries(LAYOUT_ALIASES).filter(([, v]) => v === def.id).map(([k]) => k);
-    const parts = Object.entries(def.parts).map(([name, p]) => `${name} ${p.box[2] ? p.box.join('×') : `${p.box[0]}×${p.box[1]} flat`}${p.overlay ? '*' : ''}`).join(', ');
+    const parts = Object.entries(def.parts).map(([name, p]) => `${name} ${!p.box[2] ? `${p.box[0]}×${p.box[1]} flat` : p.turned ? `${p.box[0]}×${p.box[2]}×${p.box[1]} lying` : p.box.join('×')}${p.overlay ? '*' : ''}`).join(', ');
     lines.push(`| \`${def.id}\`${aliases.length ? ` (${aliases.map((a) => `\`${a}\``).join(', ')})` : ''} | ${def.size.join('×')} | ${parts} | ${def.usedBy.join('; ')}${def.note ? `. ${def.note}` : ''} |`);
   }
   return lines.join('\n');
@@ -428,8 +603,8 @@ export interface Location extends FaceRef {
 export function locate(tx: number, ty: number, model: Model | Rig): Location | null {
   const rig = typeof model === 'string' ? rigFor('player', model) : model;
   for (const ref of rig.refs()) {
-    const r = rig.faceRect(ref.part, ref.face, ref.layer);
-    if (tx >= r.x && tx < r.x + r.w && ty >= r.y && ty < r.y + r.h) return { ...ref, x: tx - r.x, y: ty - r.y };
+    const l = local(rig.faceRect(ref.part, ref.face, ref.layer), tx, ty);
+    if (l) return { ...ref, x: l[0], y: l[1] };
   }
   return null;
 }

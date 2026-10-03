@@ -1,0 +1,123 @@
+{
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Muddy Pig",
+  "description": "A pig that has been rolling in mud: mud caked on the legs and belly, splashes up its sides and back, a curly tail on the rump.",
+  "author": "texel",
+  "tags": ["pig", "mob", "mud"],
+  "layout": "pig",
+  "palette": {
+    "pink": "#f0a9a1",
+    "pinkDark": "pink:-10",
+    "snout": "#e58b8b",
+    "nostril": "#9c4d52",
+    "mud": "#6e4b2e",
+    "mudDark": "mud:-8",
+    "mudLight": "mud:8",
+    "white": "#f4f1ec",
+    "black": "#1d1a1a"
+  },
+  "legend": {
+    "p": "pink",
+    "d": "pinkDark",
+    "s": "snout",
+    "n": "nostril",
+    "m": "mud",
+    "w": "white",
+    "k": "black"
+  },
+  "layers": [
+    { "op": "material", "id": "skin", "target": "all", "color": "pink", "kind": "skin" },
+    {
+      "op": "pixels",
+      "id": "eyes",
+      "target": "head.front",
+      "y": 3,
+      "rows": [
+        "wk....kw"
+      ]
+    },
+    {
+      "op": "pixels",
+      "id": "snout-front",
+      "target": "snout.front",
+      "rows": [
+        "ssss",
+        "nssn",
+        "ssss"
+      ]
+    },
+    {
+      "op": "rect",
+      "id": "snout-sides",
+      "target": "snout.top+bottom+right+left",
+      "color": "snout"
+    },
+    {
+      "op": "rect",
+      "id": "belly-mud",
+      "target": "body.bottom",
+      "color": "mud",
+      "note": "body.bottom is the belly: the body lies along the pig"
+    },
+    {
+      "op": "noise",
+      "id": "belly-grain",
+      "target": "body.bottom",
+      "colors": ["mudDark", "mudLight"],
+      "density": 0.35,
+      "seed": 4
+    },
+    {
+      "op": "rect",
+      "id": "side-mud",
+      "target": "body.sides",
+      "y": -2,
+      "color": "mud",
+      "note": "the sides are 16 wide and 8 tall: the bottom rows run along the belly"
+    },
+    {
+      "op": "noise",
+      "id": "side-splash",
+      "target": "body.sides",
+      "y": 3,
+      "h": 3,
+      "colors": ["mud", "mudDark"],
+      "density": 0.3,
+      "seed": 9
+    },
+    {
+      "op": "noise",
+      "id": "back-spots",
+      "target": "body.top",
+      "colors": ["mud", "mudLight"],
+      "density": 0.12,
+      "seed": 21,
+      "note": "body.top is the pig's back"
+    },
+    {
+      "op": "rect",
+      "id": "leg-mud",
+      "target": "leg.sides",
+      "y": 2,
+      "color": "mud",
+      "note": "one leg texture for all four legs"
+    },
+    { "op": "rect", "id": "hooves", "target": "leg.sides", "y": -1, "color": "mudDark" },
+    { "op": "rect", "id": "leg-bottom", "target": "leg.bottom", "color": "mudDark" },
+    {
+      "op": "pixels",
+      "id": "tail",
+      "target": "body.back",
+      "x": 4,
+      "y": 2,
+      "rows": [
+        "dd",
+        "d.",
+        "dd"
+      ],
+      "note": "body.back is the rump"
+    },
+    { "op": "lighting", "id": "light" }
+  ]
+}

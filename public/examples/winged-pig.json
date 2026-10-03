@@ -1,0 +1,238 @@
+{
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Winged Pig",
+  "description": "A pig-headed character with white feathered wings folded over the back and arms, pink hooves and gold-trimmed boots. Shows wings drawn once and copied across faces, a hint of them on the front, and a one-color body kept apart by value.",
+  "author": "texel",
+  "tags": ["creature", "wings", "pig"],
+  "model": "classic",
+  "palette": {
+    "pink": "#f2b8b0",
+    "pinkMid": "#d9a8a0",
+    "pinkDark": "pink:-18",
+    "snout": "#e98f8f",
+    "nostril": "#a4555a",
+    "eye": "#2f6fb3",
+    "white": "#f6f3ee",
+    "feather": "#e9eef3",
+    "featherShade": "#b9c6d4",
+    "featherEdge": "#8293a8",
+    "hoof": "#8a5a52",
+    "gold": "#d9a63a",
+    "goldDark": "gold~-1"
+  },
+  "legend": {
+    "p": "pink",
+    "s": "snout",
+    "n": "nostril",
+    "e": "eye",
+    "w": "white",
+    "f": "feather",
+    "h": "featherShade",
+    "o": "featherEdge",
+    "d": "pinkDark"
+  },
+  "layers": [
+    { "op": "material", "id": "skin", "target": "all", "color": "pink", "kind": "skin" },
+    {
+      "op": "material",
+      "id": "limbs",
+      "target": "arms+legs",
+      "color": "pinkMid",
+      "kind": "skin",
+      "note": "limbs a step darker than the torso so the one-color body reads apart"
+    },
+    {
+      "op": "material",
+      "id": "head-light",
+      "target": "head",
+      "color": "pink:5",
+      "kind": "skin",
+      "note": "the head lightest, then torso, then limbs"
+    },
+    {
+      "op": "rect",
+      "id": "belly",
+      "target": "body.front",
+      "x": 2,
+      "y": 3,
+      "w": 4,
+      "h": 7,
+      "color": "pink:6"
+    },
+    { "op": "rect", "id": "hooves", "target": "arms", "region": "hands", "color": "hoof" },
+    {
+      "op": "material",
+      "id": "boots",
+      "target": "legs",
+      "region": "boots",
+      "color": "gold",
+      "kind": "metal"
+    },
+    {
+      "op": "rect",
+      "id": "boot-trim",
+      "target": "legs.sides",
+      "y": 8,
+      "h": 1,
+      "color": "goldDark"
+    },
+    { "op": "lighting", "id": "light" },
+    {
+      "op": "shade",
+      "id": "arm-seam",
+      "target": "arms.sides",
+      "amount": -6,
+      "note": "1 px darker where arm meets body"
+    },
+    {
+      "op": "pixels",
+      "id": "face",
+      "target": "head.front",
+      "rows": [
+        "pppppppp",
+        "pppppppp",
+        "pppppppp",
+        "pweppewp",
+        "pppppppp",
+        "ppssssp.",
+        "ppsnnsp.",
+        "ppssssp."
+      ]
+    },
+    {
+      "op": "rect",
+      "id": "face-fix",
+      "target": "head.front",
+      "x": 7,
+      "y": 5,
+      "h": 3,
+      "color": "pink"
+    },
+    {
+      "op": "pixels",
+      "id": "ears",
+      "target": "head.top@overlay",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "dd....dd",
+        "pp....pp"
+      ]
+    },
+    {
+      "op": "pixels",
+      "id": "ears-front",
+      "target": "head.front@overlay",
+      "rows": [
+        "dd....dd"
+      ]
+    },
+    {
+      "op": "pixels",
+      "id": "wing-half",
+      "target": "body.back@overlay",
+      "rows": [
+        "....",
+        "..o.",
+        ".of.",
+        "ofh.",
+        "ffh.",
+        "fhh.",
+        "fho.",
+        "ho..",
+        "o..."
+      ],
+      "note": "left half of the wings on the back"
+    },
+    { "op": "symmetrize", "id": "wing-mirror", "target": "body.back@overlay" },
+    {
+      "op": "pixels",
+      "id": "wing-arm",
+      "target": "leftArm.back@overlay",
+      "rows": [
+        "....",
+        "....",
+        "..of",
+        ".ofh",
+        "offh",
+        "fffh",
+        "ffho",
+        "fho.",
+        "fo..",
+        "f.f.",
+        "o.o."
+      ]
+    },
+    {
+      "op": "copy",
+      "id": "wing-arm-r",
+      "from": "leftArm.back@overlay",
+      "to": "rightArm.back@overlay",
+      "flip": "h"
+    },
+    {
+      "op": "pixels",
+      "id": "wing-side",
+      "target": "leftArm.left@overlay",
+      "rows": [
+        "....",
+        "....",
+        "....",
+        "...f",
+        "..fh",
+        ".ffh",
+        ".fho",
+        "..fo",
+        "...f",
+        "...o"
+      ]
+    },
+    {
+      "op": "copy",
+      "id": "wing-side-r",
+      "from": "leftArm.left@overlay",
+      "to": "rightArm.right@overlay",
+      "flip": "h"
+    },
+    {
+      "op": "pixels",
+      "id": "wing-hint",
+      "target": "leftArm.front@overlay",
+      "x": 3,
+      "rows": [
+        "f",
+        "f",
+        "h",
+        "h",
+        "o",
+        "o"
+      ],
+      "note": "the outer column of the arm fronts: wings read from the front too",
+      "y": 3
+    },
+    {
+      "op": "copy",
+      "id": "wing-hint-r",
+      "from": "leftArm.front@overlay",
+      "to": "rightArm.front@overlay",
+      "flip": "h"
+    },
+    {
+      "op": "pixels",
+      "id": "tail",
+      "target": "body.back",
+      "x": 3,
+      "y": 9,
+      "rows": [
+        "dd",
+        "d.",
+        ".d"
+      ]
+    }
+  ]
+}

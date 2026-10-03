@@ -1,6 +1,7 @@
 import { ART_WEAK } from './art';
 import { toHex } from './color';
 import { compile, type CompileResult } from './compile';
+import { texel } from './layout';
 import { review } from './review';
 import type { FaceName, Op, PartName, SkinSpec } from './types';
 
@@ -53,8 +54,9 @@ function pixels({ texture, rig }: CompileResult, part: PartName, face: FaceName)
   if (!rig.faces(part).includes(face)) return [];
   const r = rig.faceRect(part, face, 'base');
   const out: string[] = [];
-  for (let y = r.y; y < r.y + r.h; y++)
-    for (let x = r.x; x < r.x + r.w; x++) {
+  for (let ly = 0; ly < r.h; ly++)
+    for (let lx = 0; lx < r.w; lx++) {
+      const [x, y] = texel(r, lx, ly);
       const i = (y * texture.width + x) * 4;
       if (texture.data[i + 3] === 255) out.push(toHex([texture.data[i], texture.data[i + 1], texture.data[i + 2], 255]));
     }

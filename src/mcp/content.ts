@@ -14,8 +14,10 @@ import explorer from '../../public/examples/explorer.json';
 import guild from '../../public/examples/families/guild.json';
 import knight from '../../public/examples/knight.json';
 import minerZombie from '../../public/examples/miner-zombie.json';
+import mudPig from '../../public/examples/mud-pig.json';
 import robot from '../../public/examples/robot.json';
 import wizard from '../../public/examples/wizard.json';
+import wingedPig from '../../public/examples/winged-pig.json';
 import familySchema from '../../public/schema/skinfamily.v1.json';
 import specSchema from '../../public/schema/skinspec.v1.json';
 
@@ -39,8 +41,10 @@ export const EXAMPLES = {
   astronaut,
   wizard,
   cozy,
+  'winged-pig': wingedPig,
   'miner-zombie': minerZombie,
   creeper,
+  'mud-pig': mudPig,
   'bronze-armor': bronzeArmor,
   'banner-cape': bannerCape,
   'ember-blade': emberBlade,

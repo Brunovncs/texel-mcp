@@ -1,7 +1,7 @@
 import { ART_WEAK, artReview, type ArtReport } from './art';
 import { resolveColor, rgbToHsl, toHex } from './color';
 import type { CompileResult } from './compile';
-import { type Rig, refName } from './layout';
+import { type Rig, refName, texel } from './layout';
 import type { FaceRef, Image, Issue, RGBA } from './types';
 import { renderView, viewsOf } from './views';
 
@@ -36,7 +36,8 @@ function pixelsOf(tex: Image, ref: FaceRef, rig: Rig) {
   const out: number[][] = [];
   for (let y = 0; y < r.h; y++)
     for (let x = 0; x < r.w; x++) {
-      const i = ((r.y + y) * tex.width + r.x + x) * 4;
+      const [tx, ty] = texel(r, x, y);
+      const i = (ty * tex.width + tx) * 4;
       out.push([tex.data[i], tex.data[i + 1], tex.data[i + 2], tex.data[i + 3]]);
     }
   return out;

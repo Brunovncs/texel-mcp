@@ -1,6 +1,6 @@
 import { mix, resolveColor, shiftLightness, suggestHint, TRANSPARENT } from './color';
 import { applyLighting, applyMaterial, BEARDS, drawFace, drawHair, EYE_STYLES, FRINGES, HAIR_STYLES, MATERIAL_ALIASES, MATERIALS, MOUTHS, REGIONS, type Material, type Surface } from './components';
-import { boxSize, LAYOUT_IDS, resolveLayout, type Rig, rigFor } from './layout';
+import { boxSize, LAYOUT_IDS, resolveLayout, type Rig, rigFor, texel } from './layout';
 import { parseSelector } from './selector';
 import type { FaceName, FaceRef, Image, Issue, LayerName, Model, PartName, Rect, RGBA, SkinSpec } from './types';
 
@@ -305,7 +305,7 @@ function eachPixel(ctx: Ctx, refs: FaceRef[], op: Json, fn: (tx: number, ty: num
     const a = areaOn(op, ref, face);
     if (!a) continue;
     hit++;
-    for (let ly = a.y; ly < a.y + a.h; ly++) for (let lx = a.x; lx < a.x + a.w; lx++) fn(face.x + lx, face.y + ly, lx, ly, ref, a);
+    for (let ly = a.y; ly < a.y + a.h; ly++) for (let lx = a.x; lx < a.x + a.w; lx++) fn(...texel(face, lx, ly), lx, ly, ref, a);
   }
   regionMiss(ctx, op, `$.layers[${ctx.layer}]`, hit);
 }
@@ -316,8 +316,11 @@ function surface(ctx: Ctx, ref: FaceRef): Surface {
     ref,
     w: r.w,
     h: r.h,
-    get: (x, y) => ctx.get(r.x + x, r.y + y),
-    set: (x, y, c, adjust) => ctx.set(r.x + x, r.y + y, c, adjust ? ctx.contrib[(r.y + y) * ctx.width + r.x + x] : undefined),
+    get: (x, y) => ctx.get(...texel(r, x, y)),
+    set: (x, y, c, adjust) => {
+      const [tx, ty] = texel(r, x, y);
+      ctx.set(tx, ty, c, adjust ? ctx.contrib[ty * ctx.width + tx] : undefined);
+    },
   };
 }
 
@@ -331,7 +334,7 @@ function oneOf<T extends string>(ctx: Ctx, v: unknown, options: readonly T[], fa
 function plot(ctx: Ctx, face: Rect, lx: number, ly: number, c: RGBA) {
   if (lx < 0) lx += face.w;
   if (ly < 0) ly += face.h;
-  if (lx >= 0 && ly >= 0 && lx < face.w && ly < face.h) ctx.set(face.x + lx, face.y + ly, c);
+  if (lx >= 0 && ly >= 0 && lx < face.w && ly < face.h) ctx.set(...texel(face, lx, ly), c);
 }
 
 function mulberry32(seed: number) {
@@ -400,7 +403,7 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
               return;
             }
             if (ch === '.') return;
-            ctx.set(face.x + lx, face.y + ly, ch === '_' ? TRANSPARENT : (cache.get(ch) as RGBA));
+            ctx.set(...texel(face, lx, ly), ch === '_' ? TRANSPARENT : (cache.get(ch) as RGBA));
           });
         });
       }
@@ -553,7 +556,7 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
       return;
     }
     case 'face': {
-      if (op.target === undefined && !ctx.rig.part('head')) return unsupported(ctx, path, kind);
+      if (op.target === undefined && String(ctx.rig.part('head')?.box) !== '8,8,8') return unsupported(ctx, path, kind);
       const refs = ctx.targets(op.target ?? 'head.front', `${path}.target`);
       const skin = ctx.color(op.skin, `${path}.skin`);
       const eyes = ctx.color(op.eyes, `${path}.eyes`);
@@ -585,7 +588,7 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
       const fringe = oneOf(ctx, op.fringe, FRINGES, style === 'spiky' || style === 'curly' ? 'full' : 'side', `${path}.fringe`);
       const layer = oneOf(ctx, op.layer, ['base', 'overlay', 'both'] as const, 'both', `${path}.layer`);
       if (!c || !style || !fringe || !layer) return;
-      if (ctx.rig.part('head')?.box[2] !== 8) return unsupported(ctx, path, kind);
+      if (String(ctx.rig.part('head')?.box) !== '8,8,8') return unsupported(ctx, path, kind);
       const layers = (layer === 'both' ? (['base', 'overlay'] as LayerName[]) : [layer]).filter((l) => ctx.rig.hasLayer('head', l));
       for (const l of layers)
         for (const face of ['top', 'back', 'right', 'left', 'front'] as FaceName[]) drawHair(surface(ctx, { part: 'head', face, layer: l }), c, style, fringe, l === 'overlay');
@@ -609,9 +612,9 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
         const face = ctx.rect(ref);
         for (let y = 0; y < face.h; y++)
           for (let x = 0; x < Math.floor(face.w / 2); x++) {
-            const l = face.x + x, r = face.x + face.w - 1 - x, ty = face.y + y;
+            const l = texel(face, x, y), r = texel(face, face.w - 1 - x, y);
             const [src, dst] = keepLeft ? [l, r] : [r, l];
-            ctx.set(dst, ty, ctx.get(src, ty), ctx.contrib[ty * ctx.width + src]);
+            ctx.set(dst[0], dst[1], ctx.get(src[0], src[1]), ctx.contrib[src[1] * ctx.width + src[0]]);
           }
       }
       return;
@@ -633,8 +636,9 @@ function blit(ctx: Ctx, src: FaceRef, dst: FaceRef, flipH: boolean, flipV: boole
       let sx = Math.floor((x * s.w) / d.w), sy = Math.floor((y * s.h) / d.h);
       if (flipH) sx = s.w - 1 - sx;
       if (flipV) sy = s.h - 1 - sy;
-      const t = (s.y + sy) * ctx.width + s.x + sx, i = t * 4;
-      ctx.set(d.x + x, d.y + y, [from[i], from[i + 1], from[i + 2], from[i + 3]], fromContrib[t]);
+      const [fx, fy] = texel(s, sx, sy);
+      const t = fy * ctx.width + fx, i = t * 4;
+      ctx.set(...texel(d, x, y), [from[i], from[i + 1], from[i + 2], from[i + 3]], fromContrib[t]);
     }
 }
 

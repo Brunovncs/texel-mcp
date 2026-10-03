@@ -129,3 +129,20 @@
   background: radial-gradient(closest-side, rgb(var(--accent-rgb) / 0.24), rgb(var(--accent-rgb) / 0.08) 60%, transparent);
   pointer-events: none;
 }
+/* A turned part's face (a quadruped's body): the texture sits on a layer mapped onto the face. */
+.sm-face:has(> .sm-face-texture) {
+  background-image: none;
+  overflow: hidden;
+}
+
+.sm-face-texture {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  background-image: var(--skin);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  pointer-events: none;
+}

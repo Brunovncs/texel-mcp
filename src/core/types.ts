@@ -10,6 +10,11 @@ export interface Rect {
   y: number;
   w: number;
   h: number;
+  /**
+   * For a face of a turned part: the texture pixel of face-local (x, y) is (x + m0·x + m1·y,
+   * y + m2·x + m3·y), with (x, y) here the texture pixel of local (0, 0). Read faces through `texel`.
+   */
+  m?: [number, number, number, number];
 }
 
 export interface FaceRef {

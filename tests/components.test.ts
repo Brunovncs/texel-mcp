@@ -100,6 +100,21 @@ describe('art checks and polish', () => {
     for (const id of ['face', 'texture', 'depth']) expect(art.checks.find((c) => c.id === id)!.score).toBeLessThan(0.6);
   });
 
+  it('keep a skin with a weak check under 90, and measure the arms against the torso', () => {
+    // Everything one blue: the face, light and texture are fine, the silhouette is not.
+    const blob = base([
+      { op: 'material', target: 'all', color: '#3a6ea5', kind: 'fabric' },
+      { op: 'face', skin: '#3a6ea5', eyes: '#f0f0f0' },
+      { op: 'lighting' },
+      { op: 'rect', target: 'head@overlay', y: 0, h: 2, color: '#2a4e85' },
+    ]);
+    const art = review(compile(blob)).art;
+    const r3 = art.checks.find((c) => c.rubric === 'R3')!;
+    expect(r3.score).toBeLessThan(0.6);
+    expect(r3.note).toContain('arms↔body');
+    expect(art.score).toBeLessThanOrEqual(89);
+  });
+
   it('polish adds lighting without the model', () => {
     const p = polish(flat);
     expect(p.applied).toContain('lighting');

@@ -1,4 +1,4 @@
-import { type BoxDef, type Rig, rigFor } from './layout';
+import { type BoxDef, type Rig, rigFor, texel } from './layout';
 import type { FaceName, Image, Model, PartName } from './types';
 
 export type ViewName = 'front' | 'back' | 'right' | 'left';
@@ -92,7 +92,8 @@ export function renderView(tex: Image, model: Model | Rig, view: ViewName, overl
       const r = rig.faceRect(part, face, layer);
       for (let y = 0; y < r.h; y++)
         for (let x = 0; x < r.w; x++) {
-          const i = ((r.y + y) * tex.width + r.x + x) * 4;
+          const [tx, ty] = texel(r, x, y);
+          const i = (ty * tex.width + tx) * 4;
           const a = tex.data[i + 3];
           blend(img, dx + (flip ? r.w - 1 - x : x), dy + y, tex.data[i], tex.data[i + 1], tex.data[i + 2], layer === 'base' && solid ? (a ? 255 : 0) : a);
         }

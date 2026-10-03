@@ -1,5 +1,5 @@
 import { toHex } from './color';
-import { refName, resolveLayout, rigFor } from './layout';
+import { refName, resolveLayout, rigFor, texel } from './layout';
 import type { Image, Model, Op, RGBA, SkinSpec } from './types';
 
 const LEGEND_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&*+-/:;<=>?@^~|';
@@ -95,7 +95,7 @@ export function textureToSpec(image: Image, name = 'Imported skin', layoutId?: s
     for (let y = 0; y < r.h; y++) {
       let row = '';
       for (let x = 0; x < r.w; x++) {
-        const c = at(r.x + x, r.y + y);
+        const c = at(...texel(r, x, y));
         if (c[3]) painted = true;
         row += c[3] ? charFor(c) : '.';
       }

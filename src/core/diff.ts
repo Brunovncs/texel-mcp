@@ -1,4 +1,4 @@
-import { type Rig, refName, rigFor } from './layout';
+import { type Rig, refName, rigFor, texel } from './layout';
 import type { Image, Model } from './types';
 
 export interface FaceChange {
@@ -24,8 +24,9 @@ export function diffTextures(before: Image, after: Image, model: Model | Rig): T
   for (const ref of rig.refs()) {
     const r = rig.faceRect(ref.part, ref.face, ref.layer);
     let changed = 0;
-    for (let y = r.y; y < r.y + r.h; y++)
-      for (let x = r.x; x < r.x + r.w; x++) {
+    for (let ly = 0; ly < r.h; ly++)
+      for (let lx = 0; lx < r.w; lx++) {
+        const [x, y] = texel(r, lx, ly);
         const i = (y * after.width + x) * 4;
         const a = before.data, b = after.data;
         const same = a[i + 3] === 0 && b[i + 3] === 0 ? true : a[i] === b[i] && a[i + 1] === b[i + 1] && a[i + 2] === b[i + 2] && a[i + 3] === b[i + 3];

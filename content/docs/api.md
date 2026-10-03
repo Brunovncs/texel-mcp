@@ -26,7 +26,7 @@ Open `/studio/`. Every method is synchronous unless noted and returns plain JSON
 | `shareURL()` | Promise&lt;string&gt; | Short link (`/s/<id>`) that reopens this exact spec; falls back to a long `#z=` link offline. |
 | `download(filename?)` | void | Save the PNG. |
 | `examples()` | Promise&lt;object&gt; | The example index. |
-| `loadExample(id)` | Promise&lt;Review&gt; | Load an example by id: `explorer`, `knight`, `robot`, `astronaut`, `wizard`, `cozy`, `miner-zombie`, `creeper`, `bronze-armor`, `banner-cape` or `ember-blade` (see `/examples/index.json`). |
+| `loadExample(id)` | Promise&lt;Review&gt; | Load an example by id: `explorer`, `knight`, `robot`, `astronaut`, `wizard`, `cozy`, `winged-pig`, `miner-zombie`, `creeper`, `mud-pig`, `bronze-armor`, `banner-cape` or `ember-blade` (see `/examples/index.json`). |
 
 ```js
 const r = texel.setSpec(mySpec);
