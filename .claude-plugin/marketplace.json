@@ -1,6 +1,10 @@
 {
   "name": "texel",
-  "owner": { "name": "Bruno Veronez", "url": "https://github.com/Brunovncs" },
+  "description": "Texel: Minecraft skins and textures as JSON specs, compiled to PNG. MCP server and Agent Skill.",
+  "owner": {
+    "name": "Bruno Veronez",
+    "url": "https://github.com/Brunovncs"
+  },
   "plugins": [
     {
       "name": "texel",
