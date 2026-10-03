@@ -40,6 +40,35 @@ describe('layouts', () => {
     expect(rect('hoglin', 'head', 'front')).toEqual({ x: 80, y: 20, w: 14, h: 6 });
     expect(rect('hoglin', 'mane', 'right')).toEqual({ x: 90, y: 52, w: 19, h: 10 });
     expect(rigFor('hoglin').faces('mane')).toEqual(['right', 'left']);
+    expect(rect('cold_chicken', 'crest', 'front')).toEqual({ x: 48, y: 4, w: 6, h: 3 });
+    expect(rect('cat', 'head', 'front')).toEqual({ x: 5, y: 5, w: 5, h: 4 });
+    expect(rect('cat', 'nose', 'front')).toEqual({ x: 2, y: 26, w: 3, h: 2 });
+    expect(rect('iron_golem', 'body', 'front')).toEqual({ x: 11, y: 51, w: 18, h: 12 });
+    expect(rect('iron_golem', 'leftArm', 'front')).toEqual({ x: 66, y: 64, w: 4, h: 30 });
+    expect(rect('witch', 'brim', 'front')).toEqual({ x: 10, y: 74, w: 10, h: 2 });
+    expect(rect('witch', 'mole', 'front')).toEqual({ x: 1, y: 1, w: 1, h: 1 });
+  });
+
+  it('keep both sides of a flat lying fin on their own texture faces', () => {
+    // Cold chicken tail: texture box 0×3×5 at (38, 9), turned with the body. Turning about x keeps
+    // the side faces on their side, though a box with no width has both at x = 0.
+    const rig = rigFor('cold_chicken');
+    expect(rig.faces('tail')).toEqual(['right', 'left']);
+    const cells = (face: 'right' | 'left') => {
+      const r = rig.faceRect('tail', face, 'base');
+      const xs: number[] = [];
+      for (let y = 0; y < r.h; y++) for (let x = 0; x < r.w; x++) xs.push(texel(r, x, y)[0]);
+      return [Math.min(...xs), Math.max(...xs)];
+    };
+    expect(cells('right')).toEqual([38, 42]);
+    expect(cells('left')).toEqual([43, 47]);
+  });
+
+  it('skip parts cut by transparency in the opacity check', () => {
+    const c = compile(spec('chicken', [{ op: 'fill', target: 'all', color: '#eeeeee' }, { op: 'clear', target: 'leg' }]));
+    expect(review(c).issues.find((i) => i.code === 'base-transparent')).toBeUndefined();
+    const hole = compile(spec('chicken', [{ op: 'fill', target: 'all', color: '#eeeeee' }, { op: 'clear', target: 'wing' }]));
+    expect(review(hole).issues.find((i) => i.code === 'base-transparent')).toBeTruthy();
   });
 
   it('name a lying body\'s faces the way they face in game', () => {

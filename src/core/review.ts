@@ -67,7 +67,7 @@ export function review(result: CompileResult): Review {
         if (layer === 'base') {
           baseTotal += px.length;
           baseOpaque += opaque.length;
-          if (opaque.length < px.length) holes.push(`${refName(ref)} (${px.length - opaque.length}px)`);
+          if (opaque.length < px.length && !rig.part(part)?.cutout) holes.push(`${refName(ref)} (${px.length - opaque.length}px)`);
           const visible = face !== 'bottom' && (face !== 'top' || part === 'head' || rig.layout !== 'player');
           if (visible && px.length >= 32 && opaque.length === px.length) {
             const over = rig.hasLayer(part, 'overlay') ? pixelsOf(tex, { part, face, layer: 'overlay' }, rig) : px.map(() => [0, 0, 0, 0]);

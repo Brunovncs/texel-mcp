@@ -4,7 +4,7 @@ description: Design, render, review and export Minecraft skins (64×64 PNG, clas
 license: MIT
 metadata:
   protocol: texel/1
-  version: 0.5.1
+  version: 0.6.0
 ---
 
 # Minecraft skin design with Texel
@@ -58,7 +58,7 @@ For several related skins, write one family document (`kind: "family"`) instead 
 
 ## Other textures
 
-Set `"layout"` in the spec to paint something other than a player skin: `zombie`, `drowned`, `humanoid` (armor layers), `skeleton`, `creeper`, `enderman`, `spider`, `villager`, `piglin`, `pig`, `cow` (also `cold_cow`, `warm_cow`), `sheep` and `sheep_wool`, `chicken`, `wolf`, `hoglin`, `cape` (with elytra), `item`, `block`. Each has its own part names and size; read the Layouts section of the spec reference (or `node texel.mjs layouts`) before the first draft, and fork the closest example (`miner-zombie`, `creeper`, `mud-pig`, `bronze-armor`, `banner-cape`, `ember-blade`). Mobs whose left limbs mirror the right ones only have `rightArm`/`rightLeg`. Armor, skeletons and items keep transparent pixels on purpose; items need an outline and a clear background. Ship the PNG under the path the game or mod expects (the layout table lists the vanilla paths).
+Set `"layout"` in the spec to paint something other than a player skin: `zombie`, `drowned`, `humanoid` (armor layers), `skeleton`, `creeper`, `enderman`, `spider`, `villager`, `piglin`, `pig`, `cow` (also `cold_cow`, `warm_cow`), `sheep` and `sheep_wool`, `chicken` (also `cold_chicken`), `wolf`, `cat` (also ocelots), `hoglin`, `iron_golem`, `witch`, `cape` (with elytra), `item`, `block`. Each has its own part names and size; read the Layouts section of the spec reference (or `node texel.mjs layouts`) before the first draft, and fork the closest example (`miner-zombie`, `creeper`, `mud-pig`, `bronze-armor`, `banner-cape`, `ember-blade`). Mobs whose left limbs mirror the right ones only have `rightArm`/`rightLeg`. Armor, skeletons and items keep transparent pixels on purpose; items need an outline and a clear background. Ship the PNG under the path the game or mod expects (the layout table lists the vanilla paths).
 
 ## Pitfalls
 

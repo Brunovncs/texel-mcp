@@ -24,6 +24,8 @@ export interface PartDef {
    * (top is the back of the animal, front its chest) and read upright through `texel`.
    */
   turned?: boolean;
+  /** Transparent pixels cut the part's outline (a fin, a crest), so the opacity check skips it. */
+  cutout?: boolean;
 }
 
 export interface BoxDef {
@@ -462,7 +464,7 @@ const LAYOUT_LIST: LayoutDef[] = [
       wattle: { box: [2, 2, 2], uv: [14, 4] },
       body: { box: [6, 8, 6], uv: [0, 9], turned: true },
       wing: { box: [1, 4, 6], uv: [24, 13] },
-      leg: { box: [3, 5, 3], uv: [26, 0] },
+      leg: { box: [3, 5, 3], uv: [26, 0], cutout: true },
     },
     groups: { legs: ['leg'], wings: ['wing'] },
     boxes: [
@@ -477,7 +479,38 @@ const LAYOUT_LIST: LayoutDef[] = [
     ],
     opaque: true,
     usedBy: ['textures/entity/chicken/temperate_chicken.png', 'warm_chicken.png', 'chicken.png before 1.21.5'],
-    note: 'The body lies along the chicken (body.top is its back, body.back its tail end). Both wings share one texture, and so do both legs. The cold chicken of 1.21.5 adds a crest and a tail fin this layout does not cover.',
+    note: 'The body lies along the chicken (body.top is its back, body.back its tail end). Both wings share one texture, and so do both legs. The cold chicken of 1.21.5 has its own layout, cold_chicken.',
+  },
+  {
+    id: 'cold_chicken',
+    title: 'Cold chicken (64×32)',
+    size: [64, 32],
+    parts: {
+      head: { box: [4, 6, 3], uv: [0, 0] },
+      crest: { box: [6, 3, 4], uv: [44, 0], cutout: true },
+      beak: { box: [4, 2, 2], uv: [14, 0] },
+      wattle: { box: [2, 2, 2], uv: [14, 4] },
+      body: { box: [6, 8, 6], uv: [0, 9], turned: true },
+      tail: { box: [0, 3, 5], uv: [38, 9], turned: true, cutout: true },
+      wing: { box: [1, 4, 6], uv: [24, 13] },
+      leg: { box: [3, 5, 3], uv: [26, 0], cutout: true },
+    },
+    groups: { legs: ['leg'], wings: ['wing'] },
+    boxes: [
+      { part: 'head', at: [-2, 9, -6] },
+      { part: 'crest', at: [-3, 8, -6] },
+      { part: 'beak', at: [-2, 11, -8] },
+      { part: 'wattle', at: [-1, 13, -7] },
+      { part: 'body', at: [-3, 13, -4] },
+      { part: 'tail', at: [0, 12, 3] },
+      { part: 'wing', at: [-4, 13, -3] },
+      { part: 'wing', at: [3, 13, -3] },
+      { part: 'leg', at: [-3, 19, -2] },
+      { part: 'leg', at: [0, 19, -2] },
+    ],
+    opaque: true,
+    usedBy: ['textures/entity/chicken/cold_chicken.png'],
+    note: 'The chicken of cold biomes (1.21.5+): the chicken layout plus a fluffy crest, wider than the head, that covers the top of it and the top two rows of head.front, and a tail: a flat fin over the rump with only .right and .left faces, whose transparent pixels cut its outline. The body lies along the chicken (body.top is its back).',
   },
   {
     id: 'wolf',
@@ -509,6 +542,44 @@ const LAYOUT_LIST: LayoutDef[] = [
     opaque: true,
     usedBy: ['textures/entity/wolf/wolf.png and its _tame and _angry variants', 'the other wolf variants (ashen, black, chestnut, rusty, snowy, spotted, striped, woods)', 'wolf_collar.png (same layout, transparent but for the collar on the mane)'],
     note: 'The mane (the shaggy front half) and the body lie along the wolf: their top is its back. Both ears share one texture, and all four legs too; the right legs are mirrored. In game the tail angles back and the head sits half a pixel off the grid; the views show the tail straight down and snap to whole pixels.',
+  },
+  {
+    id: 'cat',
+    title: 'Cat and ocelot (64×32)',
+    size: [64, 32],
+    parts: {
+      head: { box: [5, 4, 5], uv: [0, 0] },
+      nose: { box: [3, 2, 2], uv: [0, 24] },
+      rightEar: { box: [1, 1, 2], uv: [0, 10] },
+      leftEar: { box: [1, 1, 2], uv: [6, 10] },
+      body: { box: [4, 16, 6], uv: [20, 0], turned: true },
+      tail: { box: [1, 8, 1], uv: [0, 15], turned: true },
+      tailTip: { box: [1, 8, 1], uv: [4, 15], turned: true },
+      frontLeg: { box: [2, 10, 2], uv: [40, 0] },
+      hindLeg: { box: [2, 6, 2], uv: [8, 13] },
+    },
+    groups: { ears: ['rightEar', 'leftEar'], legs: ['frontLeg', 'hindLeg'], tails: ['tail', 'tailTip'] },
+    boxes: [
+      { part: 'head', at: [-2.5, 13, -12] },
+      { part: 'nose', at: [-1.5, 15, -13] },
+      { part: 'rightEar', at: [-2, 12, -9] },
+      { part: 'leftEar', at: [1, 12, -9] },
+      // Legs first: their tops share the body's height and sit inside it.
+      { part: 'frontLeg', at: [-2.2, 14, -5] },
+      { part: 'frontLeg', at: [0.2, 14, -5] },
+      { part: 'hindLeg', at: [-2.1, 18, 6] },
+      { part: 'hindLeg', at: [0.1, 18, 6] },
+      { part: 'body', at: [-2, 14, -7] },
+      { part: 'tail', at: [-0.5, 14, 8] },
+      { part: 'tailTip', at: [-0.5, 14, 16] },
+    ],
+    opaque: true,
+    usedBy: [
+      'textures/entity/cat/*.png (tabby, black, red, siamese, british_shorthair, calico, persian, ragdoll, white, jellie, all_black)',
+      'textures/entity/cat/ocelot.png',
+      'cat_collar.png (same layout, transparent but for the collar, tinted with its dye color)',
+    ],
+    note: 'The body lies along the cat (body.top is its back, body.back its rump). The tail is two lying pieces, tail then tailTip, named as when the cat runs with its tail straight back (their top is the upper side); walking, it hangs in a curve. Both front legs share one texture, and both hind legs another. The nose sits on the bottom half of head.front.',
   },
   {
     id: 'hoglin',
@@ -547,6 +618,73 @@ const LAYOUT_LIST: LayoutDef[] = [
     ],
     usedBy: ['textures/entity/hoglin/hoglin.png', 'zoglin.png'],
     note: 'The mane is a flat fin along the spine with only .right and .left faces, and transparent pixels cut its outline. In game the head hangs tilted 50° down and the ears angle out; the views show them straight. Every leg has its own texture.',
+  },
+  {
+    id: 'iron_golem',
+    title: 'Iron golem (128×128)',
+    size: [128, 128],
+    parts: {
+      head: { box: [8, 10, 8], uv: [0, 0] },
+      nose: { box: [2, 4, 2], uv: [24, 0] },
+      body: { box: [18, 12, 11], uv: [0, 40] },
+      waist: { box: [9, 5, 6], uv: [0, 70] },
+      rightArm: { box: [4, 30, 6], uv: [60, 21] },
+      leftArm: { box: [4, 30, 6], uv: [60, 58] },
+      rightLeg: { box: [6, 16, 5], uv: [37, 0] },
+      leftLeg: { box: [6, 16, 5], uv: [60, 0] },
+    },
+    groups: { arms: ['rightArm', 'leftArm'], legs: ['rightLeg', 'leftLeg'], limbs: ['rightArm', 'leftArm', 'rightLeg', 'leftLeg'] },
+    boxes: [
+      { part: 'head', at: [-4, -19, -7.5] },
+      { part: 'nose', at: [-1, -12, -9.5] },
+      { part: 'body', at: [-9, -9, -6] },
+      { part: 'waist', at: [-4.5, 3, -3] },
+      { part: 'rightArm', at: [-13, -9.5, -3] },
+      { part: 'leftArm', at: [9, -9.5, -3] },
+      { part: 'rightLeg', at: [-7.5, 8, -3] },
+      { part: 'leftLeg', at: [1.5, 8, -3], mirror: true },
+    ],
+    opaque: true,
+    usedBy: ['textures/entity/iron_golem/iron_golem.png', 'iron_golem_crackiness_low.png, _medium.png and _high.png (cracks over the golem, same layout, transparent elsewhere)'],
+    note: 'The head sits low, in front of the shoulders, the nose covering rows 7–9 of head.front and hanging one pixel below the chin. The waist is drawn slightly larger than its box. The left leg has its own texture, drawn mirrored like a vanilla left limb, so paint it as a copy of the right leg seen from the other side.',
+  },
+  {
+    id: 'witch',
+    title: 'Witch (64×128)',
+    size: [64, 128],
+    parts: {
+      head: { box: [8, 10, 8], uv: [0, 0] },
+      nose: { box: [2, 4, 2], uv: [24, 0] },
+      mole: { box: [1, 1, 1], uv: [0, 0] },
+      brim: { box: [10, 2, 10], uv: [0, 64] },
+      hatLow: { box: [7, 4, 7], uv: [0, 76] },
+      hatHigh: { box: [4, 4, 4], uv: [0, 87] },
+      hatTip: { box: [1, 2, 1], uv: [0, 95] },
+      body: { box: [8, 12, 6], uv: [16, 20] },
+      jacket: { box: [8, 20, 6], uv: [0, 38] },
+      arm: { box: [4, 8, 4], uv: [44, 22] },
+      armsMiddle: { box: [8, 4, 4], uv: [40, 38] },
+      leg: { box: [4, 12, 4], uv: [0, 22] },
+    },
+    groups: { hat: ['brim', 'hatLow', 'hatHigh', 'hatTip'], arms: ['arm', 'armsMiddle'], legs: ['leg'] },
+    boxes: [
+      { part: 'head', at: [-4, -10, -4] },
+      { part: 'nose', at: [-1, -3, -6] },
+      { part: 'mole', at: [0, -1, -6.75] },
+      { part: 'brim', at: [-5, -10, -5] },
+      { part: 'hatLow', at: [-3.25, -14, -3] },
+      { part: 'hatHigh', at: [-1.5, -18, -1] },
+      { part: 'hatTip', at: [0.25, -20, 1] },
+      { part: 'body', at: [-4, 0, -3] },
+      { part: 'jacket', at: [-4, 0, -3] },
+      { part: 'leg', at: [-4, 12, -2] },
+      { part: 'leg', at: [0, 12, -2], mirror: true },
+      { part: 'arm', at: [-8, 1, -3] },
+      { part: 'arm', at: [4, 1, -3], mirror: true },
+      { part: 'armsMiddle', at: [-4, 5, -3] },
+    ],
+    usedBy: ['textures/entity/witch.png'],
+    note: 'A villager body (robe on jacket, crossed arms) under a pointed hat of four stacked boxes: brim, hatLow, hatHigh, hatTip. The brim covers the top two rows of head.front. The mole is a 1-pixel box on the nose, whose texture sits in head\'s unused top-left corner. In game the hat bends back a little at each step and the nose wiggles; the views show them straight.',
   },
   {
     id: 'cape',
@@ -612,6 +750,8 @@ export const LAYOUT_ALIASES: Readonly<Record<string, string>> = {
   temperate_chicken: 'chicken',
   warm_chicken: 'chicken',
   zoglin: 'hoglin',
+  ocelot: 'cat',
+  cat_collar: 'cat',
 };
 
 export function resolveLayout(id: unknown): LayoutDef | null {
@@ -708,14 +848,19 @@ function facePoint([w, h, d]: Vec3, face: FaceName, x: number, y: number): Vec3 
   }
 }
 
-/** The face and local pixel a point on the surface of an upright box belongs to (inverse of `facePoint`). */
-function pointFace([w, h, d]: Vec3, [X, Y, Z]: Vec3): [FaceName, number, number] {
+/**
+ * The face and local pixel a point on the surface of an upright box belongs to (inverse of `facePoint`).
+ * `side` picks the side face of a box with no width, where both sides share x = 0.
+ */
+function pointFace([w, h, d]: Vec3, [X, Y, Z]: Vec3, side?: FaceName): [FaceName, number, number] {
   const px = (v: number) => Math.floor(v);
-  if (Z === 0) return ['front', px(X), px(Y)];
-  if (Z === d) return ['back', px(w - X), px(Y)];
-  if (Y === 0) return ['top', px(X), px(d - Z)];
-  if (Y === h) return ['bottom', px(X), px(d - Z)];
-  if (X === 0) return ['right', px(d - Z), px(Y)];
+  if (!side) {
+    if (Z === 0) return ['front', px(X), px(Y)];
+    if (Z === d) return ['back', px(w - X), px(Y)];
+    if (Y === 0) return ['top', px(X), px(d - Z)];
+    if (Y === h) return ['bottom', px(X), px(d - Z)];
+  }
+  if (side === 'right' || (!side && X === 0)) return ['right', px(d - Z), px(Y)];
   return ['left', px(Z), px(Y)];
 }
 
@@ -727,9 +872,11 @@ function pointFace([w, h, d]: Vec3, [X, Y, Z]: Vec3): [FaceName, number, number]
 function turnedFace(u: number, v: number, tex: Vec3, face: FaceName): Rect {
   const [w, h, d] = tex;
   const model: Vec3 = [w, d, h];
+  // Turning about x keeps the side faces on their side.
+  const side = face === 'right' || face === 'left' ? face : undefined;
   const at = (x: number, y: number): [number, number] => {
     const [X, Y, Z] = facePoint(model, face, x, y);
-    const [src, sx, sy] = pointFace(tex, [X, Z, d - Y]);
+    const [src, sx, sy] = pointFace(tex, [X, Z, d - Y], side);
     const r = boxFace(u, v, tex, src);
     return [r.x + sx, r.y + sy];
   };
