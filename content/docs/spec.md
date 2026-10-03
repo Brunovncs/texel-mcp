@@ -228,9 +228,10 @@ Shift lightness of existing pixels by `amount` (−100…100). The workhorse for
 ```
 
 ### copy
-Copy one face (`from` must select exactly one) onto target faces. `flip`: `h`, `v`, `hv`. Sizes are resampled if they differ.
+Copy one face (`from` must select exactly one) onto target faces. `flip`: `h`, `v`, `hv`. Sizes are resampled if they differ. Works on `@overlay` faces too, which is how a feature that spans several faces stays symmetric: paint one arm's part of a pair of wings, copy it to the other arm flipped, and `symmetrize` the part on the body.
 ```json
 { "op": "copy", "from": "head.right", "to": "head.left", "flip": "h" }
+{ "op": "copy", "from": "leftArm.back@overlay", "to": "rightArm.back@overlay", "flip": "h" }
 ```
 
 ### mirror

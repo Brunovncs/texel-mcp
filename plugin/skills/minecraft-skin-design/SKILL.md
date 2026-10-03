@@ -4,7 +4,7 @@ description: Design, render, review and export Minecraft skins (64×64 PNG, clas
 license: MIT
 metadata:
   protocol: texel/1
-  version: 0.3.0
+  version: 0.3.1
 ---
 
 # Minecraft skin design with Texel
@@ -15,7 +15,7 @@ A skin is a JSON **spec**, a palette plus an ordered list of drawing operations 
 
 Prefer the Texel MCP tools when they are available (`texel_render`, `texel_patch`, `texel_live`, `texel_share`, `texel_validate`, `texel_save`, `texel_render_family`, `texel_save_family`, `texel_import_png`, `texel_diff`, `texel_read_docs`, `texel_get_example`).
 
-Without MCP, use the CLI (Node 18+): download `texel.mjs` from the Texel site, then:
+Without MCP, use the CLI (Node 18+). Download https://www.texel.dev.br/texel.mjs once into this skill's folder, next to this SKILL.md (e.g. `~/.claude/skills/minecraft-skin-design/texel.mjs`), and run it from there in every project, so there is one copy to keep current; `node <path>/texel.mjs --version` prints its version. Below, `texel.mjs` stands for that path:
 
 ```bash
 node texel.mjs live spec.json --open          # background: the user watches every save
@@ -36,14 +36,15 @@ When the CLI or an MCP tool says a newer Texel release is available, update befo
 ## Procedure
 
 1. **Brief.** Restate the request as 1–3 sentences of visible features; store it in `description`, in the user's language (reply in it too; keep keys and ids in English). Don't open with questions: decide what was left open, state your choices in one line.
-   **Go live.** Before the first draft, start a live session (`texel_live`, or `texel.mjs live` in the background) and give the user the URL, so they watch the skin take shape and can steer mid-way.
-2. **Learn the format.** Read the spec reference (`texel_read_docs` page `spec`) before your first spec, and the art guide for pixel-art rules. Fork an example when one is close.
-3. **Palette first.** Name colors by role (`skin`, `hair`, `primary`, `trim`) with derived tones (`"primaryDark": "primary:-12"`), 2–4 tones per material.
-4. **Layers broad → fine.** `fill` on `all` first (no transparent base pixels) → parts → bands (`rect` with `y`/`h`) → shading on broad areas (`gradient`, `shade`, `noise` jitter 2–5) → details (face `pixels`, collars, buttons) → overlay. Texture before details, or noise smears them. Don't paint areas you fully repaint later (`overwritten-layer`). Paint `rightArm`/`rightLeg`, then `mirror`. Give revisitable layers an `id`.
-5. **Render and review.** Fix every error and warning first. Then look at the sheet image and check the rubric:
+2. **Go live, before writing the spec.** Start a live session (`texel_live`, or `node texel.mjs live spec.json --open` in the background; the file may not exist yet, it is pushed on every save) and send the user its URL right away, in the same reply as the brief, so they watch the skin take shape and can steer mid-way.
+3. **Learn the format.** Read the spec reference before your first spec and the art guide for pixel-art rules: `texel_read_docs` pages `spec` and `art-guide`, or without MCP https://www.texel.dev.br/docs/spec.md and https://www.texel.dev.br/docs/art-guide.md. Fork an example when one is close (`texel_get_example`, or https://www.texel.dev.br/examples/index.json and `/examples/<name>.json`).
+4. **Palette first.** Name colors by role (`skin`, `hair`, `primary`, `trim`) with derived tones (`"primaryDark": "primary:-12"`), 2–4 tones per material.
+5. **Layers broad → fine.** `fill` on `all` first (no transparent base pixels) → parts → bands (`rect` with `y`/`h`) → shading on broad areas (`gradient`, `shade`, `noise` jitter 2–5) → details (face `pixels`, collars, buttons) → overlay. Texture before details, or noise smears them. Don't paint areas you fully repaint later (`overwritten-layer`). Paint `rightArm`/`rightLeg`, then `mirror`. Give revisitable layers an `id`.
+   Draw a feature that crosses faces (wings over `body.back` and the arm backs, a cape, straps) once per side and copy it instead of mirroring rows by hand: paint the left half of `body.back@overlay` and `symmetrize` it, paint `leftArm.back@overlay` and `copy` it to `rightArm.back@overlay` with `"flip": "h"`. Both work on `@overlay` faces. Then check that it still reads from the front.
+6. **Render and review.** Fix every error and warning first. Then look at the sheet image and check the rubric:
    - R1 every brief feature visible · R2 face readable (eyes, brows, mouth) · R3 parts distinguishable by value · R4 light from above, darker undersides and inner faces · R5 no large flat areas · R6 back and sides designed · R7 overlay adds depth · R8 zero errors/warnings.
-6. **Patch the weakest item** with a spec patch by layer id (`texel_patch` / `texel.mjs patch`; docs page `spec`, section Patches), look at the new render, and use `texel_diff` to confirm the change touched only the intended faces. Stop when R1–R8 pass or after ~6 iterations.
-7. **Ship.** Save the PNG, the `.skin.json` source and the sheet, and create the short share link (`texel_share` / `texel.mjs share`). Give the user the link and the file paths (not the JSON itself), and how to use it: upload it at minecraft.net → Profile → Skin (classic or slim to match `model`), or save the PNGs into a resource pack or a mod's assets folder. For many skins, build them in one go with a family (`texel_save_family` / `texel.mjs family`).
+7. **Patch the weakest item** with a spec patch by layer id (`texel_patch` / `texel.mjs patch`; docs page `spec`, section Patches), look at the new render, and after every patch diff it against the previous version (`texel_diff` / `texel.mjs diff`; keep a copy before patching in place) to confirm the change touched only the intended faces. Stop when R1–R8 pass or after ~6 iterations.
+8. **Ship.** Save the PNG, the `.skin.json` source and the sheet, and create the short share link (`texel_share` / `texel.mjs share`). Give the user the link and the file paths (not the JSON itself), and how to use it: upload it at minecraft.net → Profile → Skin (classic or slim to match `model`), or save the PNGs into a resource pack or a mod's assets folder. For many skins, build them in one go with a family (`texel_save_family` / `texel.mjs family`).
 
 ## Continuing an existing skin
 
