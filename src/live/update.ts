@@ -1,0 +1,107 @@
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+
+/**
+ * Release check for the downloaded CLI and MCP server. Installed copies never update themselves, so
+ * they compare their version with `<site>/version.json` (at most once a day, cached in ~/.texel) and
+ * tell the agent running them to re-download the tools and the skill. Silent when offline.
+ */
+
+export interface Release {
+  version: string;
+  files: { skill: string; cli: string; mcp: string };
+}
+
+export interface Update extends Release {
+  current: string;
+}
+
+interface Cache {
+  site: string;
+  checkedAt: number;
+  release: Release | null;
+}
+
+/** Version of this build (package.json), or a dev marker when running unbundled. */
+export const TEXEL_VERSION = typeof __TEXEL_VERSION__ === 'string' ? __TEXEL_VERSION__ : '0.0.0-dev';
+
+const DAY = 24 * 60 * 60 * 1000;
+
+const parts = (v: string) => /^(\d+)\.(\d+)\.(\d+)/.exec(v)?.slice(1).map(Number) ?? null;
+
+/** Whether `a` is a later release than `b` (x.y.z; anything else never counts as newer). */
+export function isNewer(a: string, b: string): boolean {
+  const x = parts(a), y = parts(b);
+  if (!x || !y) return false;
+  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i];
+  return false;
+}
+
+/** A valid release with absolute file URLs (a build without SITE_URL publishes site-relative paths). */
+function asRelease(v: unknown, site: string): Release | null {
+  const r = v as Partial<Release> | null;
+  const f = r?.files;
+  if (typeof r?.version !== 'string' || typeof f?.skill !== 'string' || typeof f.cli !== 'string' || typeof f.mcp !== 'string') return null;
+  try {
+    const abs = (u: string) => new URL(u, `${site}/`).href;
+    return { version: r.version, files: { skill: abs(f.skill), cli: abs(f.cli), mcp: abs(f.mcp) } };
+  } catch {
+    return null;
+  }
+}
+
+function readCache(file: string): Cache | null {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8')) as Cache;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(file: string, cache: Cache) {
+  try {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, JSON.stringify(cache));
+  } catch {
+    // A read-only home only means checking again next time.
+  }
+}
+
+export interface CheckOptions {
+  site: string;
+  cacheFile?: string;
+  timeoutMs?: number;
+  now?: number;
+  env?: Record<string, string | undefined>;
+  fetch?: typeof fetch;
+}
+
+/** The newer release, or null when up to date, unknown, offline or disabled (TEXEL_NO_UPDATE_CHECK, CI). */
+export async function checkForUpdate(current: string, options: CheckOptions): Promise<Update | null> {
+  const { site, cacheFile = join(homedir(), '.texel', 'update-check.json'), timeoutMs = 1500, now = Date.now(), env = process.env, fetch: get = fetch } = options;
+  if (env.TEXEL_NO_UPDATE_CHECK || env.CI || !parts(current) || current.includes('-')) return null;
+  const cached = readCache(cacheFile);
+  let release = cached?.site === site ? cached.release : null;
+  if (cached?.site !== site || !(now - cached.checkedAt < DAY)) {
+    try {
+      const res = await get(`${site}/version.json`, { signal: AbortSignal.timeout(timeoutMs) });
+      if (res.ok) release = asRelease(await res.json(), site) ?? release;
+    } catch {
+      // Offline: keep the last known release and retry tomorrow.
+    }
+    writeCache(cacheFile, { site, checkedAt: now, release });
+  }
+  return release && isNewer(release.version, current) ? { ...release, current } : null;
+}
+
+/** Instructions for the agent: what to download over what. `file` is the running script. */
+export function updateNotice(u: Update, tool: 'cli' | 'mcp', file = process.argv[1]): string {
+  const self = tool === 'cli' ? `- ${u.files.cli} → replace ${file ? resolve(file) : 'texel.mjs'}` : `- ${u.files.mcp} → replace ${file ? resolve(file) : 'texel-mcp.mjs'}, then ask the user to restart the Texel MCP server`;
+  return [
+    `Texel ${u.version} is available (this ${tool === 'cli' ? 'texel.mjs' : 'MCP server'} is ${u.current}). Update before continuing and tell the user you did:`,
+    self,
+    `- ${u.files.skill} → replace your minecraft-skin-design SKILL.md, if you use that skill`,
+    'Set TEXEL_NO_UPDATE_CHECK=1 to turn this check off.',
+  ].join('\n');
+}

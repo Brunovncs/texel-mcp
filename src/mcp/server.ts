@@ -30,8 +30,9 @@ import { DOC_PAGES, DOCS, EXAMPLE_IDS, EXAMPLES, FAMILY_EXAMPLES, SCHEMAS } from
 import { Workspace } from './workspace';
 import { openBrowser, startLive, type LiveSession } from '../live/server';
 import { SITE_ORIGIN } from '../live/site';
+import { TEXEL_VERSION, updateNotice, type Update } from '../live/update';
 
-export const SERVER_VERSION = typeof __TEXEL_VERSION__ === 'string' ? __TEXEL_VERSION__ : '0.0.0-dev';
+export const SERVER_VERSION = TEXEL_VERSION;
 export const VIEWER_URI = 'ui://texel/viewer';
 export const VIEWER_MIME = 'text/html;profile=mcp-app';
 /** Key under which render results carry the texture for the MCP App viewer (kept out of model context). */
@@ -85,10 +86,25 @@ function toolError(message: string): CallToolResult {
   return { isError: true, content: [textBlock(message)] };
 }
 
-/** Build a fully configured server. Called once per connection by the transport entry point. */
-export function createTexelServer(workspace = new Workspace()): McpServer {
+/**
+ * Build a fully configured server. Called once per connection by the transport entry point. When
+ * `update` resolves to a newer release, the next tool result carries the update instructions, once.
+ */
+export function createTexelServer(workspace = new Workspace(), update?: Promise<Update | null>): McpServer {
   const server = new McpServer({ name: 'texel', title: 'Texel', version: SERVER_VERSION }, { instructions: INSTRUCTIONS });
   let live: LiveSession | null = null;
+
+  let notice: string | null = null;
+  void update?.then((u) => (notice = u && updateNotice(u, 'mcp')));
+  const register = server.registerTool.bind(server);
+  server.registerTool = ((name: string, config: never, cb: (...args: unknown[]) => Promise<CallToolResult>) =>
+    register(name, config, (async (...args: unknown[]) => {
+      const result = await cb(...args);
+      if (!notice) return result;
+      const text = notice;
+      notice = null;
+      return { ...result, content: [...result.content, textBlock(text)] };
+    }) as never)) as typeof server.registerTool;
 
   /** Review a compiled spec, push it to the live session, and return the render outputs. */
   const rendered = (result: CompileResult, include: string[], before = '', extra: Record<string, unknown> = {}): CallToolResult => {

@@ -63,3 +63,7 @@ Files are written to the directory the server runs in. Pin it with `--env TEXEL_
 | prompt | `design_skin`, `continue_skin`, `design_family`, `critique_skin` | Protocol runbooks with arguments. |
 
 All write tools are confined to the workspace directory; paths outside it are rejected.
+
+## Updates
+
+Downloaded copies don't update themselves. Once a day the CLI and the MCP server fetch [`/version.json`](/version.json) (the current release and where its files live) and compare it with their own version. When a newer release is out, the CLI prints the update steps on stderr and the MCP server adds them to the next tool result, so the agent can download the new `texel.mjs`, `texel-mcp.mjs` and `SKILL.md` over the old ones. The check waits at most 1.5 s, is cached in `~/.texel/`, stays silent offline, and is skipped when `CI` or `TEXEL_NO_UPDATE_CHECK=1` is set. `node texel.mjs --version` and `node texel-mcp.mjs --version` print the installed version; the skill carries it in `metadata.version`.

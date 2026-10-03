@@ -4,6 +4,7 @@ description: Design, render, review and export Minecraft skins (64×64 PNG, clas
 license: MIT
 metadata:
   protocol: texel/1
+  version: 0.3.0
 ---
 
 # Minecraft skin design with Texel
@@ -29,6 +30,8 @@ node texel.mjs layouts                       # texture layouts and their part na
 ```
 
 Read `sheet.png` / `lineup.png` with your image-viewing tool to judge the result.
+
+When the CLI or an MCP tool says a newer Texel release is available, update before continuing: download the files it lists over the old ones, this SKILL.md included, and tell the user.
 
 ## Procedure
 

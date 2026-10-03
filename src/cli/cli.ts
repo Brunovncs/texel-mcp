@@ -26,8 +26,9 @@ import {
 } from '../core';
 import { openBrowser, startLive } from '../live/server';
 import { SITE_ORIGIN } from '../live/site';
+import { checkForUpdate, TEXEL_VERSION, updateNotice } from '../live/update';
 
-const HELP = `texel: compile Texel skin specs (${PROTOCOL}) into Minecraft skins
+const HELP = `texel ${TEXEL_VERSION}: compile Texel skin specs (${PROTOCOL}) into Minecraft skins
 
 usage:
   node texel.mjs live   <spec.json> [--port 4747] [--open]
@@ -43,6 +44,7 @@ usage:
   node texel.mjs format <spec.json|->
   node texel.mjs layouts
   node texel.mjs init   [--layout player|zombie|skeleton|creeper|cape|item|…]
+  node texel.mjs --version
 
 live   serves the spec to the studio and re-pushes it on every save, so the user can watch while
        you work. Run it in the background, give the user the printed URL, then just edit the file.
@@ -53,6 +55,8 @@ patch  applies a patch ({ "patch": [{ "do": "update", "id": …, "set": … }] }
        Without -o the patched spec goes to stdout and the review to stderr.
 
 "-" reads the spec from stdin. Exit code is 1 when the spec has errors.
+Once a day the CLI checks ${SITE_ORIGIN}/version.json and says on stderr when a newer release is out
+(TEXEL_NO_UPDATE_CHECK=1 turns this off).
 Docs: ${SITE_ORIGIN}/llms.txt · ${SITE_ORIGIN}/docs/spec.md · ${SITE_ORIGIN}/docs/protocol.md`;
 
 const STARTER = {
@@ -125,6 +129,12 @@ async function live(file: string, args: string[]) {
 
 async function main(argv: string[]) {
   const [cmd, file, ...rest] = argv;
+  if (cmd === '--version') return void process.stdout.write(`${TEXEL_VERSION}
+`);
+  const update = cmd && !['help', '--help', '-h'].includes(cmd) ? await checkForUpdate(TEXEL_VERSION, { site: SITE_ORIGIN }) : null;
+  if (update) process.stderr.write(`${updateNotice(update, 'cli')}
+
+`);
   switch (cmd) {
     case 'build': {
       const result = compile(readSpec(file));
