@@ -61,6 +61,7 @@ Minecraft's lighting is flat, so skins carry their own shading. Assume light fro
 - 15–60 distinct colors is typical for a good skin. Fewer than 6 looks flat.
 - 1 dominant hue, 1–2 secondary, 1 accent (small area, high saturation: buckles, eyes, gems, lights).
 - Keep adjacent parts at different *values* (lightness), not just hues. Silhouettes must read in grayscale.
+- One-color characters (a white pig, a black cat, a silver robot) still need parts that read apart: keep the head lightest, the torso a step darker or with a lighter belly or chest, arms and legs a step darker again (`"fur:-8"`), hands and feet darker still, and a 1 px darker seam where arm meets body. A gap under ~8 lightness points between head, body and legs reads as one blob.
 - Avoid pure `#000000` and pure `#ffffff` in large areas.
 
 ## The overlay layer

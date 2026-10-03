@@ -2,6 +2,10 @@
 
 Each release's section is published as `notes` in `/version.json`, and installed tools show it in their update notice, so the agent knows what changed and whether to redo anything. Keep it to one or two lines, and say whether specs still render the same PNGs. A test fails when the current version has no section.
 
+## 0.3.4
+
+Docs and skill only. The art guide covers one-color characters (keeping head, body and limbs apart by value); the spec warns that `fur` (and feathers) turns blotchy on light colors; the skill says what to do when a feature can't read from the front, to read the docs online instead of keeping stale copies, and to check viewers after the first live push. Compiler unchanged.
+
 ## 0.3.3
 
 `live` and `texel_live` printed the default port even when another session held it and they had moved to the next one, so the studio link showed someone else's skin; restart a running live to get the fix. The skill now says what a texture is for (player skin or the mob's own texture) and when a mob has no layout, and checks the viewer count before calling the studio open. The spec warns that `~` shadows turn pinks red. Compiler unchanged: specs render the same PNGs.

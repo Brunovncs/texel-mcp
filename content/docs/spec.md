@@ -251,7 +251,7 @@ Make faces left-right symmetric by copying one half onto the other. `source`: `l
 These do the craft from the [art guide](/docs/art-guide.md) for you: face layout, hair that wraps around the head, material texture, light from above. Use them for the broad strokes, then add personality with `pixels`, `points` and `line`. They are ordinary layers: later layers still paint over them.
 
 ### material
-Fill an area with a color and the texture of a material, with its tones derived from that one color. `kind`: `plain`, `skin`, `fabric`, `knit`, `leather`, `metal`, `fur`, `stone`, `scales`, `wood`, `glow`. Takes the area options and `region`; `seed` varies the grain.
+Fill an area with a color and the texture of a material, with its tones derived from that one color. `kind`: `plain`, `skin`, `fabric`, `knit`, `leather`, `metal`, `fur`, `stone`, `scales`, `wood`, `glow`. Takes the area options and `region`; `seed` varies the grain. `fur` has strong grain and turns blotchy on very light colors (white or pastel coats, and feathers, which are read as `fur`); use `skin` or `plain` plus `noise` with jitter 2–4 there.
 ```json
 { "op": "material", "target": "legs", "region": "boots", "color": "#4a3324", "kind": "leather" }
 ```
