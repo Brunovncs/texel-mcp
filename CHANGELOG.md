@@ -2,6 +2,10 @@
 
 Each release's section is published as `notes` in `/version.json`, and installed tools show it in their update notice, so the agent knows what changed and whether to redo anything. Keep it to one or two lines, and say whether specs still render the same PNGs. A test fails when the current version has no section.
 
+## 0.3.5
+
+Docs and skill only. The art guide says how R3 measures (front faces, overlay included, passing at a gap of about 6 points, arms not measured) and how to paint ice and glass; the skill no longer reads `mirror` as mandatory for limbs that differ on purpose. Compiler unchanged.
+
 ## 0.3.4
 
 Docs and skill only. The art guide covers one-color characters (keeping head, body and limbs apart by value); the spec warns that `fur` (and feathers) turns blotchy on light colors; the skill says what to do when a feature can't read from the front, to read the docs online instead of keeping stale copies, and to check viewers after the first live push. Compiler unchanged.

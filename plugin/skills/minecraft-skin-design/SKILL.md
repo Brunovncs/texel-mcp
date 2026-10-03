@@ -4,7 +4,7 @@ description: Design, render, review and export Minecraft skins (64×64 PNG, clas
 license: MIT
 metadata:
   protocol: texel/1
-  version: 0.3.4
+  version: 0.3.5
 ---
 
 # Minecraft skin design with Texel
@@ -40,7 +40,7 @@ When the CLI or an MCP tool says a newer Texel release is available, the result 
 2. **Go live, before writing the spec.** Start a live session (`texel_live`, or `node texel.mjs live spec.json --open` in the background; the file may not exist yet, it is pushed on every save) and send the user its URL right away, in the same reply as the brief, so they watch the skin take shape and can steer mid-way. Use the URL it prints (another session may hold the default port). The live output counts viewers on each push; after the first push, don't tell the user the studio is open unless it shows one, and resend the URL if it stays at 0.
 3. **Learn the format.** Read the spec reference before your first spec and the art guide for pixel-art rules: `texel_read_docs` pages `spec` and `art-guide`, or without MCP https://www.texel.dev.br/docs/spec.md and https://www.texel.dev.br/docs/art-guide.md. Read them from there each time rather than keeping copies, which go stale when Texel updates. Fork an example when one is close (`texel_get_example`, or https://www.texel.dev.br/examples/index.json and `/examples/<name>.json`).
 4. **Palette first.** Name colors by role (`skin`, `hair`, `primary`, `trim`) with derived tones (`"primaryDark": "primary:-12"`), 2–4 tones per material.
-5. **Layers broad → fine.** `fill` on `all` first (no transparent base pixels) → parts → bands (`rect` with `y`/`h`) → shading on broad areas (`gradient`, `shade`, `noise` jitter 2–5) → details (face `pixels`, collars, buttons) → overlay. Texture before details, or noise smears them. Don't paint areas you fully repaint later (`overwritten-layer`). Paint `rightArm`/`rightLeg`, then `mirror`. Give revisitable layers an `id`.
+5. **Layers broad → fine.** `fill` on `all` first (no transparent base pixels) → parts → bands (`rect` with `y`/`h`) → shading on broad areas (`gradient`, `shade`, `noise` jitter 2–5) → details (face `pixels`, collars, buttons) → overlay. Texture before details, or noise smears them. Don't paint areas you fully repaint later (`overwritten-layer`). Paint `rightArm`/`rightLeg`, then `mirror` (skip it for limbs that differ on purpose). Give revisitable layers an `id`.
    Draw a feature that crosses faces (wings over `body.back` and the arm backs, a cape, straps) once per side and copy it instead of mirroring rows by hand: paint the left half of `body.back@overlay` and `symmetrize` it, paint `leftArm.back@overlay` and `copy` it to `rightArm.back@overlay` with `"flip": "h"`. Both work on `@overlay` faces. Then check that it still reads from the front; a skin can't stick out of the body, so when it doesn't, bring a hint of it to the front faces (wing edges on the outer columns of `arms.front@overlay`, tips over the shoulders on the top rows of `body.front@overlay`) and, for wings, offer a matching `cape` layout texture (cape and elytra).
 6. **Render and review.** Fix every error and warning first. Then look at the sheet image and check the rubric:
    - R1 every brief feature visible · R2 face readable (eyes, brows, mouth) · R3 parts distinguishable by value (one-color characters too: see the art guide, Color) · R4 light from above, darker undersides and inner faces · R5 no large flat areas · R6 back and sides designed · R7 overlay adds depth · R8 zero errors/warnings.
