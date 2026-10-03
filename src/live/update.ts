@@ -10,6 +10,8 @@ import { dirname, join, resolve } from 'node:path';
 
 export interface Release {
   version: string;
+  /** What changed, from CHANGELOG.md. */
+  notes?: string;
   files: { skill: string; cli: string; mcp: string };
 }
 
@@ -45,7 +47,8 @@ function asRelease(v: unknown, site: string): Release | null {
   if (typeof r?.version !== 'string' || typeof f?.skill !== 'string' || typeof f.cli !== 'string' || typeof f.mcp !== 'string') return null;
   try {
     const abs = (u: string) => new URL(u, `${site}/`).href;
-    return { version: r.version, files: { skill: abs(f.skill), cli: abs(f.cli), mcp: abs(f.mcp) } };
+    const notes = typeof r.notes === 'string' ? r.notes.replace(/\s+/g, ' ').trim().slice(0, 600) : '';
+    return { version: r.version, ...(notes && { notes }), files: { skill: abs(f.skill), cli: abs(f.cli), mcp: abs(f.mcp) } };
   } catch {
     return null;
   }
@@ -95,11 +98,18 @@ export async function checkForUpdate(current: string, options: CheckOptions): Pr
   return release && isNewer(release.version, current) ? { ...release, current } : null;
 }
 
-/** Instructions for the agent: what to download over what. `file` is the running script. */
+/**
+ * Instructions for the agent: what to download over what. `file` is the running script. The notice
+ * comes with a finished result, so it says that result stands and the update is for the next call.
+ */
 export function updateNotice(u: Update, tool: 'cli' | 'mcp', file = process.argv[1]): string {
-  const self = tool === 'cli' ? `- ${u.files.cli} → replace ${file ? resolve(file) : 'texel.mjs'}` : `- ${u.files.mcp} → replace ${file ? resolve(file) : 'texel-mcp.mjs'}, then ask the user to restart the Texel MCP server`;
+  const self =
+    tool === 'cli'
+      ? `- ${u.files.cli} → replace ${file ? resolve(file) : 'texel.mjs'}, then restart any running \`texel.mjs live\` from the new copy`
+      : `- ${u.files.mcp} → replace ${file ? resolve(file) : 'texel-mcp.mjs'}, then ask the user to restart the Texel MCP server`;
   return [
-    `Texel ${u.version} is available (this ${tool === 'cli' ? 'texel.mjs' : 'MCP server'} is ${u.current}). Update before continuing and tell the user you did:`,
+    `Texel ${u.version} is available (this ${tool === 'cli' ? 'texel.mjs' : 'MCP server'} is ${u.current}). This ${tool === 'cli' ? 'run' : 'tool call'} completed normally; before your next Texel command, update and tell the user what changed:`,
+    ...(u.notes ? [`What changed: ${u.notes}`] : []),
     self,
     `- ${u.files.skill} → replace your minecraft-skin-design SKILL.md, if you use that skill`,
     'Set TEXEL_NO_UPDATE_CHECK=1 to turn this check off.',
