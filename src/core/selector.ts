@@ -37,6 +37,19 @@ export function parseSelector(sel: unknown): SelectorResult {
   for (const item of list) {
     if (typeof item !== 'string') return { ok: false, error: 'target must be a string or an array of strings' };
     const m = SELECTOR.exec(item.replace(/\s+/g, ''));
+    // Models often join whole selectors with "+" ("body.sides+arms.sides"); read that as a union.
+    if (!m && item.includes('+')) {
+      const split = splitJoined(item.replace(/\s+/g, ''));
+      if (split) {
+        const r = parseSelector(split);
+        if (!r.ok) return r;
+        for (const ref of r.refs) {
+          const key = `${ref.part}.${ref.face}@${ref.layer}`;
+          if (!seen.has(key)) seen.add(key), refs.push(ref);
+        }
+        continue;
+      }
+    }
     if (!m) return { ok: false, error: `malformed selector "${item}"`, hint: 'expected "<parts>[.<faces>][@<layer>]", e.g. "arms.front@overlay"' };
     const parts = expand(m[1], PART_GROUPS, 'part');
     if (!parts.ok) return parts;
@@ -55,6 +68,22 @@ export function parseSelector(sel: unknown): SelectorResult {
         }
   }
   return { ok: true, refs };
+}
+
+/**
+ * "head.front+head.sides@overlay" → ["head.front@overlay", "head.sides@overlay"]. A piece without
+ * a dot extends the one before it ("head.top+back" stays valid). A layer written only on the last
+ * piece applies to all of them. Null when it doesn't split into more than one selector.
+ */
+function splitJoined(text: string): string[] | null {
+  const groups: string[] = [];
+  for (const token of text.split('+')) {
+    if (token.includes('.') || !groups.length) groups.push(token);
+    else groups[groups.length - 1] += `+${token}`;
+  }
+  if (groups.length < 2) return null;
+  const layer = /@[^.@]+$/.exec(groups[groups.length - 1])?.[0];
+  return groups.map((g) => (layer && !g.includes('@') ? g + layer : g));
 }
 
 function expand(

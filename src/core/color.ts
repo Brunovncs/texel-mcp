@@ -2,6 +2,7 @@ import type { RGBA } from './types';
 
 const HEX = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 const SHIFT = /^(.+?):([+-]?\d+(?:\.\d+)?)$/;
+const TONE = /^(.+?)~([+-]?[1-4])$/;
 
 export const TRANSPARENT: RGBA = [0, 0, 0, 0];
 
@@ -58,6 +59,26 @@ export function shiftLightness(c: RGBA, pct: number): RGBA {
   return hslToRgb(h, s, Math.min(1, Math.max(0, l + pct / 100)), c[3]);
 }
 
+/**
+ * One step along a pixel-art tone ramp (-4..4). Lighter steps warm toward yellow and lose a little
+ * saturation; darker steps cool toward blue and gain some, which reads richer than plain lightness.
+ */
+export function tone(c: RGBA, step: number): RGBA {
+  if (step === 0 || c[3] === 0) return c;
+  const [h, s, l] = rgbToHsl(c);
+  let hue = h;
+  if (s >= 0.06) {
+    const target = step > 0 ? 60 / 360 : 230 / 360;
+    let d = target - h;
+    if (d > 0.5) d -= 1;
+    if (d < -0.5) d += 1;
+    const move = Math.min(Math.abs(d), Math.abs(step) * 0.012);
+    hue = (h + Math.sign(d) * move + 1) % 1;
+  }
+  const sat = step < 0 ? Math.min(1, s + 0.04 * -step) : Math.max(0, s - 0.02 * step);
+  return hslToRgb(hue, sat, Math.min(1, Math.max(0, l + step * 0.09)), c[3]);
+}
+
 export function mix(a: RGBA, b: RGBA, t: number): RGBA {
   return [0, 1, 2, 3].map((i) => Math.round(a[i] + (b[i] - a[i]) * t)) as RGBA;
 }
@@ -70,7 +91,11 @@ export function luminance([r, g, b]: RGBA): number {
   return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
 }
 
-export type ColorResult = { ok: true; color: RGBA } | { ok: false; error: string; hint?: string };
+/** `guessed` explains how a near-miss expression was read, e.g. "armor-1" as "armor~-1". */
+export type ColorResult = { ok: true; color: RGBA; guessed?: string } | { ok: false; error: string; hint?: string };
+
+/** Near misses models write for tone steps: "armor-1", "armor+2", or a shift with no number ("coat:"). */
+const NEAR_MISS = /^(.+?)(?:([-+])([1-4])|[:~])$/;
 
 /**
  * Resolve a color expression against a palette. Palette values may themselves reference other
@@ -85,10 +110,15 @@ export function resolveColor(
   if (typeof expr !== 'string' || !expr.trim()) return { ok: false, error: 'color must be a non-empty string' };
   if (depth > 8) return { ok: false, error: `palette reference chain too deep at "${expr}"` };
   const text = expr.trim();
+  const toned = TONE.exec(text);
+  if (toned) {
+    const inner = resolveColor(toned[1], palette, used, depth + 1);
+    return inner.ok ? { ok: true, color: tone(inner.color, Number(toned[2])), guessed: inner.guessed } : inner;
+  }
   const shift = SHIFT.exec(text);
   if (shift) {
     const inner = resolveColor(shift[1], palette, used, depth + 1);
-    return inner.ok ? { ok: true, color: shiftLightness(inner.color, Number(shift[2])) } : inner;
+    return inner.ok ? { ok: true, color: shiftLightness(inner.color, Number(shift[2])), guessed: inner.guessed } : inner;
   }
   if (text === 'transparent') return { ok: true, color: TRANSPARENT };
   if (text.startsWith('#')) {
@@ -98,6 +128,12 @@ export function resolveColor(
   if (Object.prototype.hasOwnProperty.call(palette, text)) {
     used?.add(text);
     return resolveColor(palette[text], palette, used, depth + 1);
+  }
+  const near = NEAR_MISS.exec(text);
+  if (near && Object.prototype.hasOwnProperty.call(palette, near[1])) {
+    const inner = resolveColor(near[1], palette, used, depth + 1);
+    const step = near[3] ? Number(`${near[2]}${near[3]}`) : 0;
+    if (inner.ok) return { ok: true, color: tone(inner.color, step), guessed: `read "${text}" as "${near[1]}${step ? `~${step}` : ''}"` };
   }
   return { ok: false, error: `unknown color or palette key "${text}"`, hint: suggestHint(text, Object.keys(palette)) };
 }

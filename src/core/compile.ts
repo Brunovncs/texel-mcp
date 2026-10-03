@@ -1,22 +1,27 @@
 import { mix, resolveColor, shiftLightness, suggestHint, TRANSPARENT } from './color';
+import { applyLighting, applyMaterial, BEARDS, drawFace, drawHair, EYE_STYLES, FRINGES, HAIR_STYLES, MATERIAL_ALIASES, MATERIALS, MOUTHS, REGIONS, type Material, type Surface } from './components';
 import { boxSize, faceRect, PARTS, SKIN_SIZE } from './layout';
 import { parseSelector } from './selector';
 import type { FaceName, FaceRef, Image, Issue, LayerName, Model, PartName, Rect, RGBA, SkinSpec } from './types';
 
 export const OP_KEYS: Record<string, { required: string[]; optional: string[] }> = {
-  fill: { required: ['target', 'color'], optional: [] },
-  rect: { required: ['target', 'color'], optional: ['x', 'y', 'w', 'h'] },
-  clear: { required: ['target'], optional: ['x', 'y', 'w', 'h'] },
+  fill: { required: ['target', 'color'], optional: ['x', 'y', 'w', 'h', 'region'] },
+  rect: { required: ['target', 'color'], optional: ['x', 'y', 'w', 'h', 'region'] },
+  clear: { required: ['target'], optional: ['x', 'y', 'w', 'h', 'region'] },
   pixels: { required: ['target', 'rows'], optional: ['x', 'y', 'legend'] },
   points: { required: ['target', 'points', 'color'], optional: [] },
   line: { required: ['target', 'from', 'to', 'color'], optional: [] },
-  gradient: { required: ['target', 'from', 'to'], optional: ['direction', 'steps', 'x', 'y', 'w', 'h'] },
-  pattern: { required: ['target', 'kind', 'colors'], optional: ['size', 'x', 'y', 'w', 'h'] },
-  noise: { required: ['target'], optional: ['colors', 'density', 'jitter', 'seed', 'x', 'y', 'w', 'h'] },
-  shade: { required: ['target', 'amount'], optional: ['x', 'y', 'w', 'h'] },
+  gradient: { required: ['target', 'from', 'to'], optional: ['direction', 'steps', 'x', 'y', 'w', 'h', 'region'] },
+  pattern: { required: ['target', 'kind', 'colors'], optional: ['size', 'x', 'y', 'w', 'h', 'region'] },
+  noise: { required: ['target'], optional: ['colors', 'density', 'jitter', 'seed', 'x', 'y', 'w', 'h', 'region'] },
+  shade: { required: ['target', 'amount'], optional: ['x', 'y', 'w', 'h', 'region'] },
   copy: { required: ['from', 'to'], optional: ['flip'] },
   mirror: { required: ['from', 'to'], optional: ['layer'] },
   symmetrize: { required: ['target'], optional: ['source'] },
+  material: { required: ['target', 'color', 'kind'], optional: ['seed', 'x', 'y', 'w', 'h', 'region'] },
+  face: { required: ['skin', 'eyes'], optional: ['target', 'eyeStyle', 'mouth', 'beard', 'nose', 'white', 'brows', 'mouthColor', 'beardColor', 'blush'] },
+  hair: { required: ['color'], optional: ['style', 'fringe', 'layer'] },
+  lighting: { required: [], optional: ['target', 'strength'] },
 };
 const COMMON_KEYS = ['op', 'id', 'note', 'enabled'];
 const SPEC_KEYS = ['$schema', 'version', 'name', 'description', 'author', 'tags', 'model', 'palette', 'legend', 'layers'];
@@ -89,7 +94,10 @@ class Ctx {
 
   color(expr: unknown, path: string): RGBA | null {
     const r = resolveColor(expr, this.palette, this.used);
-    if (r.ok) return r.color;
+    if (r.ok) {
+      if (r.guessed) this.issue('info', 'color-guess', path, r.guessed, 'write tone steps as "name~-1" and shifts as "name:-10"');
+      return r.color;
+    }
     this.issue('error', 'bad-color', path, r.error, r.hint);
     return null;
   }
@@ -139,6 +147,7 @@ export function compile(input: unknown): CompileResult {
       for (const k of Object.keys(ctx.palette)) {
         const r = resolveColor(ctx.palette[k], ctx.palette);
         if (!r.ok) ctx.issue('error', 'bad-color', `$.palette.${k}`, r.error, r.hint);
+        else if (r.guessed) ctx.issue('info', 'color-guess', `$.palette.${k}`, r.guessed, 'write tone steps as "name~-1" and shifts as "name:-10"');
       }
     }
   }
@@ -191,7 +200,8 @@ function readLegend(ctx: Ctx, legend: Json, path: string): Record<string, string
   const out: Record<string, string> = {};
   for (const [ch, v] of Object.entries(legend)) {
     if ([...ch].length !== 1) ctx.issue('error', 'bad-legend', `${path}.${ch}`, `legend keys must be a single character, got "${ch}"`);
-    else if (RESERVED_CHARS.has(ch)) ctx.issue('error', 'bad-legend', `${path}.${ch}`, `"${ch}" is reserved ("." keeps the pixel, "_" erases it)`);
+    // Defining "." or "_" changes nothing they mean, so drop the entry instead of the whole layer.
+    else if (RESERVED_CHARS.has(ch)) ctx.issue('info', 'legend-reserved', `${path}.${ch}`, `"${ch}" is reserved ("." keeps the pixel, "_" erases it); this legend entry is ignored`);
     else if (typeof v !== 'string') ctx.issue('error', 'bad-legend', `${path}.${ch}`, 'legend values must be color expressions');
     else out[ch] = v;
   }
@@ -233,16 +243,62 @@ function area(op: Json, face: Rect): Rect {
 
 function checkArea(ctx: Ctx, op: Json, path: string): boolean {
   let ok = true;
+  if (op.region !== undefined) {
+    if (typeof op.region !== 'string' || !Object.hasOwn(REGIONS, op.region)) {
+      ctx.issue('error', 'bad-region', `${path}.region`, `unknown region ${JSON.stringify(op.region)}`, suggestHint(String(op.region), Object.keys(REGIONS)) ?? `valid: ${Object.keys(REGIONS).join(', ')}`);
+      ok = false;
+    } else if (op.y !== undefined || op.h !== undefined) {
+      ctx.issue('error', 'bad-region', `${path}.region`, '"region" sets the rows itself; drop "y" and "h"');
+      ok = false;
+    }
+  }
   for (const k of ['x', 'y', 'w', 'h']) if (op[k] !== undefined && num(ctx, op[k], `${path}.${k}`, { int: true, ...(k === 'w' || k === 'h' ? { min: 0 } : {}) }) === null) ok = false;
   return ok;
 }
 
+/** The op's area on one face, or null when its `region` doesn't cover that face. */
+function areaOn(op: Json, ref: FaceRef, face: Rect): Rect | null {
+  if (op.region === undefined) return area(op, face);
+  const r = REGIONS[op.region as string];
+  if (!r.parts.includes(ref.part)) return null;
+  if (ref.face === 'top') return r.top ? area({ x: op.x, w: op.w }, face) : null;
+  if (ref.face === 'bottom') return r.bottom ? area({ x: op.x, w: op.w }, face) : null;
+  return area({ ...op, y: r.y, h: r.h }, face);
+}
+
+function regionMiss(ctx: Ctx, op: Json, path: string, hit: number) {
+  if (op.region !== undefined && !hit)
+    ctx.issue('warning', 'region-miss', `${path}.region`, `region "${op.region}" covers none of the target faces`, `it applies to: ${REGIONS[op.region as string].parts.join(', ')}`);
+}
+
 function eachPixel(ctx: Ctx, refs: FaceRef[], op: Json, fn: (tx: number, ty: number, lx: number, ly: number, ref: FaceRef, a: Rect) => void) {
+  let hit = 0;
   for (const ref of refs) {
     const face = ctx.rect(ref);
-    const a = area(op, face);
+    const a = areaOn(op, ref, face);
+    if (!a) continue;
+    hit++;
     for (let ly = a.y; ly < a.y + a.h; ly++) for (let lx = a.x; lx < a.x + a.w; lx++) fn(face.x + lx, face.y + ly, lx, ly, ref, a);
   }
+  regionMiss(ctx, op, `$.layers[${ctx.layer}]`, hit);
+}
+
+function surface(ctx: Ctx, ref: FaceRef): Surface {
+  const r = ctx.rect(ref);
+  return {
+    ref,
+    w: r.w,
+    h: r.h,
+    get: (x, y) => ctx.get(r.x + x, r.y + y),
+    set: (x, y, c, adjust) => ctx.set(r.x + x, r.y + y, c, adjust ? ctx.contrib[(r.y + y) * SKIN_SIZE + r.x + x] : undefined),
+  };
+}
+
+function oneOf<T extends string>(ctx: Ctx, v: unknown, options: readonly T[], fallback: T, path: string): T | null {
+  if (v === undefined) return fallback;
+  if (typeof v === 'string' && (options as readonly string[]).includes(v)) return v as T;
+  ctx.issue('error', 'bad-option', path, `expected one of ${options.join(', ')}, got ${JSON.stringify(v)}`, suggestHint(String(v), options));
+  return null;
 }
 
 function plot(ctx: Ctx, face: Rect, lx: number, ly: number, c: RGBA) {
@@ -285,7 +341,7 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
       const refs = ctx.targets(op.target, `${path}.target`);
       const c = kind === 'clear' ? TRANSPARENT : ctx.color(op.color, `${path}.color`);
       if (!checkArea(ctx, op, path) || !refs || !c) return;
-      eachPixel(ctx, refs, kind === 'fill' ? {} : op, (tx, ty) => ctx.set(tx, ty, c));
+      eachPixel(ctx, refs, op, (tx, ty) => ctx.set(tx, ty, c));
       return;
     }
     case 'pixels': {
@@ -444,6 +500,72 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
         for (const face of Object.keys(swap) as FaceName[])
           blit(ctx, { part: from, face: swap[face], layer }, { part: to, face, layer }, true, false, snapshot);
       }
+      return;
+    }
+    case 'material': {
+      const refs = ctx.targets(op.target, `${path}.target`);
+      const c = ctx.color(op.color, `${path}.color`);
+      // A near word for the kind ("feathers", "steel") is read as the closest one rather than dropping the layer.
+      const alias = typeof op.kind === 'string' ? MATERIAL_ALIASES[op.kind.toLowerCase()] : undefined;
+      if (alias) ctx.issue('info', 'kind-guess', `${path}.kind`, `read kind "${op.kind}" as "${alias}"`, `valid kinds: ${MATERIALS.join(', ')}`);
+      const kind: Material | null = alias ?? oneOf(ctx, op.kind, MATERIALS, 'plain', `${path}.kind`);
+      const seed = op.seed === undefined ? index + 1 : num(ctx, op.seed, `${path}.seed`, { int: true });
+      if (!checkArea(ctx, op, path) || !refs || !c || !kind || seed === null) return;
+      const rnd = mulberry32(seed);
+      let hit = 0;
+      for (const ref of refs) {
+        const a = areaOn(op, ref, ctx.rect(ref));
+        if (!a) continue;
+        hit++;
+        applyMaterial(surface(ctx, ref), a, c, kind, rnd);
+      }
+      regionMiss(ctx, op, path, hit);
+      return;
+    }
+    case 'face': {
+      const refs = ctx.targets(op.target ?? 'head.front', `${path}.target`);
+      const skin = ctx.color(op.skin, `${path}.skin`);
+      const eyes = ctx.color(op.eyes, `${path}.eyes`);
+      const white = op.white === undefined ? ([236, 238, 240, 255] as RGBA) : ctx.color(op.white, `${path}.white`);
+      const brows = op.brows === undefined || op.brows === 'none' ? null : ctx.color(op.brows, `${path}.brows`);
+      const mouth = op.mouthColor === undefined ? null : ctx.color(op.mouthColor, `${path}.mouthColor`);
+      const beard = op.beardColor === undefined ? null : ctx.color(op.beardColor, `${path}.beardColor`);
+      const blush = op.blush === undefined || op.blush === false ? null : op.blush === true ? mix(skin ?? TRANSPARENT, [232, 96, 110, 255], 0.35) : ctx.color(op.blush, `${path}.blush`);
+      const eyeStyle = oneOf(ctx, op.eyeStyle, EYE_STYLES, 'normal', `${path}.eyeStyle`);
+      const mouthStyle = oneOf(ctx, op.mouth, MOUTHS, 'neutral', `${path}.mouth`);
+      const beardStyle = oneOf(ctx, op.beard, BEARDS, 'none', `${path}.beard`);
+      if (op.nose !== undefined && typeof op.nose !== 'boolean') ctx.issue('info', 'bad-option', `${path}.nose`, '"nose" is true or false; anything else draws the nose');
+      if (!refs || !skin || !eyes || !white || failed() || !eyeStyle || !mouthStyle || !beardStyle) return;
+      const colors = {
+        skin,
+        eyes,
+        white,
+        brows: op.brows === 'none' ? null : (brows ?? mix(skin, [58, 36, 28, 255], 0.7)),
+        mouth: mouth ?? mix(skin, [120, 52, 48, 255], 0.5),
+        beard: beard ?? brows ?? mix(skin, [58, 36, 28, 255], 0.7),
+        blush,
+      };
+      for (const ref of refs) drawFace(surface(ctx, ref), colors, { eyeStyle, mouth: mouthStyle, beard: beardStyle, nose: op.nose !== false });
+      return;
+    }
+    case 'hair': {
+      const c = ctx.color(op.color, `${path}.color`);
+      const style = oneOf(ctx, op.style, HAIR_STYLES, 'short', `${path}.style`);
+      const fringe = oneOf(ctx, op.fringe, FRINGES, style === 'spiky' || style === 'curly' ? 'full' : 'side', `${path}.fringe`);
+      const layer = oneOf(ctx, op.layer, ['base', 'overlay', 'both'] as const, 'both', `${path}.layer`);
+      if (!c || !style || !fringe || !layer) return;
+      const layers: LayerName[] = layer === 'both' ? ['base', 'overlay'] : [layer];
+      for (const l of layers)
+        for (const face of ['top', 'back', 'right', 'left', 'front'] as FaceName[]) drawHair(surface(ctx, { part: 'head', face, layer: l }), c, style, fringe, l === 'overlay');
+      return;
+    }
+    case 'lighting': {
+      const explicit = op.target !== undefined;
+      const refs = ctx.targets(explicit ? op.target : ['all', 'all@overlay'], `${path}.target`);
+      const strength = op.strength === undefined ? 1 : num(ctx, op.strength, `${path}.strength`, { min: 0, max: 3 });
+      if (!refs || strength === null) return;
+      // The face keeps its exact colors unless it is targeted on purpose.
+      for (const ref of refs) if (explicit || ref.part !== 'head' || ref.face !== 'front') applyLighting(surface(ctx, ref), strength);
       return;
     }
     case 'symmetrize': {

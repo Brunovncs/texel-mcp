@@ -49,12 +49,12 @@ Rules of thumb:
 
 Minecraft's lighting is flat, so skins carry their own shading. Assume light from **above and slightly in front**.
 
-1. **Tone ramp per material:** 3 to 4 tones: highlight (+8…+12), base, shadow (−8…−12), deep (−20…−28). Define them in the palette with `:` shifts.
+1. **Tone ramp per material:** 3 to 4 tones: highlight, base, shadow, deep. `"cloth~1"`, `"cloth"`, `"cloth~-1"`, `"cloth~-2"` gives a hue-shifted ramp from one color; `:` shifts (`cloth:-12`) change lightness only.
 2. **Top-down:** lighter on top rows/`top` faces, darker toward the bottom of each part. `gradient` with `steps: 3–5`, or `shade` on the last row.
 3. **Inner and back faces darker:** limbs' inner faces (`rightArm.left`, `rightLeg.left`, …) and `back` faces by −6…−10.
 4. **Separate overlapping parts:** the row where sleeves end, where shirt meets pants, and where boots begin should have a 1 px shadow.
 5. **Texture, not noise soup:** `noise` with `jitter` 2–5 for cloth/metal grain; 6+ looks dirty. Don't jitter faces or small details.
-6. **Hue-shift shadows** for richer art: shadows slightly cooler/more saturated, highlights warmer. (Pick explicit hex tones for that instead of `:` shifts.)
+6. **Hue-shift shadows** for richer art: shadows slightly cooler/more saturated, highlights warmer. The `~` tone steps do this for you.
 
 ## Color
 
@@ -75,14 +75,16 @@ The overlay is a shell 0.5 px (head) / 0.25 px (body, limbs) outside the base. I
 
 ## Workflow that works
 
-1. `fill all` with the dominant skin/suit color (no transparent base).
-2. Fill parts: head, body, arms, legs.
-3. Bands: sleeves, belt, pants, shoes.
-4. Head: `pixels` for the face, hair on top/back/sides (`copy` right → left with `flip: "h"`).
-5. Shading and texture on the broad areas: `gradient` / `shade` / `noise`.
-6. Details on one side (they stay crisp because they come after the texture); `mirror` limbs; then asymmetric details.
-7. Overlay pass.
+1. `fill all` (or `material` on `all`) with the dominant skin/suit color (no transparent base).
+2. Parts with `material`: the right kind (fabric, leather, metal…) gives texture and tone variation in one layer.
+3. Bands with `region`: `sleeves`, `belt`, `waist`, `cuffs`, `hands`, `shoes`, `boots`. No row numbers to get wrong.
+4. Head: `face` (or `pixels` for a custom face), then `hair`, which wraps top, back and sides and adds overlay volume.
+5. `lighting`: light from above on everything but the face.
+6. Details on one side (they stay crisp because they come after the texture and light); `mirror` limbs; then asymmetric details.
+7. Overlay pass: hood, collar, cuffs, gear.
 8. Review, screenshot, patch.
+
+The high-level ops are a floor, not a ceiling: they guarantee a readable face, wrapped hair and consistent light, and leave you free to replace any of it with hand-placed `pixels` where the character needs personality.
 
 ## Common mistakes
 

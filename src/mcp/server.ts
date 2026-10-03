@@ -53,6 +53,10 @@ const reviewShape = z.object({
   name: z.string(),
   model: z.enum(['classic', 'slim']),
   score: z.number(),
+  art: z.object({
+    score: z.number().describe('0–100 from the art checks: face, silhouette, shading, texture, back, depth, colors.'),
+    checks: z.array(z.object({ id: z.string(), rubric: z.string(), score: z.number(), note: z.string(), hint: z.string() })),
+  }),
   issues: z.array(issueShape),
   stats: z.object({ layers: z.number(), disabledLayers: z.number(), colorsUsed: z.number(), baseCoverage: z.number(), overlayPixels: z.number(), paletteSize: z.number() }),
   next: z.array(z.string()),
@@ -66,7 +70,7 @@ const textBlock = (text: string) => ({ type: 'text' as const, text });
 function reviewPayload(result: CompileResult, r: Review) {
   const { model: _model, ...stats } = r.stats;
   void _model;
-  return { ok: r.ok, name: String(result.spec?.name ?? 'Untitled'), model: result.model, score: r.score, issues: r.issues, stats, next: r.next };
+  return { ok: r.ok, name: String(result.spec?.name ?? 'Untitled'), model: result.model, score: r.score, art: r.art, issues: r.issues, stats, next: r.next };
 }
 
 function toolError(message: string): CallToolResult {

@@ -1,3 +1,4 @@
+import { ART_WEAK, artReview, type ArtReport } from './art';
 import { resolveColor, rgbToHsl, toHex } from './color';
 import type { CompileResult } from './compile';
 import { faceRect, FACES, PARTS, refName, SKIN_SIZE } from './layout';
@@ -19,6 +20,8 @@ export interface Review {
   /** 0–100 technical health score: validity + in-game hygiene. It does NOT judge artistic quality; look at the render for that. */
   score: number;
   issues: Issue[];
+  /** Art checks (face, silhouette, shading, texture, back, depth, colors): how good it is likely to look. */
+  art: ArtReport;
   stats: ReviewStats;
   /** Text renders so non-visual agents can "see" the skin. */
   ascii: { front: string; back: string; key: Record<string, string> };
@@ -85,8 +88,16 @@ export function review(result: CompileResult): Review {
   }
   if (faceFront.size < 3) add('warning', 'blank-face', 'head.front', 'the face (head.front) uses fewer than 3 colors and will read as blank', 'draw eyes, brows and a mouth with a "pixels" op on head.front');
 
+  // A face drawn on the base, then hidden under the same color as the rest of the hat layer, is
+  // almost always an accident: a hood or hat filled over the whole head ("sides" includes the
+  // front). A visor has colors of its own, so it passes.
   const hat = pixelsOf(tex, { part: 'head', face: 'front', layer: 'overlay' }, model);
-  if (hat.every((p) => p[3] === 255)) add('info', 'hat-covers-face', 'head.front@overlay', 'the hat layer fully covers the face; fine for helmets, a mistake otherwise');
+  const eyeArea = [3, 4, 5].flatMap((y) => [1, 2, 5, 6].map((x) => hat[y * 8 + x]));
+  const drawn = new Set(pixelsOf(tex, { part: 'head', face: 'front', layer: 'base' }, model).slice(24, 48).map(key)).size >= 3;
+  const elsewhere = new Set((['right', 'left', 'top', 'back'] as const).flatMap((face) => pixelsOf(tex, { part: 'head', face, layer: 'overlay' }, model).filter((p) => p[3] > 0).map(key)));
+  if (drawn && eyeArea.every((p) => p[3] === 255) && eyeArea.every((p) => elsewhere.has(key(p))))
+    add('warning', 'face-hidden', 'head.front@overlay', 'the hat layer covers the eyes of the face drawn underneath', 'clear the face on the overlay ({ "op": "clear", "target": "head.front@overlay", "x": 1, "y": 3, "w": 6, "h": 4 }), and remember "sides" includes the front');
+  else if (hat.every((p) => p[3] === 255)) add('info', 'hat-covers-face', 'head.front@overlay', 'the hat layer fully covers the face; fine for helmets, a mistake otherwise');
 
   if (flat.length) add('info', 'flat-surface', '$.layers', `${flat.length} face(s) are ≥90% one color: ${flat.slice(0, 6).join(', ')}${flat.length > 6 ? ', …' : ''}`, 'add depth with "shade" on edges, a "gradient", or "noise" with a small jitter (3–6)');
 
@@ -116,12 +127,15 @@ export function review(result: CompileResult): Review {
   if (issues.some((i) => i.code === 'base-transparent')) next.push('Cover every base pixel (fill "all" first, then paint on top).');
   if (issues.some((i) => i.code === 'blank-face')) next.push('Give the face readable features: 2px-wide eyes, a darker brow row, a mouth.');
   if (issues.some((i) => i.code === 'flat-surface')) next.push('Add shading: darker bottom rows, lighter top row, and subtle noise.');
+  const art = artReview(tex, model, overlayPixels, colors.size);
+  for (const c of art.checks) if (c.score < ART_WEAK) next.push(`${c.rubric} ${c.id} (${c.score}): ${c.hint}.`);
   next.push('Look at the render (front/back/sides) and compare it to the brief; iterate on the weakest area.');
 
   return {
     ok,
     score,
     issues,
+    art,
     stats: {
       model,
       layers: layers.length,
@@ -213,6 +227,9 @@ export function reviewToMarkdown(r: Review, opts: { includeAscii?: boolean } = {
     for (const i of r.issues) lines.push(`- **${i.level}** \`${i.code}\` at \`${i.path}\`: ${i.message}${i.hint ? `. _${i.hint}_` : ''}`);
     lines.push('');
   } else lines.push('No issues found.', '');
+  lines.push(`### Art checks: ${r.art.score}/100`, '');
+  for (const c of r.art.checks) lines.push(`- ${c.score >= ART_WEAK ? 'ok' : '**weak**'} ${c.rubric} ${c.id} ${c.score}: ${c.note}`);
+  lines.push('');
   if (opts.includeAscii !== false) {
     lines.push('### Text render (front | back, each pixel = 2 chars, "." = transparent; shaded tones shown as their nearest named color)', '```');
     const f = r.ascii.front.split('\n'), b = r.ascii.back.split('\n');

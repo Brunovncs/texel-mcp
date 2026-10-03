@@ -63,7 +63,9 @@ They can react mid-way ("shorter hair", "more pink") and you patch, instead of s
 
 Every render returns a **review**: `score` (0–100 technical health), `issues` (with `path`, `code` and a `hint`), `stats`, and a **text render** of the front and back views, so even text-only agents can see the result.
 
-Then look at it. The score only checks hygiene; it cannot tell whether the skin looks good. Screenshot `/studio/?view=inspect` (3D angles + flat sheet) or open the `--sheet` PNG and judge it against the rubric:
+It also returns **art checks** (`art.score` 0–100 and one entry per rubric item R2–R7 plus color count) measured from the pixels: face contrast, lightness gaps between parts, light from above, flat or noisy faces, a designed back, overlay depth. Weak checks come with a hint and show up in `next`. They are proxies, good for ranking drafts and choosing what to fix first.
+
+Then look at it. The score only checks hygiene and the art checks only measure; neither can tell whether the skin matches the brief or looks good. Screenshot `/studio/?view=inspect` (3D angles + flat sheet) or open the `--sheet` PNG and judge it against the rubric:
 
 | # | Check | Pass when |
 | --- | --- | --- |
@@ -79,6 +81,8 @@ Then look at it. The score only checks hygiene; it cannot tell whether the skin 
 ### 6. Patch
 
 Change the smallest thing that fixes the weakest rubric item, then render again. In the browser: `texel.updateLayer("eyes", { rows: [...] })`, `texel.addLayers([...])`, `texel.toggleLayer(3)`. With files: edit the JSON and rebuild.
+
+Writing the change as a [patch](/docs/spec.md#patches) (`{ "patch": [{ "do": "update", "id": "eyes", "set": { … } }] }`) instead of a whole new spec keeps everything else byte for byte, and is a fraction of the output. Layers need ids to be patched; give them ids as you draft.
 
 Stop when R1–R8 all pass, or after ~6 iterations with diminishing returns.
 

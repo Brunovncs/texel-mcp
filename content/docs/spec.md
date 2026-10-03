@@ -1,6 +1,6 @@
 # Skin spec reference
 
-> Complete reference for the Texel skin spec (`version: 1`): structure, colors, selectors, coordinates and all 13 operations.
+> Complete reference for the Texel skin spec (`version: 1`): structure, colors, selectors, coordinates and all 17 operations.
 
 ## Shape
 
@@ -38,11 +38,12 @@ A color expression is one of:
 - `transparent`
 - a palette key: `"shirt"`
 - any of the above plus `:<n>`: shift HSL lightness by *n* points: `"shirt:-12"`, `"#88aaff:+6"`
+- any of the above plus `~<n>` (−4…4): a step along a pixel-art tone ramp. Lighter steps also warm toward yellow, darker steps cool toward blue and gain saturation: `"cloth~1"` (highlight), `"cloth~-1"` (shadow), `"cloth~-2"` (deep shadow).
 
-Palette entries may reference each other, which is the idiomatic way to build tone ramps:
+Palette entries may reference each other, so a material needs only one base color; derive its tones where you use them (`"cloth~-1"`) or name them:
 
 ```json
-"palette": { "cloth": "#7a5c3e", "clothLight": "cloth:+10", "clothDark": "cloth:-12", "clothDeep": "cloth:-24" }
+"palette": { "cloth": "#7a5c3e", "clothLight": "cloth~1", "clothDark": "cloth~-1", "clothDeep": "cloth~-2" }
 ```
 
 Base-layer pixels must be opaque (Minecraft renders transparent base pixels black). Overlay pixels are either opaque or `transparent`. Avoid partial alpha.
@@ -84,10 +85,10 @@ Negative `x`/`y` count from the far edge: `"y": -2` means "the last 2 rows" when
 | Piece | Values |
 | --- | --- |
 | parts | `head` `body` `rightArm` `leftArm` `rightLeg` `leftLeg` · groups: `arms` `legs` `limbs` `all` |
-| faces | `top` `bottom` `right` `front` `left` `back` · groups: `sides` (the four vertical faces), `all` (default) |
+| faces | `top` `bottom` `right` `front` `left` `back` · groups: `sides` (the four vertical faces, **front included**: `head.sides@overlay` covers the face), `all` (default) |
 | layer | `base` (default), `overlay`, `both` |
 
-Join alternatives with `+`: `"head.top+back"`, `"arms+legs.sides"`. An array of selectors is a union.
+Join alternatives with `+`: `"head.top+back"`, `"arms+legs.sides"`. An array of selectors is a union. Whole selectors joined with `+` are read as a union too: `"body.sides+arms.sides"` is `["body.sides", "arms.sides"]`, and a layer on the last one (`"head.right+head.back@overlay"`) applies to all of them.
 
 Examples: `"all"` · `"head.front"` · `"legs.sides"` · `"body.front+back@overlay"` · `"arms.top@both"`.
 
@@ -95,14 +96,35 @@ When a selector matches several faces, the operation runs **once per face** in t
 
 ## Area options
 
-`rect`, `clear`, `gradient`, `pattern`, `noise` and `shade` accept an optional area: `x`, `y` (default 0, negatives from the far edge), `w`, `h` (default: to the edge). Omit all four for the whole face.
+`fill`, `rect`, `clear`, `gradient`, `pattern`, `noise`, `shade` and `material` accept an optional area: `x`, `y` (default 0, negatives from the far edge), `w`, `h` (default: to the edge). Omit all four for the whole face.
+
+Instead of `y`/`h`, a **`region`** names the rows. It only paints the parts it belongs to, so `"target": "all"` is safe, and the hand and shoe regions include the bottom face:
+
+| Region | Parts | Rows |
+| --- | --- | --- |
+| `collar` | body | 0 |
+| `chest` | body | 1–6 |
+| `belt` | body | 8 |
+| `waist` | body | 9–11 (where pants start) |
+| `sleeves` | arms | 0–3, plus the top |
+| `longSleeves` | arms | 0–8, plus the top |
+| `cuffs` | arms | 8 |
+| `hands` | arms | 9–11, plus the bottom |
+| `gloves` | arms | 7–11, plus the bottom |
+| `knees` | legs | 5 |
+| `shoes` | legs | 9–11, plus the bottom |
+| `boots` | legs | 6–11, plus the bottom |
+
+```json
+{ "op": "rect", "target": "body.sides", "region": "belt", "color": "leather" }
+```
 
 ## Operations
 
 Every op accepts `id` (string handle for patching), `note` (free text) and `enabled` (`false` skips it).
 
 ### fill
-Paint whole faces.
+Paint whole faces. Like `rect`, it also takes the area options and `region`.
 ```json
 { "op": "fill", "target": "legs", "color": "pants" }
 ```
@@ -188,6 +210,69 @@ Make faces left-right symmetric by copying one half onto the other. `source`: `l
 { "op": "symmetrize", "target": "head.front" }
 ```
 
+## High-level operations
+
+These do the craft from the [art guide](/docs/art-guide.md) for you: face layout, hair that wraps around the head, material texture, light from above. Use them for the broad strokes, then add personality with `pixels`, `points` and `line`. They are ordinary layers: later layers still paint over them.
+
+### material
+Fill an area with a color and the texture of a material, with its tones derived from that one color. `kind`: `plain`, `skin`, `fabric`, `knit`, `leather`, `metal`, `fur`, `stone`, `scales`, `wood`, `glow`. Takes the area options and `region`; `seed` varies the grain.
+```json
+{ "op": "material", "target": "legs", "region": "boots", "color": "#4a3324", "kind": "leather" }
+```
+
+### face
+A complete 8×8 face on `head.front` (or `target`): brows on row 3, eyes on row 4, nose, mouth on row 6. Needs `skin` and `eyes` (iris color). Optional:
+
+| Key | Values |
+| --- | --- |
+| `eyeStyle` | `normal` (default), `wide`, `cute`, `angry`, `sad`, `closed`, `glow`, `visor`, `narrow` |
+| `mouth` | `neutral` (default), `smile`, `grin`, `open`, `frown`, `fangs`, `none` |
+| `beard` | `none` (default), `stubble`, `full`, `mustache`, `goatee` |
+| `brows`, `mouthColor`, `beardColor`, `white` | colors (`brows: "none"` hides them); defaults are darker skin tones |
+| `blush` | `true` or a color |
+| `nose` | `false` hides it |
+
+```json
+{ "op": "face", "skin": "skin", "eyes": "#3a6fd9", "eyeStyle": "cute", "mouth": "smile", "blush": true }
+```
+
+### hair
+Hair on the whole head, wrapping the top, back and sides, with volume on the overlay. `style`: `short` (default), `buzz`, `bob`, `long`, `spiky`, `curly`, `ponytail`, `mohawk`. `fringe`: `side` (default), `full`, `parted`, `none`. `layer`: `both` (default), `base`, `overlay`. Put it after `face`, since the fringe covers the top rows.
+```json
+{ "op": "hair", "color": "#6b3e1f", "style": "ponytail", "fringe": "full" }
+```
+
+### lighting
+Light from above and slightly in front, the way the art guide shades by hand: tops lighter, bottom rows and bottoms darker, backs and the inner faces of limbs darker. With no `target` it lights everything except the face. `strength` scales it (default 1, 0–3). Put it after the broad fills and before small details, so buttons and eyes keep their exact colors.
+```json
+{ "op": "lighting" }
+```
+
+## Patches
+
+To change an existing spec, send only what changes. Layers are addressed by `id`, so give every layer you may revisit one (`withIds` in `/texel-core.mjs` adds `"<op>-<index>"` ids to the rest). Entries apply in order; one that can't apply (unknown id) is skipped and reported, and the others still apply.
+
+```json
+{ "patch": [
+  { "do": "update", "id": "face", "set": { "eyeStyle": "wide", "mouth": "smile" } },
+  { "do": "replace", "id": "hood", "layer": { "op": "fill", "target": "head.top+back@overlay", "color": "robe~-1" } },
+  { "do": "add", "after": "belt", "layer": { "op": "points", "target": "body.front", "points": [[3, 8], [4, 8]], "color": "gold" } },
+  { "do": "remove", "id": "noise-12" },
+  { "do": "palette", "set": { "robe": "#2f4fb0" } },
+  { "do": "meta", "set": { "description": "Now with a gold buckle." } }
+] }
+```
+
+| `do` | Fields | Effect |
+| --- | --- | --- |
+| `update` | `id`, `set` | Merge fields into a layer; `null` removes a field. |
+| `replace` | `id`, `layer` | Swap a layer for a new one (it keeps the id). |
+| `add` | `layer`, `after` or `before` (an id) | Insert a layer; at the end without an anchor. Remember order matters: later layers paint over earlier ones. |
+| `remove` | `id` | Delete a layer. |
+| `palette` | `set` | Add or change palette colors; `null` removes one. |
+| `legend` | `set` | Add or change top-level legend characters; `null` removes one. |
+| `meta` | `set` | Change `name`, `description` or `model`. |
+
 ## Texture map (for importing / debugging)
 
 UV origin of each box in the 64×64 PNG. Within a box of size w×h×d at (u, v): top `(u+d, v)`, bottom `(u+d+w, v)`, right `(u, v+d)`, front `(u+d, v+d)`, left `(u+d+w, v+d)`, back `(u+2d+w, v+d)`.
@@ -206,6 +291,9 @@ UV origin of each box in the 64×64 PNG. Within a box of size w×h×d at (u, v):
 | Code | Level | Meaning |
 | --- | --- | --- |
 | `bad-json`, `bad-spec`, `no-layers` | error | Spec cannot be read. |
+| `bad-region`, `bad-option` | error | Unknown `region`, or a value outside an op's options (the hint suggests the closest). |
+| `region-miss` | warning | The `region` covers none of the target faces. |
+| `face-hidden` | warning | The hat layer covers the eyes of a face drawn on the base (usually a hood or hat filled over the whole head). |
 | `unknown-op`, `missing-key`, `bad-selector`, `bad-color`, `unknown-char`, `bad-number`, `out-of-range`, `bad-point`, … | error | Layer skipped. |
 | `unknown-key`, `version`, `clipped` | warning | Ignored input / pixels outside the face. |
 | `base-transparent` | warning | Base pixels left transparent (render black in-game). |
@@ -213,6 +301,9 @@ UV origin of each box in the 64×64 PNG. Within a box of size w×h×d at (u, v):
 | `flat-surface` | info | A visible face is ≥90% one color. |
 | `few-colors` | info | Fewer than 6 colors overall. |
 | `hat-covers-face` | info | Hat layer is fully opaque over the face. |
+| `kind-guess` | info | A `material` kind was read from a near word: `"feathers"` as `fur`, `"steel"` as `metal`. |
+| `legend-reserved` | info | A legend defines `.` or `_`; the entry is ignored. |
+| `color-guess` | info | A near-miss color was read as the closest valid expression: `"armor-1"` as `"armor~-1"`, `"coat:"` as `"coat"`. |
 | `unused-palette` | info | Palette keys never referenced. |
 | `overwritten-layer` | info | A layer is completely painted over by later layers, so it does nothing. The `fill` on `all` safety net is exempt. |
 

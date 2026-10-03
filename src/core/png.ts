@@ -26,14 +26,23 @@ function chunk(type: string, data: Uint8Array): Uint8Array {
   return out;
 }
 
-/** Encode RGBA8 as PNG. `deflate` must produce a zlib stream (e.g. node:zlib deflateSync). */
-export function encodePNG(img: Image, deflate: (raw: Uint8Array) => Uint8Array): Uint8Array {
-  const { width, height, data } = img;
+/** The filtered scanlines a PNG compresses: one 0 (no filter) byte, then the row's RGBA. */
+export function pngScanlines({ width, height, data }: Image): Uint8Array {
   const raw = new Uint8Array((width * 4 + 1) * height);
   for (let y = 0; y < height; y++) {
     raw[y * (width * 4 + 1)] = 0;
     raw.set(data.subarray(y * width * 4, (y + 1) * width * 4), y * (width * 4 + 1) + 1);
   }
+  return raw;
+}
+
+/**
+ * Encode RGBA8 as PNG. `deflate` must produce a zlib stream (e.g. node:zlib deflateSync). Where only
+ * an async compressor exists, compress `pngScanlines(img)` first and pass a function returning it.
+ */
+export function encodePNG(img: Image, deflate: (raw: Uint8Array) => Uint8Array): Uint8Array {
+  const { width, height } = img;
+  const raw = pngScanlines(img);
   const ihdr = new Uint8Array(13);
   const v = new DataView(ihdr.buffer);
   v.setUint32(0, width);

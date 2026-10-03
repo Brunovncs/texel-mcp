@@ -1,0 +1,36 @@
+{
+  "$schema": "/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Star Wizard",
+  "description": "Old wizard with a long white beard, a starry blue robe with a gold belt, a hood on the back and leather boots.",
+  "author": "texel",
+  "tags": ["classic", "fantasy", "magic", "robe", "beard", "old", "high-level ops"],
+  "model": "classic",
+  "palette": {
+    "skin": "#e0ac7e",
+    "robe": "#2f4fb0",
+    "gold": "#e8c34a",
+    "beard": "#dcdcdc",
+    "eyes": "#3a6fd9",
+    "boots": "#4a3324",
+    "star": "#fff1a8"
+  },
+  "layers": [
+    { "op": "material", "target": "all", "color": "skin", "kind": "skin", "note": "every base pixel opaque first" },
+    { "op": "material", "target": "body+arms", "color": "robe", "kind": "fabric" },
+    { "op": "material", "target": "legs", "color": "robe~-1", "kind": "fabric", "note": "a long robe: legs a shade darker than the body" },
+    { "op": "material", "target": "arms", "region": "hands", "color": "skin", "kind": "skin" },
+    { "op": "rect", "target": "arms.sides", "region": "cuffs", "color": "gold" },
+    { "op": "material", "target": "legs", "region": "boots", "color": "boots", "kind": "leather" },
+    { "op": "face", "id": "face", "skin": "skin", "eyes": "eyes", "brows": "beard", "beard": "full", "beardColor": "beard", "mouth": "smile" },
+    { "op": "hair", "id": "hair", "color": "beard", "style": "long", "fringe": "parted" },
+    { "op": "lighting", "note": "after the broad areas, before the small details" },
+    { "op": "rect", "target": "body.sides", "region": "belt", "color": "gold" },
+    { "op": "points", "target": "body.front", "points": [[3, 8], [4, 8]], "color": "gold~-2", "note": "buckle" },
+    { "op": "points", "target": "body.front+back", "points": [[1, 2], [6, 4], [2, 6], [5, 10]], "color": "star" },
+    { "op": "points", "target": "legs.front", "points": [[1, 1], [2, 4]], "color": "star" },
+    { "op": "material", "id": "hood", "target": "body.back@overlay", "y": 0, "h": 3, "color": "robe~-1", "kind": "fabric", "note": "hood folded down on the back" },
+    { "op": "rect", "target": "body.front@overlay", "region": "collar", "color": "gold~-1" },
+    { "op": "rect", "target": "arms.sides@overlay", "region": "cuffs", "color": "gold~1" }
+  ]
+}

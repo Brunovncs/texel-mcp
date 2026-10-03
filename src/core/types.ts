@@ -34,9 +34,11 @@ export interface AreaOpts {
   y?: number;
   w?: number;
   h?: number;
+  /** Named rows instead of y/h: collar, chest, belt, waist, sleeves, longSleeves, cuffs, hands, gloves, knees, shoes, boots. */
+  region?: string;
 }
 
-export interface FillOp extends OpBase { op: 'fill'; target: Selector; color: ColorExpr }
+export interface FillOp extends OpBase, AreaOpts { op: 'fill'; target: Selector; color: ColorExpr }
 export interface RectOp extends OpBase, AreaOpts { op: 'rect'; target: Selector; color: ColorExpr }
 export interface ClearOp extends OpBase, AreaOpts { op: 'clear'; target: Selector }
 export interface PixelsOp extends OpBase {
@@ -77,6 +79,37 @@ export interface CopyOp extends OpBase { op: 'copy'; from: string; to: Selector;
 export interface MirrorOp extends OpBase { op: 'mirror'; from: PartName; to: PartName; layer?: LayerName | 'both' }
 export interface SymmetrizeOp extends OpBase { op: 'symmetrize'; target: Selector; source?: 'left' | 'right' }
 
+export interface MaterialOp extends OpBase, AreaOpts {
+  op: 'material';
+  target: Selector;
+  color: ColorExpr;
+  kind: 'plain' | 'skin' | 'fabric' | 'knit' | 'leather' | 'metal' | 'fur' | 'stone' | 'scales' | 'wood' | 'glow';
+  seed?: number;
+}
+export interface FaceOp extends OpBase {
+  op: 'face';
+  target?: Selector;
+  skin: ColorExpr;
+  eyes: ColorExpr;
+  eyeStyle?: 'normal' | 'wide' | 'cute' | 'angry' | 'sad' | 'closed' | 'glow' | 'visor' | 'narrow';
+  mouth?: 'neutral' | 'smile' | 'grin' | 'open' | 'frown' | 'fangs' | 'none';
+  beard?: 'none' | 'stubble' | 'full' | 'mustache' | 'goatee';
+  nose?: boolean;
+  white?: ColorExpr;
+  brows?: ColorExpr | 'none';
+  mouthColor?: ColorExpr;
+  beardColor?: ColorExpr;
+  blush?: boolean | ColorExpr;
+}
+export interface HairOp extends OpBase {
+  op: 'hair';
+  color: ColorExpr;
+  style?: 'short' | 'buzz' | 'bob' | 'long' | 'spiky' | 'curly' | 'ponytail' | 'mohawk';
+  fringe?: 'full' | 'side' | 'parted' | 'none';
+  layer?: LayerName | 'both';
+}
+export interface LightingOp extends OpBase { op: 'lighting'; target?: Selector; strength?: number }
+
 export type Op =
   | FillOp
   | RectOp
@@ -90,7 +123,11 @@ export type Op =
   | ShadeOp
   | CopyOp
   | MirrorOp
-  | SymmetrizeOp;
+  | SymmetrizeOp
+  | MaterialOp
+  | FaceOp
+  | HairOp
+  | LightingOp;
 
 export interface SkinSpec {
   $schema?: string;

@@ -1,0 +1,34 @@
+{
+  "$schema": "/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Cozy Knitter",
+  "description": "Girl with an auburn ponytail, a red knitted sweater with a cream stripe, blue jeans and white sneakers. Slim arms.",
+  "author": "texel",
+  "tags": ["slim", "modern", "casual", "sweater", "ponytail", "cute", "high-level ops"],
+  "model": "slim",
+  "palette": {
+    "skin": "#f1c6a3",
+    "hair": "#a4462a",
+    "sweater": "#c23b3b",
+    "cream": "#f2e6c9",
+    "jeans": "#3c5fa0",
+    "shoe": "#eeeeee",
+    "eyes": "#3f7a4a"
+  },
+  "layers": [
+    { "op": "material", "target": "all", "color": "skin", "kind": "skin" },
+    { "op": "material", "target": "body+arms", "color": "sweater", "kind": "knit" },
+    { "op": "material", "target": "arms", "region": "hands", "color": "skin", "kind": "skin" },
+    { "op": "material", "target": "legs", "color": "jeans", "kind": "fabric" },
+    { "op": "material", "target": "body", "region": "waist", "color": "jeans", "kind": "fabric" },
+    { "op": "material", "target": "legs", "region": "shoes", "color": "shoe", "kind": "leather" },
+    { "op": "rect", "target": ["body.sides", "arms.sides"], "y": 4, "h": 1, "color": "cream", "note": "one stripe across the sweater and sleeves" },
+    { "op": "face", "id": "face", "skin": "skin", "eyes": "eyes", "eyeStyle": "cute", "mouth": "smile", "blush": true, "brows": "hair~-1" },
+    { "op": "hair", "id": "hair", "color": "hair", "style": "ponytail", "fringe": "full" },
+    { "op": "lighting" },
+    { "op": "rect", "target": "legs.sides", "y": 8, "h": 1, "color": "jeans~-2", "note": "rolled hem" },
+    { "op": "points", "target": "legs.front", "points": [[1, 10], [2, 10]], "color": "#c23b3b", "note": "laces" },
+    { "op": "material", "target": "body.sides@overlay", "region": "collar", "color": "sweater~-1", "kind": "knit" },
+    { "op": "rect", "target": "arms.sides@overlay", "region": "cuffs", "color": "sweater~-1" }
+  ]
+}
