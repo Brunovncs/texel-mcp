@@ -428,7 +428,7 @@ const LAYOUT_LIST: LayoutDef[] = [
       { part: 'leg', at: [1, 12, -7] },
     ],
     opaque: true,
-    usedBy: ['textures/entity/sheep/sheep.png (the sheared body under the wool)'],
+    usedBy: ['textures/entity/sheep/sheep.png (the sheared body under the wool)', 'sheep_wool_undercoat.png (drawn under the wool of dyed sheep and tinted with their color)'],
     note: 'The bare sheep; its wool is another texture with its own layout, sheep_wool. The body lies along the sheep (body.top is its back). All four legs share one texture; the right ones are mirrored.',
   },
   {
@@ -449,8 +449,8 @@ const LAYOUT_LIST: LayoutDef[] = [
       { part: 'leg', at: [-5, 12, -7] },
       { part: 'leg', at: [1, 12, -7] },
     ],
-    usedBy: ['textures/entity/sheep/sheep_wool.png', 'sheep_wool_undercoat.png'],
-    note: 'The wool drawn over the sheep, a little larger than it: a cap on the head, a coat on the body and the tops of the legs. The game tints it with the sheep\'s color, so paint it in whites and light grays. Transparent pixels leave the sheep showing.',
+    usedBy: ['textures/entity/sheep/sheep_wool.png'],
+    note: 'The wool drawn over the sheep, a little larger than it: a cap on the head (its front sits inside the sheep\'s face and never shows), a coat on the body and the tops of the legs. The game multiplies it by the sheep\'s dye color: on a white sheep the colors show as painted, on a dyed one they are tinted. So a colored design is for white sheep, and whites and light grays suit every color. Transparent pixels leave the sheep showing.',
   },
   {
     id: 'chicken',
@@ -608,7 +608,7 @@ export const LAYOUT_ALIASES: Readonly<Record<string, string>> = {
   cold_pig: 'pig',
   temperate_cow: 'cow',
   mooshroom: 'cow',
-  sheep_wool_undercoat: 'sheep_wool',
+  sheep_wool_undercoat: 'sheep',
   temperate_chicken: 'chicken',
   warm_chicken: 'chicken',
   zoglin: 'hoglin',

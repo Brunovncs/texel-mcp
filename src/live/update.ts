@@ -29,6 +29,8 @@ interface Cache {
 export const TEXEL_VERSION = typeof __TEXEL_VERSION__ === 'string' ? __TEXEL_VERSION__ : '0.0.0-dev';
 
 const DAY = 24 * 60 * 60 * 1000;
+/** Longest release notes a notice shows. Copies up to 0.5.0 cut at 600 characters with no mark, so keep CHANGELOG sections under it. */
+export const NOTES_MAX = 600;
 
 const parts = (v: string) => /^(\d+)\.(\d+)\.(\d+)/.exec(v)?.slice(1).map(Number) ?? null;
 
@@ -47,7 +49,8 @@ function asRelease(v: unknown, site: string): Release | null {
   if (typeof r?.version !== 'string' || typeof f?.skill !== 'string' || typeof f.cli !== 'string' || typeof f.mcp !== 'string') return null;
   try {
     const abs = (u: string) => new URL(u, `${site}/`).href;
-    const notes = typeof r.notes === 'string' ? r.notes.replace(/\s+/g, ' ').trim().slice(0, 600) : '';
+    const one = typeof r.notes === 'string' ? r.notes.replace(/\s+/g, ' ').trim() : '';
+    const notes = one.length > NOTES_MAX ? `${one.slice(0, NOTES_MAX - 1).trimEnd()}…` : one;
     return { version: r.version, ...(notes && { notes }), files: { skill: abs(f.skill), cli: abs(f.cli), mcp: abs(f.mcp) } };
   } catch {
     return null;

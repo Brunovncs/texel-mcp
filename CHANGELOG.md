@@ -1,6 +1,10 @@
 # Changelog
 
-Each release's section is published as `notes` in `/version.json`, and installed tools show it in their update notice, so the agent knows what changed and whether to redo anything. Keep it to one or two lines, and say whether specs still render the same PNGs. A test fails when the current version has no section.
+Each release's section is published as `notes` in `/version.json`, and installed tools show it in their update notice, so the agent knows what changed and whether to redo anything. Keep it to one or two lines (under 600 characters, where installed copies cut it), and say whether specs still render the same PNGs. A test fails when the current version has no section.
+
+## 0.5.1
+
+Fixes: `sheep_wool_undercoat.png` uses the `sheep` body layout (it pointed at the wool), and release notes cut to fit a notice now end with …. Docs: how the game tints wool, that a lying body's top and bottom both start at the rump, and that a shared texture (four legs) must fit every spot. The skill checks `layouts` before deciding. Compiler unchanged.
 
 ## 0.5.0
 

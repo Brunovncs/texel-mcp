@@ -4,7 +4,7 @@ description: Design, render, review and export Minecraft skins (64×64 PNG, clas
 license: MIT
 metadata:
   protocol: texel/1
-  version: 0.5.0
+  version: 0.5.1
 ---
 
 # Minecraft skin design with Texel
@@ -37,7 +37,7 @@ When the CLI or an MCP tool says a newer Texel release is available, the result 
 ## Procedure
 
 1. **Brief.** Restate the request as 1–3 sentences of visible features; store it in `description`, in the user's language (reply in it too; keep keys and ids in English). Don't open with questions: decide what was left open, state your choices in one line.
-   Include what the texture is for. "A skin of a pig" or "a winged pig" means a player skin the user wears, styled as that creature; the mob's own texture (it replaces every pig through a resource pack or a mod) is a different request. When the subject is a mob that has a layout (see Other textures), make the player skin unless they ask for a texture, resource pack or mod, and offer the other one in your choices line. When the mob has no layout (`layouts` lists the ones that exist), say so and that you made a player skin.
+   Include what the texture is for. "A skin of a pig" or "a winged pig" means a player skin the user wears, styled as that creature; the mob's own texture (it replaces every pig through a resource pack or a mod) is a different request. When the subject is a mob that has a layout (see Other textures), make the player skin unless they ask for a texture, resource pack or mod, and offer the other one in your choices line. Check which mobs have a layout with `node texel.mjs layouts` (or the spec reference) before you decide, not from memory; the command also tells you when Texel has an update. When the mob has no layout, say so and that you made a player skin.
 2. **Go live, before writing the spec.** Start a live session (`texel_live`, or `node texel.mjs live spec.json --open` in the background; the file may not exist yet, it is pushed on every save) and send the user its URL right away, in the same reply as the brief, so they watch the skin take shape and can steer mid-way. Use the URL it prints (another session may hold the default port). The live output counts viewers on each push; after the first push, don't tell the user the studio is open unless it shows one, and resend the URL if it stays at 0.
 3. **Learn the format.** Read the spec reference before your first spec and the art guide for pixel-art rules: `texel_read_docs` pages `spec` and `art-guide`, or without MCP https://www.texel.dev.br/docs/spec.md and https://www.texel.dev.br/docs/art-guide.md. Read them from there each time rather than keeping copies, which go stale when Texel updates. Fork an example when one is close (`texel_get_example`, or https://www.texel.dev.br/examples/index.json and `/examples/<name>.json`).
 4. **Palette first.** Name colors by role (`skin`, `hair`, `primary`, `trim`) with derived tones (`"primaryDark": "primary:-12"`), 2–4 tones per material.

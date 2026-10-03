@@ -62,6 +62,7 @@ Minecraft's lighting is flat, so skins carry their own shading. Assume light fro
 - 1 dominant hue, 1–2 secondary, 1 accent (small area, high saturation: buckles, eyes, gems, lights).
 - Keep adjacent parts at different *values* (lightness), not just hues. Silhouettes must read in grayscale.
 - One-color characters (a white pig, a black cat, a silver robot) still need parts that read apart: keep the head lightest, the torso a step darker or with a lighter belly or chest, arms and legs a step darker again (`"fur:-8"`), hands and feet darker still, and a 1 px darker seam where arm meets body. The review's R3 compares the average lightness (L*, 0–100) of what you see on `head.front`, `body.front` and the leg fronts, overlay included, so a dark face or a light overlay shifts the head's value. It passes at an average gap of about 6 points; 10 or more reads clearly. Arms aren't measured: keep them apart from the torso yourself.
+- Shared textures: when one texture is drawn in several places (a mob's four legs, both ears, both wings), its colors must fit every spot. Under a striped or gradient body, pick leg colors that work under both the front and the rear.
 - Ice, glass and other glossy surfaces: a smooth base (`plain` or `noise` jitter ≤2) with a few large lighter facets and highlights and sharp darker cracks. Even grain everywhere reads as snow or stone.
 - Avoid pure `#000000` and pure `#ffffff` in large areas.
 
