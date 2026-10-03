@@ -25,6 +25,9 @@ export interface ArtReport {
 }
 
 const WEIGHTS: Record<ArtCheck['id'], number> = { face: 0.25, silhouette: 0.15, shading: 0.15, texture: 0.15, back: 0.1, depth: 0.1, colors: 0.1 };
+
+/** Every art check with its rubric item, so a review can say which ones a layout skips. */
+export const ART_RUBRIC: readonly [ArtCheck['id'], string][] = [['face', 'R2'], ['silhouette', 'R3'], ['shading', 'R4'], ['texture', 'R5'], ['back', 'R6'], ['depth', 'R7'], ['colors', 'color']];
 const SIDES: FaceName[] = ['front', 'back', 'right', 'left'];
 
 const clamp = (v: number) => Math.max(0, Math.min(1, v));

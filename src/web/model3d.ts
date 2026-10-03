@@ -40,7 +40,7 @@ function buildBox(rig: Rig, part: PartName, layer: LayerName, opts: { mirror?: b
   const w = bw + inf * 2, h = bh + inf * 2, d = bd + inf * 2;
   const box = document.createElement('div');
   box.className = `sm-box sm-${layer}`;
-  const faces = opts.tile ? FACES : rig.faces(part).length === 1 ? (['front', 'back'] as FaceName[]) : FACES;
+  const faces = opts.tile ? FACES : rig.faces(part).length === 1 ? (['front', 'back'] as FaceName[]) : rig.faces(part);
   for (const face of faces) {
     const src = opts.tile || rig.faces(part).length === 1 ? 'front' : opts.mirror ? SWAP[face] : face;
     const flip = Boolean(opts.mirror) !== (rig.faces(part).length === 1 && face === 'back');

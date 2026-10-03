@@ -4,7 +4,7 @@ description: Design, render, review and export Minecraft skins (64×64 PNG, clas
 license: MIT
 metadata:
   protocol: texel/1
-  version: 0.4.0
+  version: 0.5.0
 ---
 
 # Minecraft skin design with Texel
@@ -21,6 +21,7 @@ Without MCP, use the CLI (Node 18+). Download https://www.texel.dev.br/texel.mjs
 node texel.mjs live spec.json --open          # background: the user watches every save
 node texel.mjs review spec.json               # issues + text render
 node texel.mjs patch spec.json fix.json -o spec.json --sheet sheet.png   # change layers by id
+node texel.mjs diff before.json after.json    # which faces and pixels a change touched
 node texel.mjs build spec.json -o skin.png --sheet sheet.png
 node texel.mjs share spec.json                # short share link
 node texel.mjs pull <link> -o spec.json       # continue an existing skin from its link
@@ -36,7 +37,7 @@ When the CLI or an MCP tool says a newer Texel release is available, the result 
 ## Procedure
 
 1. **Brief.** Restate the request as 1–3 sentences of visible features; store it in `description`, in the user's language (reply in it too; keep keys and ids in English). Don't open with questions: decide what was left open, state your choices in one line.
-   Include what the texture is for. "A skin of a pig" or "a winged pig" means a player skin the user wears, styled as that creature; the mob's own texture (it replaces every pig through a resource pack or a mod) is a different request. When the subject is a mob that has a layout (see Other textures), make the player skin unless they ask for a texture, resource pack or mod, and offer the other one in your choices line. When the mob has no layout (hoglin, sheep, chicken, wolf and others for now; `layouts` lists the ones that exist), say so and that you made a player skin.
+   Include what the texture is for. "A skin of a pig" or "a winged pig" means a player skin the user wears, styled as that creature; the mob's own texture (it replaces every pig through a resource pack or a mod) is a different request. When the subject is a mob that has a layout (see Other textures), make the player skin unless they ask for a texture, resource pack or mod, and offer the other one in your choices line. When the mob has no layout (`layouts` lists the ones that exist), say so and that you made a player skin.
 2. **Go live, before writing the spec.** Start a live session (`texel_live`, or `node texel.mjs live spec.json --open` in the background; the file may not exist yet, it is pushed on every save) and send the user its URL right away, in the same reply as the brief, so they watch the skin take shape and can steer mid-way. Use the URL it prints (another session may hold the default port). The live output counts viewers on each push; after the first push, don't tell the user the studio is open unless it shows one, and resend the URL if it stays at 0.
 3. **Learn the format.** Read the spec reference before your first spec and the art guide for pixel-art rules: `texel_read_docs` pages `spec` and `art-guide`, or without MCP https://www.texel.dev.br/docs/spec.md and https://www.texel.dev.br/docs/art-guide.md. Read them from there each time rather than keeping copies, which go stale when Texel updates. Fork an example when one is close (`texel_get_example`, or https://www.texel.dev.br/examples/index.json and `/examples/<name>.json`).
 4. **Palette first.** Name colors by role (`skin`, `hair`, `primary`, `trim`) with derived tones (`"primaryDark": "primary:-12"`), 2–4 tones per material.
@@ -45,7 +46,7 @@ When the CLI or an MCP tool says a newer Texel release is available, the result 
 6. **Render and review.** Fix every error and warning first. Then look at the sheet image and check the rubric:
    - R1 every brief feature visible · R2 face readable (eyes, brows, mouth) · R3 parts distinguishable by value (one-color characters too: see the art guide, Color) · R4 light from above, darker undersides and inner faces · R5 no large flat areas · R6 back and sides designed · R7 overlay adds depth · R8 zero errors/warnings.
 7. **Patch the weakest item** with a spec patch by layer id (`texel_patch` / `texel.mjs patch`; docs page `spec`, section Patches), look at the new render, and after every patch diff it against the previous version (`texel_diff` / `texel.mjs diff`; keep a copy before patching in place) to confirm the change touched only the intended faces. Stop when R1–R8 pass or after ~6 iterations.
-8. **Ship.** Save the PNG, the `.skin.json` source and the sheet, and create the short share link (`texel_share` / `texel.mjs share`). Give the user the link and the file paths (not the JSON itself), and how to use it: upload it at minecraft.net → Profile → Skin (classic or slim to match `model`), or save the PNGs into a resource pack or a mod's assets folder. For many skins, build them in one go with a family (`texel_save_family` / `texel.mjs family`).
+8. **Ship.** Save the PNG, the `.skin.json` source and the sheet, and create the short share link (`texel_share` / `texel.mjs share`). Give the user the link and the file paths (not the JSON itself), and how to use it: upload it at minecraft.net → Profile → Skin (classic or slim to match `model`), or save the PNGs into a resource pack (`assets/minecraft/<the path in the layout table>`) or a mod's assets folder. For many skins, build them in one go with a family (`texel_save_family` / `texel.mjs family`).
 
 ## Continuing an existing skin
 
@@ -57,7 +58,7 @@ For several related skins, write one family document (`kind: "family"`) instead 
 
 ## Other textures
 
-Set `"layout"` in the spec to paint something other than a player skin: `zombie`, `drowned`, `humanoid` (armor layers), `skeleton`, `creeper`, `enderman`, `spider`, `villager`, `piglin`, `pig`, `cow`, `cape` (with elytra), `item`, `block`. Each has its own part names and size; read the Layouts section of the spec reference (or `node texel.mjs layouts`) before the first draft, and fork the closest example (`miner-zombie`, `creeper`, `mud-pig`, `bronze-armor`, `banner-cape`, `ember-blade`). Mobs whose left limbs mirror the right ones only have `rightArm`/`rightLeg`. Armor, skeletons and items keep transparent pixels on purpose; items need an outline and a clear background. Ship the PNG under the path the game or mod expects (the layout table lists the vanilla paths).
+Set `"layout"` in the spec to paint something other than a player skin: `zombie`, `drowned`, `humanoid` (armor layers), `skeleton`, `creeper`, `enderman`, `spider`, `villager`, `piglin`, `pig`, `cow` (also `cold_cow`, `warm_cow`), `sheep` and `sheep_wool`, `chicken`, `wolf`, `hoglin`, `cape` (with elytra), `item`, `block`. Each has its own part names and size; read the Layouts section of the spec reference (or `node texel.mjs layouts`) before the first draft, and fork the closest example (`miner-zombie`, `creeper`, `mud-pig`, `bronze-armor`, `banner-cape`, `ember-blade`). Mobs whose left limbs mirror the right ones only have `rightArm`/`rightLeg`. Armor, skeletons and items keep transparent pixels on purpose; items need an outline and a clear background. Ship the PNG under the path the game or mod expects (the layout table lists the vanilla paths).
 
 ## Pitfalls
 

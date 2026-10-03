@@ -12,7 +12,7 @@ export const LAYERS: readonly LayerName[] = ['base', 'overlay'];
  * viewer's right when facing it), y grows down, and the front faces -z, as in Java's model parts.
  */
 export interface PartDef {
-  /** [width, height, depth] in texture pixels. Depth 0 marks a flat texture (front face only). */
+  /** [width, height, depth] in texture pixels. Depth 0 marks a flat texture (front face only); width 0 a plane seen from the sides. */
   box: [number, number, number];
   /** UV origin of the base layer. */
   uv: [number, number];
@@ -316,7 +316,7 @@ const LAYOUT_LIST: LayoutDef[] = [
     ],
     opaque: true,
     usedBy: ['textures/entity/pig/temperate_pig.png', 'warm_pig.png', 'cold_pig.png (body@overlay is its fur coat)', 'pig.png before 1.21.5 (64×32, the same UVs)'],
-    note: 'The body lies along the pig: body.top is its back, body.front the chest, body.back the rump, body.bottom the belly, all named and drawn the way they face in game. body@overlay is the cold pig\'s fur coat; leave it transparent for the others. All four legs share one texture; the left ones are mirrored.',
+    note: 'The body lies along the pig: body.top is its back, body.front the chest, body.back the rump, body.bottom the belly, all named and drawn the way they face in game. body@overlay is the cold pig\'s fur coat; leave it transparent for the others. The snout covers columns 2–5 of rows 4–6 of head.front. All four legs share one texture; the left ones are mirrored.',
   },
   {
     id: 'cow',
@@ -345,7 +345,208 @@ const LAYOUT_LIST: LayoutDef[] = [
     ],
     opaque: true,
     usedBy: ['textures/entity/cow/temperate_cow.png', 'red_mooshroom.png', 'brown_mooshroom.png', 'cow.png and mooshroom textures before 1.21.5'],
-    note: 'The body lies along the cow: body.top is its back, body.front the chest, body.back the rump, body.bottom the belly; the udder hangs under the belly. Both horns share one texture. The cold and warm cows of 1.21.5 have other horns (and the cold one a fur coat), which this layout does not cover.',
+    note: 'The body lies along the cow: body.top is its back, body.front the chest, body.back the rump, body.bottom the belly; the udder hangs under the belly. Both horns share one texture. The cold and warm cows of 1.21.5 have their own layouts, cold_cow and warm_cow.',
+  },
+  {
+    id: 'cold_cow',
+    title: 'Cold cow (64×64)',
+    size: [64, 64],
+    parts: {
+      head: { box: [8, 8, 6], uv: [0, 0] },
+      muzzle: { box: [6, 3, 1], uv: [9, 33] },
+      rightHorn: { box: [2, 6, 2], uv: [0, 40], turned: true },
+      leftHorn: { box: [2, 6, 2], uv: [0, 32], turned: true },
+      body: { box: [12, 18, 10], uv: [18, 4], overlay: [20, 32], turned: true },
+      udder: { box: [4, 6, 1], uv: [52, 0], turned: true },
+      leg: { box: [4, 12, 4], uv: [0, 16] },
+    },
+    groups: { legs: ['leg'], horns: ['rightHorn', 'leftHorn'] },
+    boxes: [
+      { part: 'head', at: [-4, 0, -14] },
+      { part: 'muzzle', at: [-3, 5, -15] },
+      { part: 'rightHorn', at: [-6, 0, -16] },
+      { part: 'leftHorn', at: [4, 0, -16] },
+      { part: 'body', at: [-6, 2, -8] },
+      { part: 'udder', at: [-2, 12, 4] },
+      { part: 'leg', at: [-6, 12, 5] },
+      { part: 'leg', at: [2, 12, 5], mirror: true },
+      { part: 'leg', at: [-6, 12, -7] },
+      { part: 'leg', at: [2, 12, -7], mirror: true },
+    ],
+    opaque: true,
+    usedBy: ['textures/entity/cow/cold_cow.png'],
+    note: 'The cow of cold biomes (1.21.5+): horns that point forward and a fur coat on body@overlay, drawn a little larger than the body. The body lies along the cow (body.top is its back), as in the cow layout.',
+  },
+  {
+    id: 'warm_cow',
+    title: 'Warm cow (64×64)',
+    size: [64, 64],
+    parts: {
+      head: { box: [8, 8, 6], uv: [0, 0] },
+      muzzle: { box: [6, 3, 1], uv: [1, 33] },
+      horn: { box: [4, 2, 2], uv: [27, 0] },
+      hornTip: { box: [2, 2, 2], uv: [39, 0] },
+      body: { box: [12, 18, 10], uv: [18, 4], turned: true },
+      udder: { box: [4, 6, 1], uv: [52, 0], turned: true },
+      leg: { box: [4, 12, 4], uv: [0, 16] },
+    },
+    groups: { legs: ['leg'], horns: ['horn', 'hornTip'] },
+    boxes: [
+      { part: 'head', at: [-4, 0, -14] },
+      { part: 'muzzle', at: [-3, 5, -15] },
+      { part: 'horn', at: [-8, 1, -13] },
+      { part: 'hornTip', at: [-8, -1, -13] },
+      { part: 'horn', at: [4, 1, -13], mirror: true },
+      { part: 'hornTip', at: [6, -1, -13], mirror: true },
+      { part: 'body', at: [-6, 2, -8] },
+      { part: 'udder', at: [-2, 12, 4] },
+      { part: 'leg', at: [-6, 12, 5] },
+      { part: 'leg', at: [2, 12, 5], mirror: true },
+      { part: 'leg', at: [-6, 12, -7] },
+      { part: 'leg', at: [2, 12, -7], mirror: true },
+    ],
+    opaque: true,
+    usedBy: ['textures/entity/cow/warm_cow.png'],
+    note: 'The cow of warm biomes (1.21.5+): long horns, each a horn and an upturned tip shared, mirrored, by both sides. The body lies along the cow (body.top is its back), as in the cow layout.',
+  },
+  {
+    id: 'sheep',
+    title: 'Sheep (64×32)',
+    size: [64, 32],
+    parts: {
+      head: { box: [6, 6, 8], uv: [0, 0] },
+      body: { box: [8, 16, 6], uv: [28, 8], turned: true },
+      leg: { box: [4, 12, 4], uv: [0, 16] },
+    },
+    groups: { legs: ['leg'] },
+    boxes: [
+      { part: 'head', at: [-3, 2, -14] },
+      { part: 'body', at: [-4, 6, -8] },
+      { part: 'leg', at: [-5, 12, 5], mirror: true },
+      { part: 'leg', at: [1, 12, 5] },
+      { part: 'leg', at: [-5, 12, -7], mirror: true },
+      { part: 'leg', at: [1, 12, -7] },
+    ],
+    opaque: true,
+    usedBy: ['textures/entity/sheep/sheep.png (the sheared body under the wool)'],
+    note: 'The bare sheep; its wool is another texture with its own layout, sheep_wool. The body lies along the sheep (body.top is its back). All four legs share one texture; the right ones are mirrored.',
+  },
+  {
+    id: 'sheep_wool',
+    title: 'Sheep wool (64×32)',
+    size: [64, 32],
+    parts: {
+      head: { box: [6, 6, 6], uv: [0, 0] },
+      body: { box: [8, 16, 6], uv: [28, 8], turned: true },
+      leg: { box: [4, 6, 4], uv: [0, 16] },
+    },
+    groups: { legs: ['leg'] },
+    boxes: [
+      { part: 'head', at: [-3, 2, -12] },
+      { part: 'body', at: [-4, 6, -8] },
+      { part: 'leg', at: [-5, 12, 5] },
+      { part: 'leg', at: [1, 12, 5] },
+      { part: 'leg', at: [-5, 12, -7] },
+      { part: 'leg', at: [1, 12, -7] },
+    ],
+    usedBy: ['textures/entity/sheep/sheep_wool.png', 'sheep_wool_undercoat.png'],
+    note: 'The wool drawn over the sheep, a little larger than it: a cap on the head, a coat on the body and the tops of the legs. The game tints it with the sheep\'s color, so paint it in whites and light grays. Transparent pixels leave the sheep showing.',
+  },
+  {
+    id: 'chicken',
+    title: 'Chicken (64×32)',
+    size: [64, 32],
+    parts: {
+      head: { box: [4, 6, 3], uv: [0, 0] },
+      beak: { box: [4, 2, 2], uv: [14, 0] },
+      wattle: { box: [2, 2, 2], uv: [14, 4] },
+      body: { box: [6, 8, 6], uv: [0, 9], turned: true },
+      wing: { box: [1, 4, 6], uv: [24, 13] },
+      leg: { box: [3, 5, 3], uv: [26, 0] },
+    },
+    groups: { legs: ['leg'], wings: ['wing'] },
+    boxes: [
+      { part: 'head', at: [-2, 9, -6] },
+      { part: 'beak', at: [-2, 11, -8] },
+      { part: 'wattle', at: [-1, 13, -7] },
+      { part: 'body', at: [-3, 13, -4] },
+      { part: 'wing', at: [-4, 13, -3] },
+      { part: 'wing', at: [3, 13, -3] },
+      { part: 'leg', at: [-3, 19, -2] },
+      { part: 'leg', at: [0, 19, -2] },
+    ],
+    opaque: true,
+    usedBy: ['textures/entity/chicken/temperate_chicken.png', 'warm_chicken.png', 'chicken.png before 1.21.5'],
+    note: 'The body lies along the chicken (body.top is its back, body.back its tail end). Both wings share one texture, and so do both legs. The cold chicken of 1.21.5 adds a crest and a tail fin this layout does not cover.',
+  },
+  {
+    id: 'wolf',
+    title: 'Wolf (64×32)',
+    size: [64, 32],
+    parts: {
+      head: { box: [6, 6, 4], uv: [0, 0] },
+      ear: { box: [2, 2, 1], uv: [16, 14] },
+      snout: { box: [3, 3, 4], uv: [0, 10] },
+      mane: { box: [8, 6, 7], uv: [21, 0], turned: true },
+      body: { box: [6, 9, 6], uv: [18, 14], turned: true },
+      leg: { box: [2, 8, 2], uv: [0, 18] },
+      tail: { box: [2, 8, 2], uv: [9, 18] },
+    },
+    groups: { legs: ['leg'] },
+    boxes: [
+      { part: 'head', at: [-3, 10.5, -9] },
+      { part: 'ear', at: [-3, 8.5, -7] },
+      { part: 'ear', at: [1, 8.5, -7] },
+      { part: 'snout', at: [-1.5, 13.5, -12] },
+      { part: 'mane', at: [-4, 10, -6] },
+      { part: 'body', at: [-3, 11, 2] },
+      { part: 'leg', at: [-2.5, 16, 6], mirror: true },
+      { part: 'leg', at: [0.5, 16, 6] },
+      { part: 'leg', at: [-2.5, 16, -5], mirror: true },
+      { part: 'leg', at: [0.5, 16, -5] },
+      { part: 'tail', at: [-1, 12, 7] },
+    ],
+    opaque: true,
+    usedBy: ['textures/entity/wolf/wolf.png and its _tame and _angry variants', 'the other wolf variants (ashen, black, chestnut, rusty, snowy, spotted, striped, woods)', 'wolf_collar.png (same layout, transparent but for the collar on the mane)'],
+    note: 'The mane (the shaggy front half) and the body lie along the wolf: their top is its back. Both ears share one texture, and all four legs too; the right legs are mirrored. In game the tail angles back and the head sits half a pixel off the grid; the views show the tail straight down and snap to whole pixels.',
+  },
+  {
+    id: 'hoglin',
+    title: 'Hoglin (128×64)',
+    size: [128, 64],
+    parts: {
+      body: { box: [16, 14, 26], uv: [1, 1] },
+      mane: { box: [0, 10, 19], uv: [90, 33] },
+      head: { box: [14, 6, 19], uv: [61, 1] },
+      rightEar: { box: [6, 1, 4], uv: [1, 1] },
+      leftEar: { box: [6, 1, 4], uv: [1, 6] },
+      rightHorn: { box: [2, 11, 2], uv: [10, 13] },
+      leftHorn: { box: [2, 11, 2], uv: [1, 13] },
+      rightFrontLeg: { box: [6, 14, 6], uv: [66, 42] },
+      leftFrontLeg: { box: [6, 14, 6], uv: [41, 42] },
+      rightHindLeg: { box: [5, 11, 5], uv: [21, 45] },
+      leftHindLeg: { box: [5, 11, 5], uv: [0, 45] },
+    },
+    groups: {
+      ears: ['rightEar', 'leftEar'],
+      horns: ['rightHorn', 'leftHorn'],
+      legs: ['rightFrontLeg', 'leftFrontLeg', 'rightHindLeg', 'leftHindLeg'],
+    },
+    boxes: [
+      { part: 'body', at: [-8, 0, -13] },
+      { part: 'mane', at: [0, -7, -16] },
+      { part: 'head', at: [-7, -1, -31] },
+      { part: 'rightEar', at: [-12, -1, -17] },
+      { part: 'leftEar', at: [6, -1, -17] },
+      { part: 'rightHorn', at: [-8, -7, -25] },
+      { part: 'leftHorn', at: [6, -7, -25] },
+      { part: 'rightFrontLeg', at: [-7, 10, -11.5] },
+      { part: 'leftFrontLeg', at: [1, 10, -11.5] },
+      { part: 'rightHindLeg', at: [-7.5, 13, 7.5] },
+      { part: 'leftHindLeg', at: [2.5, 13, 7.5] },
+    ],
+    usedBy: ['textures/entity/hoglin/hoglin.png', 'zoglin.png'],
+    note: 'The mane is a flat fin along the spine with only .right and .left faces, and transparent pixels cut its outline. In game the head hangs tilted 50° down and the ears angle out; the views show them straight. Every leg has its own texture.',
   },
   {
     id: 'cape',
@@ -407,6 +608,10 @@ export const LAYOUT_ALIASES: Readonly<Record<string, string>> = {
   cold_pig: 'pig',
   temperate_cow: 'cow',
   mooshroom: 'cow',
+  sheep_wool_undercoat: 'sheep_wool',
+  temperate_chicken: 'chicken',
+  warm_chicken: 'chicken',
+  zoglin: 'hoglin',
 };
 
 export function resolveLayout(id: unknown): LayoutDef | null {
@@ -438,6 +643,8 @@ export interface Rig {
 const SLIM: Record<string, Partial<PartDef>> = { rightArm: { box: [3, 12, 4] }, leftArm: { box: [3, 12, 4] } };
 const SLIM_BOXES: Record<string, [number, number, number]> = { rightArm: [-7, 0, -2], leftArm: [4, 0, -2] };
 const FLAT_FACES: readonly FaceName[] = ['front'];
+/** A box with no width (a hoglin's mane) is a plane seen from the sides. */
+const SIDE_FACES: readonly FaceName[] = ['right', 'left'];
 const rigs = new Map<string, Rig>();
 
 export function rigFor(layout: LayoutDef | string = 'player', model: Model = 'classic'): Rig {
@@ -455,7 +662,7 @@ export function rigFor(layout: LayoutDef | string = 'player', model: Model = 'cl
   }
   const boxes = slim ? def.boxes.map((b) => (SLIM_BOXES[b.part] ? { ...b, at: SLIM_BOXES[b.part] } : b)) : def.boxes;
   const names = Object.keys(parts);
-  const faces = (part: PartName) => (parts[part]?.box[2] === 0 ? FLAT_FACES : FACES);
+  const faces = (part: PartName) => (parts[part]?.box[2] === 0 ? FLAT_FACES : parts[part]?.box[0] === 0 ? SIDE_FACES : FACES);
   const rig: Rig = {
     layout: def.id,
     model: def.id === 'player' ? model : 'classic',

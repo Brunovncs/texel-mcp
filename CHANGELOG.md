@@ -2,6 +2,10 @@
 
 Each release's section is published as `notes` in `/version.json`, and installed tools show it in their update notice, so the agent knows what changed and whether to redo anything. Keep it to one or two lines, and say whether specs still render the same PNGs. A test fails when the current version has no section.
 
+## 0.5.0
+
+New layouts: `sheep` and `sheep_wool` (the wool is its own texture, tinted by the game), `chicken`, `wolf` (every variant, and the collar), `hoglin` (and zoglin, 128×64), `cold_cow` and `warm_cow`. Their bodies (and a wolf's mane, a cold cow's horns) lie along the animal like the pig's. The views snap Java's half-pixel offsets to whole pixels. For layouts with a lying body the review sheet adds a view from above. The review lists the art checks a layout does not measure. The spec says which way x runs on top and bottom faces, where the pig's snout sits, and that lighting skips head.front on mobs too. Compiler unchanged for the existing layouts: specs render the same PNGs.
+
 ## 0.4.0
 
 New layouts: `piglin` (also zombified piglin and brute), `pig` (temperate, warm and cold, with the cold pig's fur as body@overlay) and `cow` (temperate cow and mooshrooms). A pig's or cow's body lies along the animal, and its faces are named and drawn the way they face in game (`body.top` is the back). Two new examples: `winged-pig` (wings across faces with symmetrize and copy, a one-color body kept apart by value) and `mud-pig` (the pig layout). Art checks: R3 also weighs arms against the torso, and any weak check keeps the art score under 90. Specs for the existing layouts render the same PNGs; their art scores may shift a little.

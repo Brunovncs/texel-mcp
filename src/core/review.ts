@@ -1,4 +1,4 @@
-import { ART_WEAK, artReview, type ArtReport } from './art';
+import { ART_RUBRIC, ART_WEAK, artReview, type ArtReport } from './art';
 import { resolveColor, rgbToHsl, toHex } from './color';
 import type { CompileResult } from './compile';
 import { type Rig, refName, texel } from './layout';
@@ -241,7 +241,9 @@ export function reviewToMarkdown(r: Review, opts: { includeAscii?: boolean } = {
   } else lines.push('No issues found.', '');
   lines.push(`### Art checks: ${r.art.score}/100`, '');
   for (const c of r.art.checks) lines.push(`- ${c.score >= ART_WEAK ? 'ok' : '**weak**'} ${c.rubric} ${c.id} ${c.score}: ${c.note}`);
-  lines.push('');
+  const skipped = ART_RUBRIC.filter(([id]) => !r.art.checks.some((c) => c.id === id));
+  if (skipped.length) lines.push(`- not measured for this layout: ${skipped.map(([id, rubric]) => `${rubric} ${id}`).join(', ')}`);
+  lines.push('- R1 (does it match the brief) is never measured: look at the sheet', '');
   if (opts.includeAscii !== false) {
     lines.push('### Text render (front | back, each pixel = 2 chars, "." = transparent; shaded tones shown as their nearest named color)', '```');
     const f = r.ascii.front.split('\n'), b = r.ascii.back ? r.ascii.back.split('\n') : [];

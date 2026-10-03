@@ -1,7 +1,7 @@
 import { type BoxDef, type Rig, rigFor, texel } from './layout';
 import type { FaceName, Image, Model, PartName } from './types';
 
-export type ViewName = 'front' | 'back' | 'right' | 'left';
+export type ViewName = 'front' | 'back' | 'right' | 'left' | 'top';
 export const VIEWS: readonly ViewName[] = ['front', 'back', 'right', 'left'];
 
 /** A face drawn at (x, y) of a view; `flip` mirrors it horizontally (a mirrored box). */
@@ -9,14 +9,15 @@ type Placement = { part: PartName; face: FaceName; x: number; y: number; flip?: 
 
 const asRig = (r: Model | Rig): Rig => (typeof r === 'string' ? rigFor('player', r) : r);
 
-/** The views a layout has: a flat texture only has its front. */
+/** The views a layout has: a flat texture only has its front; an animal lying along its body is also seen from above. */
 export function viewsOf(rig: Model | Rig): readonly ViewName[] {
   const r = asRig(rig);
-  return r.parts.every((p) => r.faces(p).length === 1) ? ['front'] : VIEWS;
+  if (r.parts.every((p) => r.faces(p).length === 1)) return ['front'];
+  return r.parts.some((p) => r.part(p)?.turned) ? [...VIEWS, 'top'] : VIEWS;
 }
 
 /** Hand-placed player views, kept pixel-identical to earlier sheets. "right" looks at the character's right side (their front is on the viewer's right). */
-function playerPlacements(view: ViewName, model: Model): { w: number; h: number; parts: Placement[] } {
+function playerPlacements(view: Exclude<ViewName, 'top'>, model: Model): { w: number; h: number; parts: Placement[] } {
   const slim = model === 'slim' ? 1 : 0;
   const at = (list: [PartName, FaceName, number, number][]) => list.map(([part, face, x, y]) => ({ part, face, x, y }));
   switch (view) {
@@ -40,24 +41,28 @@ const SWAP: Record<FaceName, FaceName> = { top: 'top', bottom: 'bottom', front: 
  */
 function boxPlacements(rig: Rig, view: ViewName): { w: number; h: number; parts: Placement[] } {
   const size = (b: BoxDef) => rig.part(b.part)?.box ?? [0, 0, 0];
-  const minOf = (i: 0 | 1 | 2) => Math.min(...rig.boxes.map((b) => b.at[i]));
-  const maxOf = (i: 0 | 1 | 2) => Math.max(...rig.boxes.map((b) => b.at[i] + size(b)[i]));
+  // Java places some boxes on half pixels (a wolf's legs); the views snap them to the pixel grid.
+  const boxes = rig.boxes.map((b): BoxDef => ({ ...b, at: b.at.map(Math.round) as [number, number, number] }));
+  const minOf = (i: 0 | 1 | 2) => Math.min(...boxes.map((b) => b.at[i]));
+  const maxOf = (i: 0 | 1 | 2) => Math.max(...boxes.map((b) => b.at[i] + size(b)[i]));
   const [x0, x1, y0, y1, z0, z1] = [minOf(0), maxOf(0), minOf(1), maxOf(1), minOf(2), maxOf(2)];
   const side = view === 'right' || view === 'left';
-  // Distance of the box's near face from the viewer: front looks from -z, back from +z, right from -x, left from +x.
-  const depth = (b: BoxDef) => (view === 'front' ? b.at[2] : view === 'back' ? -(b.at[2] + size(b)[2]) : view === 'right' ? b.at[0] : -(b.at[0] + size(b)[0]));
-  const order = rig.boxes.map((b, i) => ({ b, i })).sort((p, q) => depth(q.b) - depth(p.b) || p.i - q.i);
+  // Distance of the box's near face from the viewer: front looks from -z, back from +z, right from -x, left from +x, top from -y.
+  const depth = (b: BoxDef) => (view === 'front' ? b.at[2] : view === 'back' ? -(b.at[2] + size(b)[2]) : view === 'right' ? b.at[0] : view === 'left' ? -(b.at[0] + size(b)[0]) : b.at[1]);
+  const order = boxes.map((b, i) => ({ b, i })).sort((p, q) => depth(q.b) - depth(p.b) || p.i - q.i);
   const parts = order.map(({ b }): Placement => {
     const [w, , d] = size(b);
-    const x = view === 'front' ? b.at[0] - x0 : view === 'back' ? x1 - (b.at[0] + w) : view === 'right' ? z1 - (b.at[2] + d) : b.at[2] - z0;
+    const x = view === 'front' || view === 'top' ? b.at[0] - x0 : view === 'back' ? x1 - (b.at[0] + w) : view === 'right' ? z1 - (b.at[2] + d) : b.at[2] - z0;
+    // Seen from above, the back is at the top of the image, as on every top face.
+    const y = view === 'top' ? z1 - (b.at[2] + d) : b.at[1] - y0;
     const face = b.mirror ? SWAP[view] : view;
-    return { part: b.part, face, x, y: b.at[1] - y0, flip: b.mirror };
+    return { part: b.part, face, x, y, flip: b.mirror };
   });
-  return { w: side ? z1 - z0 : x1 - x0, h: y1 - y0, parts };
+  return { w: side ? z1 - z0 : x1 - x0, h: view === 'top' ? z1 - z0 : y1 - y0, parts };
 }
 
 function placements(rig: Rig, view: ViewName) {
-  return rig.layout === 'player' ? playerPlacements(view, rig.model) : boxPlacements(rig, view);
+  return rig.layout === 'player' && view !== 'top' ? playerPlacements(view, rig.model) : boxPlacements(rig, view);
 }
 
 export function newImage(width: number, height: number): Image {

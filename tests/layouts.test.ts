@@ -32,6 +32,14 @@ describe('layouts', () => {
     expect(rect('pig', 'leg', 'front')).toEqual({ x: 4, y: 20, w: 4, h: 6 });
     expect(rect('cow', 'head', 'front')).toEqual({ x: 6, y: 6, w: 8, h: 8 });
     expect(rect('cow', 'muzzle', 'front')).toEqual({ x: 2, y: 34, w: 6, h: 3 });
+    expect(rect('cold_cow', 'muzzle', 'front')).toEqual({ x: 10, y: 34, w: 6, h: 3 });
+    expect(rect('sheep', 'head', 'front')).toEqual({ x: 8, y: 8, w: 6, h: 6 });
+    expect(rect('sheep_wool', 'head', 'front')).toEqual({ x: 6, y: 6, w: 6, h: 6 });
+    expect(rect('chicken', 'beak', 'front')).toEqual({ x: 16, y: 2, w: 4, h: 2 });
+    expect(rect('wolf', 'snout', 'front')).toEqual({ x: 4, y: 14, w: 3, h: 3 });
+    expect(rect('hoglin', 'head', 'front')).toEqual({ x: 80, y: 20, w: 14, h: 6 });
+    expect(rect('hoglin', 'mane', 'right')).toEqual({ x: 90, y: 52, w: 19, h: 10 });
+    expect(rigFor('hoglin').faces('mane')).toEqual(['right', 'left']);
   });
 
   it('name a lying body\'s faces the way they face in game', () => {
@@ -61,6 +69,18 @@ describe('layouts', () => {
       const r = rig.faceRect(ref.part, ref.face, ref.layer);
       for (const [x, y] of [[0, 0], [r.w - 1, 0], [0, r.h - 1], [r.w - 1, r.h - 1]]) expect(locate(...texel(r, x, y), rig)).toMatchObject({ ...ref, x, y });
     }
+  });
+
+  it('add a view from above for lying bodies only', () => {
+    expect(viewsOf(rigFor('pig'))).toContain('top');
+    expect(viewsOf(rigFor('creeper'))).not.toContain('top');
+    expect(viewsOf(rigFor('player'))).not.toContain('top');
+    const c = compile(spec('pig', [{ op: 'fill', target: 'all', color: '#f0a0a0' }, { op: 'fill', target: 'body.top', color: '#000000' }]));
+    const top = renderView(c.texture, c.rig, 'top');
+    // Snout to hind legs, head at the bottom: the back fills the middle of the view.
+    expect([top.width, top.height]).toEqual([10, 24]);
+    expect(px(top, 5, 6)).toEqual([0, 0, 0, 255]);
+    expect(px(top, 5, 23)).toEqual([240, 160, 160, 255]);
   });
 
   it('paint a lying body by its in-game faces', () => {
