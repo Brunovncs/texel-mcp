@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { isSiteOrigin } from '../core/share';
 
 /**
@@ -102,18 +103,24 @@ export async function startLive(opts: { site: string; port?: number; initial?: s
   };
 }
 
-/** Listen on `port`, or the next free one (up to 20 tries). */
+/**
+ * Listen on `port`, or the next free one (up to 20 tries). A failed attempt drops its 'listening'
+ * handler, or it would fire on the retry's success and report the busy port (another session's).
+ */
 function listen(server: ReturnType<typeof createServer>, port: number, tries = 20): Promise<number> {
   return new Promise((resolve, reject) => {
+    const onListening = () => {
+      server.off('error', onError);
+      resolve((server.address() as AddressInfo).port);
+    };
     const onError = (e: NodeJS.ErrnoException) => {
+      server.off('listening', onListening);
       if (e.code === 'EADDRINUSE' && tries > 1) listen(server, port + 1, tries - 1).then(resolve, reject);
       else reject(e);
     };
     server.once('error', onError);
-    server.listen(port, '127.0.0.1', () => {
-      server.off('error', onError);
-      resolve(port);
-    });
+    server.once('listening', onListening);
+    server.listen(port, '127.0.0.1');
   });
 }
 

@@ -39,7 +39,7 @@ A color expression is one of:
 - `transparent`
 - a palette key: `"shirt"`
 - any of the above plus `:<n>`: shift HSL lightness by *n* points: `"shirt:-12"`, `"#88aaff:+6"`
-- any of the above plus `~<n>` (−4…4): a step along a pixel-art tone ramp. Lighter steps also warm toward yellow, darker steps cool toward blue and gain saturation: `"cloth~1"` (highlight), `"cloth~-1"` (shadow), `"cloth~-2"` (deep shadow).
+- any of the above plus `~<n>` (−4…4): a step along a pixel-art tone ramp. Lighter steps also warm toward yellow, darker steps cool toward blue and gain saturation: `"cloth~1"` (highlight), `"cloth~-1"` (shadow), `"cloth~-2"` (deep shadow). On light, saturated pinks and skin tones the darker steps turn vivid red (`"#f0b0a8~-2"` is `#ea5257`); shade those with `:` (`"pink:-12"`) or name a duller shadow color.
 
 Palette entries may reference each other, so a material needs only one base color; derive its tones where you use them (`"cloth~-1"`) or name them:
 

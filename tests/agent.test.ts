@@ -75,4 +75,17 @@ describe('live session', () => {
       await live.close();
     }
   });
+
+  it('reports the port it actually got when the first one is taken', async () => {
+    const first = await startLive({ site: 'https://example.test', port: 47480, initial: '{"version":1,"name":"First","layers":[]}' });
+    const second = await startLive({ site: 'https://example.test', port: 47480, initial: '{"version":1,"name":"Second","layers":[]}' });
+    try {
+      expect(second.port).not.toBe(first.port);
+      expect(second.url).toBe(`https://example.test/studio/?live=${second.port}`);
+      const res = await fetch(`http://127.0.0.1:${second.port}/spec`, { headers: { Origin: 'https://example.test' } });
+      expect(JSON.parse(await res.text()).name).toBe('Second');
+    } finally {
+      await Promise.all([first.close(), second.close()]);
+    }
+  });
 });
