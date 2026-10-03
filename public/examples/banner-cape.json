@@ -1,0 +1,28 @@
+{
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Banner Cape",
+  "description": "A guild cape in crimson with a gold border and a ring crest, plus matching elytra with gold leading edges.",
+  "author": "texel",
+  "tags": ["cape", "elytra", "guild"],
+  "layout": "cape",
+  "palette": {
+    "crimson": "#a3262f",
+    "crimsonDark": "crimson~-1",
+    "lining": "crimson~-2",
+    "gold": "#e2b23a",
+    "goldDark": "gold~-1"
+  },
+  "legend": { "G": "gold", "g": "goldDark" },
+  "layers": [
+    { "op": "material", "id": "cloth", "target": "all", "color": "crimson", "kind": "fabric" },
+    { "op": "fill", "id": "lining", "target": "cape.back", "color": "lining", "note": "cape.front is the outside; the back faces the player" },
+    { "op": "rect", "id": "border", "target": "cape.front", "color": "gold" },
+    { "op": "material", "id": "field", "target": "cape.front", "x": 1, "y": 1, "w": 8, "h": 14, "color": "crimson", "kind": "fabric", "seed": 5 },
+    { "op": "pixels", "id": "crest", "target": "cape.front", "x": 3, "y": 4, "rows": [".GG.", "GggG", "GggG", ".GG."] },
+    { "op": "rect", "id": "hem", "target": "cape.front", "y": -2, "h": 1, "x": 1, "w": 8, "color": "crimsonDark" },
+    { "op": "rect", "id": "wing-edge", "target": "elytra.front", "h": 2, "color": "gold" },
+    { "op": "rect", "id": "wing-edge-side", "target": "elytra.right+left", "h": 2, "color": "goldDark" },
+    { "op": "lighting", "id": "light" }
+  ]
+}

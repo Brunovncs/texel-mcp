@@ -1,0 +1,31 @@
+{
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Bronze Armor",
+  "description": "Armor layer 1 for a bronze tier: helmet with an open face, chestplate with gold trim and rivets, shoulder plates and boots. Everything else stays transparent so the body shows.",
+  "author": "texel",
+  "tags": ["armor", "equipment", "bronze"],
+  "layout": "humanoid",
+  "palette": {
+    "bronze": "#b0723a",
+    "bronzeDark": "bronze~-1",
+    "bronzeDeep": "bronze~-2",
+    "trim": "#e6c25a",
+    "rivet": "#f1dc9a"
+  },
+  "layers": [
+    { "op": "material", "id": "helmet", "target": "head", "color": "bronze", "kind": "metal", "note": "head = helmet; the bottom stays open" },
+    { "op": "clear", "id": "helmet-bottom", "target": "head.bottom" },
+    { "op": "clear", "id": "face-opening", "target": "head.front", "x": 1, "y": 3, "w": 6, "h": 5 },
+    { "op": "rect", "id": "helmet-rim", "target": "head.sides", "y": 2, "h": 1, "color": "trim" },
+    { "op": "material", "id": "chest", "target": "body", "color": "bronze", "kind": "metal" },
+    { "op": "rect", "id": "chest-trim", "target": "body.sides", "region": "collar", "color": "trim" },
+    { "op": "rect", "id": "belt", "target": "body.sides", "region": "belt", "color": "bronzeDeep" },
+    { "op": "points", "id": "rivets", "target": "body.front", "points": [[1, 3], [6, 3], [1, 6], [6, 6]], "color": "rivet" },
+    { "op": "material", "id": "shoulders", "target": "rightArm", "region": "sleeves", "color": "bronze", "kind": "metal" },
+    { "op": "rect", "id": "shoulder-edge", "target": "rightArm.sides", "y": 3, "h": 1, "color": "trim" },
+    { "op": "material", "id": "boots", "target": "rightLeg", "region": "boots", "color": "bronzeDark", "kind": "metal" },
+    { "op": "rect", "id": "boot-cuff", "target": "rightLeg.sides", "y": 6, "h": 1, "color": "trim" },
+    { "op": "lighting", "id": "light" }
+  ]
+}

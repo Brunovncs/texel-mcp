@@ -1,9 +1,9 @@
 {
-  "$schema": "/schema/skinfamily.v1.json",
+  "$schema": "https://www.texel.dev.br/schema/skinfamily.v1.json",
   "version": 1,
   "kind": "family",
   "name": "Guild uniforms",
-  "description": "Three guilds × two ranks from one base. Guilds recolor the uniform; captains add a cape and an insignia, recruits lose the trim.",
+  "description": "Three guilds × two ranks from one base. Each guild recolors the uniform and the person, adds its own gear (a headband, a hood, a mantle) and its crest. Captains switch on the cape and rank pips and add pauldrons and a circlet; recruits lose the trim and the crest and carry a satchel.",
   "base": {
     "version": 1,
     "name": "Guild member",
@@ -18,6 +18,7 @@
       "primaryLight": "primary:+10",
       "primaryDark": "primary:-12",
       "trim": "#e0a940",
+      "trimDark": "trim:-18",
       "belt": "#5b3a1f",
       "pants": "#3b3530",
       "boots": "#2a211c"
@@ -61,18 +62,63 @@
       { "op": "fill", "target": "body.back@overlay", "color": "primaryDark", "id": "cape", "enabled": false },
       { "op": "rect", "target": "body.back@overlay", "h": 1, "color": "trim", "id": "cape", "enabled": false },
       { "op": "shade", "target": "body.back@overlay", "y": -2, "amount": -8, "id": "cape", "enabled": false },
-      { "op": "points", "target": "body.front@overlay", "points": [[5, 2], [6, 2], [5, 3], [6, 3]], "color": "trim", "id": "insignia", "enabled": false }
+      { "op": "points", "target": "body.front@overlay", "points": [[6, 2], [6, 4]], "color": "trim", "id": "insignia", "enabled": false, "note": "rank pips" }
     ]
   },
   "matrix": {
     "guild": {
-      "ember": { "name": "Ember", "palette": { "primary": "#9b2f2f", "trim": "#e0a940" } },
-      "tide": { "name": "Tide", "palette": { "primary": "#2c5d9b", "trim": "#d5dde8" } },
-      "grove": { "name": "Grove", "palette": { "primary": "#3d7a3a", "trim": "#cdb070" } }
+      "ember": {
+        "name": "Ember",
+        "palette": { "primary": "#9b2f2f", "trim": "#e0a940", "hair": "#6b2a17", "eye": "#b5762a" },
+        "layers": [
+          { "op": "rect", "target": "head.sides@overlay", "y": 2, "h": 1, "color": "primary", "id": "gear", "note": "headband" },
+          { "op": "points", "target": "head.back@overlay", "points": [[3, 3], [4, 3], [3, 4], [4, 5]], "color": "primaryDark", "id": "gear", "note": "headband knot" },
+          { "op": "pixels", "target": "body.front@overlay", "x": 1, "y": 2, "id": "emblem", "note": "flame crest", "legend": { "F": "#e8742a", "Y": "#ffcf5a" }, "rows": ["..F.", ".FF.", "FYYF", ".YY."] }
+        ]
+      },
+      "tide": {
+        "name": "Tide",
+        "palette": { "primary": "#2c5d9b", "trim": "#d5dde8", "skin": "#8d5a3b", "hair": "#1d1a18", "eye": "#3f2a1c" },
+        "layers": [
+          { "op": "fill", "target": "head.top+back+right+left@overlay", "color": "primaryDark", "id": "gear", "note": "hood" },
+          { "op": "pixels", "target": "head.front@overlay", "id": "gear", "note": "hood rim", "legend": { "D": "primaryDark", "d": "primary" }, "rows": ["DDDDDDDD", "Dd....dD", "D......D", "D......D"] },
+          { "op": "rect", "target": "head.right+left@overlay", "y": -2, "color": "primary", "id": "gear" },
+          { "op": "noise", "target": "head.top+back@overlay", "jitter": 3, "seed": 21, "id": "gear" },
+          { "op": "pixels", "target": "body.front@overlay", "x": 1, "y": 2, "id": "emblem", "note": "wave crest", "legend": { "W": "trim", "w": "primaryLight" }, "rows": [".WW.", "W..W", "..WW", "www."] }
+        ]
+      },
+      "grove": {
+        "name": "Grove",
+        "palette": { "primary": "#3d7a3a", "trim": "#cdb070", "skin": "#efc29a", "hair": "#c4954a", "eye": "#4e8a3c", "mantle": "#6a5532" },
+        "layers": [
+          { "op": "fill", "target": "body.top@overlay", "color": "mantle", "id": "gear", "note": "mantle" },
+          { "op": "rect", "target": "body.sides@overlay", "h": 2, "color": "mantle", "id": "gear", "note": "mantle" },
+          { "op": "rect", "target": "body.sides@overlay", "y": 1, "h": 1, "color": "mantle:-8", "id": "gear" },
+          { "op": "pixels", "target": "body.front@overlay", "x": 1, "y": 2, "id": "emblem", "note": "leaf crest", "legend": { "L": "#9fd16a", "l": "trim" }, "rows": ["..LL", ".LLL", "LLL.", "l..."] }
+        ]
+      }
     },
     "rank": {
-      "recruit": { "name": "Recruit", "disable": ["trim"] },
-      "captain": { "name": "Captain", "enable": ["cape", "insignia"] }
+      "recruit": {
+        "name": "Recruit",
+        "disable": ["trim", "emblem"],
+        "layers": [
+          { "op": "line", "target": "body.front@overlay", "from": [1, 0], "to": [6, 8], "color": "belt", "id": "satchel", "note": "strap" },
+          { "op": "line", "target": "body.back@overlay", "from": [6, 0], "to": [1, 8], "color": "belt", "id": "satchel" },
+          { "op": "rect", "target": "body.front@overlay", "x": 5, "y": 8, "w": 3, "h": 2, "color": "belt:+8", "id": "satchel", "note": "pouch" }
+        ]
+      },
+      "captain": {
+        "name": "Captain",
+        "enable": ["cape", "insignia"],
+        "layers": [
+          { "op": "fill", "target": "arms.top@overlay", "color": "trim", "id": "pauldrons" },
+          { "op": "rect", "target": "arms.sides@overlay", "h": 2, "color": "trim", "id": "pauldrons" },
+          { "op": "rect", "target": "arms.sides@overlay", "y": 2, "h": 1, "color": "trimDark", "id": "pauldrons" },
+          { "op": "rect", "target": "head.sides@overlay", "y": 1, "h": 1, "color": "trim", "id": "circlet" },
+          { "op": "points", "target": "head.front@overlay", "points": [[3, 1], [4, 1]], "color": "primaryLight", "id": "circlet", "note": "gem" }
+        ]
+      }
     }
   }
 }

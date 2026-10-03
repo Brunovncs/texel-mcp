@@ -1,9 +1,9 @@
 import type { Model } from '../../core/types';
-import { SkinModel, type ModelView } from '../../web/model3d';
+import { fitModel, SkinModel, type ModelView } from '../../web/model3d';
 import { HostBridge } from './host-bridge';
 
 interface RenderResult {
-  structuredContent?: { name?: string; model?: Model; score?: number; ok?: boolean; issues?: { level: string; code: string; message: string }[] };
+  structuredContent?: { name?: string; model?: Model; layout?: string; score?: number; ok?: boolean; issues?: { level: string; code: string; message: string }[] };
   _meta?: Record<string, unknown>;
 }
 
@@ -38,7 +38,7 @@ function show(result: RenderResult) {
     return;
   }
   current = { name: s.name ?? 'Skin', texture };
-  model.setSkin(texture, s.model ?? 'classic');
+  model.setSkin(texture, s.model ?? 'classic', s.layout ?? 'player');
   $('name').textContent = current.name;
   $('score').textContent = s.score === undefined ? '' : `${s.score}/100`;
   $('score').dataset.tone = !s.ok ? 'bad' : (s.score ?? 0) >= 90 ? 'good' : 'mid';
@@ -85,10 +85,7 @@ bridge.on('ui/notifications/tool-input', () => {
 bridge.on('ui/notifications/tool-result', (params) => show(params as RenderResult));
 bridge.on('ui/notifications/host-context-changed', (params) => applyContext(params as HostContext));
 
-new ResizeObserver(() => {
-  const { width, height } = stage.getBoundingClientRect();
-  model.root.style.setProperty('--u', `${Math.max(4, Math.min(width / 22, height / 38)).toFixed(2)}px`);
-}).observe(stage);
+fitModel(model, stage);
 
 async function init() {
   if (!bridge.embedded) {

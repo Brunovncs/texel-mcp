@@ -3,6 +3,7 @@ import { deflateSync, inflateSync } from 'node:zlib';
 import { McpServer, ResourceTemplate, type CallToolResult } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import {
+  applyPatch,
   compile,
   decodePNG,
   diffTextures,
@@ -19,9 +20,11 @@ import {
   resolveShareLink,
   shareURL,
   textureToSpec,
+  withIds,
   type CompileResult,
   type Image,
   type Review,
+  type SkinSpec,
 } from '../core';
 import { DOC_PAGES, DOCS, EXAMPLE_IDS, EXAMPLES, FAMILY_EXAMPLES, SCHEMAS } from './content';
 import { Workspace } from './workspace';
@@ -34,8 +37,8 @@ export const VIEWER_MIME = 'text/html;profile=mcp-app';
 /** Key under which render results carry the texture for the MCP App viewer (kept out of model context). */
 export const TEXTURE_META_KEY = 'texel/texture';
 
-const INSTRUCTIONS = `Texel compiles Minecraft skin specs (JSON: palette + ordered drawing ops) into 64×64 PNGs. Protocol ${PROTOCOL}.
-Workflow: read the "spec" docs (texel_read_docs or resource texel://docs/spec), draft a spec, call texel_render, look at the returned review sheet image and the issues, patch the spec, render again, then texel_save and texel_share.
+const INSTRUCTIONS = `Texel compiles Minecraft skin specs (JSON: palette + ordered drawing ops) into PNGs: 64×64 player skins by default, and with "layout" also zombies, skeletons, armor, creepers, endermen, spiders, villagers, capes/elytra, items and blocks (texel://docs/spec, section "Layouts"). Protocol ${PROTOCOL}.
+Workflow: read the "spec" docs (texel_read_docs or resource texel://docs/spec), draft a spec, call texel_render, look at the returned review sheet image and the issues, fix the weakest area (texel_patch changes a few layers by id), render again, then texel_save and texel_share.
 When a person is waiting on the result, call texel_live first and give them the URL: every texel_render then appears in their open studio tab, so they can watch and steer while you work.
 For many related skins (teams, factions, tiers), write a family (kind: "family") and use texel_render_family / texel_save_family.
 The score only measures technical hygiene; judge appearance from the sheet image against the brief.`;
@@ -43,6 +46,10 @@ The score only measures technical hygiene; judge appearance from the sheet image
 const specInput = z
   .union([z.string(), z.record(z.string(), z.unknown())])
   .describe('A Texel skin spec (version 1) as a JSON object or JSON text. Format: texel://docs/spec, schema: texel://schema/skinspec.v1');
+const patchInput = z
+  .union([z.string(), z.record(z.string(), z.unknown())])
+  .describe('A patch ({ patch: [{ do: "update", id, set }, …] }) as a JSON object or JSON text. Format: texel://docs/spec, section "Patches".');
+const includeInput = z.array(z.enum(['sheet', 'texture', 'ascii'])).default(['sheet']).describe('Extra outputs. "sheet" is the review image; "ascii" adds a text render for models without vision.');
 const familyInput = z
   .union([z.string(), z.record(z.string(), z.unknown())])
   .describe('A skin family ({ kind: "family", base, variants?, matrix? }) as a JSON object or JSON text. Format: texel://docs/families');
@@ -52,6 +59,7 @@ const reviewShape = z.object({
   ok: z.boolean(),
   name: z.string(),
   model: z.enum(['classic', 'slim']),
+  layout: z.string().describe('Texture layout: player, zombie, humanoid (armor), skeleton, item…'),
   score: z.number(),
   art: z.object({
     score: z.number().describe('0–100 from the art checks: face, silhouette, shading, texture, back, depth, colors.'),
@@ -68,9 +76,9 @@ const imageBlock = (img: Image) => ({ type: 'image' as const, data: base64(png(i
 const textBlock = (text: string) => ({ type: 'text' as const, text });
 
 function reviewPayload(result: CompileResult, r: Review) {
-  const { model: _model, ...stats } = r.stats;
-  void _model;
-  return { ok: r.ok, name: String(result.spec?.name ?? 'Untitled'), model: result.model, score: r.score, art: r.art, issues: r.issues, stats, next: r.next };
+  const { model: _model, layout: _layout, ...stats } = r.stats;
+  void _model, void _layout;
+  return { ok: r.ok, name: String(result.spec?.name ?? 'Untitled'), model: result.model, layout: result.layout, score: r.score, art: r.art, issues: r.issues, stats, next: r.next };
 }
 
 function toolError(message: string): CallToolResult {
@@ -82,6 +90,20 @@ export function createTexelServer(workspace = new Workspace()): McpServer {
   const server = new McpServer({ name: 'texel', title: 'Texel', version: SERVER_VERSION }, { instructions: INSTRUCTIONS });
   let live: LiveSession | null = null;
 
+  /** Review a compiled spec, push it to the live session, and return the render outputs. */
+  const rendered = (result: CompileResult, include: string[], before = '', extra: Record<string, unknown> = {}): CallToolResult => {
+    const r = review(result);
+    if (live && result.spec) live.push(formatSpec(result.spec));
+    const content: CallToolResult['content'] = [textBlock(before + reviewToMarkdown(r, { includeAscii: include.includes('ascii') }))];
+    if (include.includes('sheet')) content.push(imageBlock(renderSheet(result.texture, result.rig).image));
+    if (include.includes('texture')) content.push(imageBlock(scaleImage(result.texture, 4)));
+    return {
+      content,
+      structuredContent: { ...reviewPayload(result, r), ...extra },
+      _meta: { [TEXTURE_META_KEY]: `data:image/png;base64,${base64(png(result.texture))}` },
+    };
+  };
+
   // ---- tools --------------------------------------------------------------
 
   server.registerTool(
@@ -89,27 +111,40 @@ export function createTexelServer(workspace = new Workspace()): McpServer {
     {
       title: 'Render skin',
       description:
-        'Compile a skin spec and review it. Returns a review sheet image (front | back | right | left views + raw texture), the review (score, issues with JSON paths and fix hints, suggested next steps) and, on request, the 64×64 texture and a text render. Deterministic; never modifies files.',
-      inputSchema: z.object({
-        spec: specInput,
-        include: z.array(z.enum(['sheet', 'texture', 'ascii'])).default(['sheet']).describe('Extra outputs. "sheet" is the review image; "ascii" adds a text render for models without vision.'),
-      }),
+        'Compile a skin spec and review it. Returns a review sheet image (front | back | right | left views + raw texture), the review (score, issues with JSON paths and fix hints, suggested next steps) and, on request, the texture (64×64 for a player skin) and a text render. Deterministic; never modifies files.',
+      inputSchema: z.object({ spec: specInput, include: includeInput }),
       outputSchema: reviewShape,
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
       _meta: { ui: { resourceUri: VIEWER_URI } },
     },
-    async ({ spec, include }) => {
-      const result = compile(spec);
-      const r = review(result);
-      if (live && result.spec) live.push(formatSpec(result.spec));
-      const content: CallToolResult['content'] = [textBlock(reviewToMarkdown(r, { includeAscii: include.includes('ascii') }))];
-      if (include.includes('sheet')) content.push(imageBlock(renderSheet(result.texture, result.model).image));
-      if (include.includes('texture')) content.push(imageBlock(scaleImage(result.texture, 4)));
-      return {
-        content,
-        structuredContent: reviewPayload(result, r),
-        _meta: { [TEXTURE_META_KEY]: `data:image/png;base64,${base64(png(result.texture))}` },
-      };
+    async ({ spec, include }) => rendered(compile(spec), include),
+  );
+
+  server.registerTool(
+    'texel_patch',
+    {
+      title: 'Patch skin',
+      description:
+        'Apply a patch to a spec (update, replace, add or remove layers by id; change palette, legend or meta) and render the result like texel_render. Layers without an id first get "<op>-<index>" and keep it, so the next patch can use the same ids. Entries that cannot apply are skipped and reported. Returns the patched spec, the review and the sheet. Deterministic; never modifies files.',
+      inputSchema: z.object({ spec: specInput, patch: patchInput, include: includeInput }),
+      outputSchema: reviewShape.extend({ spec: z.record(z.string(), z.unknown()), applied: z.number(), skipped: z.array(issueShape) }),
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+      _meta: { ui: { resourceUri: VIEWER_URI } },
+    },
+    async ({ spec, patch, include }) => {
+      let base: SkinSpec, body: unknown;
+      try {
+        base = typeof spec === 'string' ? JSON.parse(spec) : (spec as unknown as SkinSpec);
+        body = typeof patch === 'string' ? JSON.parse(patch) : patch;
+      } catch (e) {
+        return toolError(`Invalid JSON: ${(e as Error).message}`);
+      }
+      if (!Array.isArray(base?.layers)) return toolError('"spec" must be a skin spec with a "layers" array.');
+      const p = applyPatch(withIds(base), body);
+      if (p.issues.some((i) => i.level === 'error')) return toolError(p.issues.map((i) => i.message).join('\n'));
+      const skipped = p.issues.map((i) => `- ${i.code} at ${i.path}: ${i.message}${i.hint ? ` (${i.hint})` : ''}`).join('\n');
+      const before = `Applied ${p.applied} of ${p.applied + p.issues.length} patch entries.${skipped ? `\n${skipped}` : ''}\n\n\`\`\`json\n${formatSpec(p.spec)}\`\`\`\n\n`;
+      return rendered(compile(p.spec), include, before, { spec: p.spec as unknown as Record<string, unknown>, applied: p.applied, skipped: p.issues });
     },
   );
 
@@ -148,7 +183,7 @@ export function createTexelServer(workspace = new Workspace()): McpServer {
       const stem = path.replace(/\.(png|json)$/i, '').replace(/\.skin$/i, '');
       try {
         const files = [workspace.write(`${stem}.png`, png(result.texture)), workspace.write(`${stem}.skin.json`, formatSpec(result.spec))];
-        if (sheet) files.push(workspace.write(`${stem}.sheet.png`, png(renderSheet(result.texture, result.model).image)));
+        if (sheet) files.push(workspace.write(`${stem}.sheet.png`, png(renderSheet(result.texture, result.rig).image)));
         const shown = files.map((f) => workspace.display(f));
         return { content: [textBlock(`Saved:\n${shown.map((f) => `- ${f}`).join('\n')}`)], structuredContent: { files: shown, score: review(result).score } };
       } catch (e) {
@@ -247,7 +282,7 @@ Give this URL to the user. Each texel_render now updates their studio tab (${liv
       const table = ['| # | id | score | issues |', '| --- | --- | --- | --- |', ...members.map((m, i) => `| ${i + 1} | ${m.id} | ${m.score} | ${m.issues.join('; ') || '-'} |`)].join('\n');
       const familyIssues = f.issues.map((i) => `- ${i.level} \`${i.code}\` at \`${i.path}\`: ${i.message}${i.hint ? `. ${i.hint}` : ''}`).join('\n');
       const content: CallToolResult['content'] = [textBlock(`## ${f.name}: ${members.length} members (lineup order = table order)\n\n${table}${familyIssues ? `\n\n### Family issues\n${familyIssues}` : ''}`)];
-      if (built.length) content.push(imageBlock(renderLineup(built.map(({ result }) => ({ texture: result.texture, model: result.model })), 6)));
+      if (built.length) content.push(imageBlock(renderLineup(built.map(({ result }) => ({ texture: result.texture, model: result.model, rig: result.rig })), 6)));
       return { content, structuredContent: { ok: f.ok && members.every((m) => m.ok), name: f.name, members, issues: f.issues } };
     },
   );
@@ -272,7 +307,7 @@ Give this URL to the user. Each texel_render now updates their studio tab (${liv
           files.push(workspace.write(`${directory}/${m.id}.png`, png(result.texture)));
           files.push(workspace.write(`${directory}/${m.id}.skin.json`, formatSpec(m.spec)));
         }
-        files.push(workspace.write(`${directory}/lineup.png`, png(renderLineup(built.map(({ result }) => ({ texture: result.texture, model: result.model })), 6))));
+        files.push(workspace.write(`${directory}/lineup.png`, png(renderLineup(built.map(({ result }) => ({ texture: result.texture, model: result.model, rig: result.rig })), 6))));
         const shown = files.map((x) => workspace.display(x));
         return { content: [textBlock(`Saved ${built.length} skins (${shown.length} files) under ${workspace.display(workspace.resolve(directory))}/`)], structuredContent: { files: shown, members: built.length } };
       } catch (e) {
@@ -285,18 +320,21 @@ Give this URL to the user. Each texel_render now updates their studio tab (${liv
     'texel_import_png',
     {
       title: 'Import skin PNG',
-      description: 'Convert an existing skin PNG (64×64 or legacy 64×32) in the workspace into an editable spec, one layer per painted face, palette keys c01…cNN. Rename palette keys to material names before editing.',
-      inputSchema: z.object({ path: z.string().min(1).describe('Path to a .png file, relative to the workspace.') }),
-      outputSchema: z.object({ spec: z.record(z.string(), z.unknown()), lossy: z.boolean(), model: z.enum(['classic', 'slim']) }),
+      description: 'Convert an existing PNG in the workspace into an editable spec, one layer per painted face, palette keys c01…cNN. A player skin (64×64 or legacy 64×32) by default; pass layout for a mob, armor, cape, item or block texture. Rename palette keys to material names before editing.',
+      inputSchema: z.object({
+        path: z.string().min(1).describe('Path to a .png file, relative to the workspace.'),
+        layout: z.string().optional().describe('Texture layout of the PNG, e.g. "zombie", "humanoid" (armor), "item". Default: player skin.'),
+      }),
+      outputSchema: z.object({ spec: z.record(z.string(), z.unknown()), lossy: z.boolean(), model: z.enum(['classic', 'slim']), layout: z.string() }),
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
     },
-    async ({ path }) => {
+    async ({ path, layout }) => {
       try {
         const bytes = readFileSync(workspace.resolve(path));
-        const { spec, lossy } = textureToSpec(decodePNG(bytes, (d) => inflateSync(d)), path.split(/[\\/]/).pop()?.replace(/\.png$/i, ''));
+        const { spec, lossy } = textureToSpec(decodePNG(bytes, (d) => inflateSync(d)), path.split(/[\\/]/).pop()?.replace(/\.png$/i, ''), layout);
         return {
           content: [textBlock(`${lossy ? 'Imported with color quantization.' : 'Imported losslessly.'}\n\n\`\`\`json\n${formatSpec(spec)}\`\`\``)],
-          structuredContent: { spec: spec as unknown as Record<string, unknown>, lossy, model: spec.model ?? 'classic' },
+          structuredContent: { spec: spec as unknown as Record<string, unknown>, lossy, model: spec.model ?? 'classic', layout: spec.layout ?? 'player' },
         };
       } catch (e) {
         return toolError(`Import failed: ${(e as Error).message}`);
@@ -315,7 +353,8 @@ Give this URL to the user. Each texel_render now updates their studio tab (${liv
     },
     async ({ before, after }) => {
       const a = compile(before), b = compile(after);
-      const d = diffTextures(a.texture, b.texture, b.model);
+      if (a.layout !== b.layout || a.texture.width !== b.texture.width) return toolError(`The specs use different layouts (${a.layout}, ${b.layout}); diff compares two textures of the same layout.`);
+      const d = diffTextures(a.texture, b.texture, b.rig);
       const content: CallToolResult['content'] = [textBlock(diffToMarkdown(d))];
       if (d.changedPixels) content.push(imageBlock(scaleImage(d.mask, 4)));
       return { content, structuredContent: { changedPixels: d.changedPixels, faces: d.faces } };
@@ -400,7 +439,7 @@ Give this URL to the user. Each texel_render now updates their studio tab (${liv
           role: 'user' as const,
           content: {
             type: 'text' as const,
-            text: `Design a Minecraft skin with Texel.\n\nBrief: ${brief}\nModel: ${model ?? 'your choice (classic = 4px arms, slim = 3px)'}\n\n1. Read texel://docs/spec and texel://docs/art-guide (or call texel_read_docs).\n2. Call texel_live and give me the URL, so I can watch every render.\n3. Put the brief in "description", in the language I wrote it in (answer me in it too). Decide whatever the brief leaves open and state your choices in one line instead of asking. Define the palette first: 2–4 tones per material.\n4. Draft layers broad → fine, texture (gradient/shade/noise) before small details. Give layers you may revisit an "id".\n5. Call texel_render. Fix every error and warning. Then judge the sheet image against rubric R1–R8 in texel://docs/protocol.\n6. Patch the weakest area and render again; use texel_diff to confirm what changed. Stop when R1–R8 pass (≈3–6 iterations).\n7. Save with texel_save (sheet: true), call texel_share, and report the link, the files and the final score.`,
+            text: `Design a Minecraft skin with Texel.\n\nBrief: ${brief}\nModel: ${model ?? 'your choice (classic = 4px arms, slim = 3px)'}\n\n1. Read texel://docs/spec and texel://docs/art-guide (or call texel_read_docs).\n2. Call texel_live and give me the URL, so I can watch every render.\n3. Put the brief in "description", in the language I wrote it in (answer me in it too). Decide whatever the brief leaves open and state your choices in one line instead of asking. Define the palette first: 2–4 tones per material.\n4. Draft layers broad → fine, texture (gradient/shade/noise) before small details. Give layers you may revisit an "id".\n5. Call texel_render. Fix every error and warning. Then judge the sheet image against rubric R1–R8 in texel://docs/protocol.\n6. Patch the weakest area (texel_patch changes layers by id) and check the new sheet; use texel_diff to confirm what changed. Stop when R1–R8 pass (≈3–6 iterations).\n7. Save with texel_save (sheet: true), call texel_share, and report the link, the files and the final score.`,
           },
         },
       ],
@@ -420,7 +459,7 @@ Give this URL to the user. Each texel_render now updates their studio tab (${liv
           role: 'user' as const,
           content: {
             type: 'text' as const,
-            text: `Keep working on this Texel skin: ${link}\n\nWhat I want changed: ${change}\n\n1. Load it with texel_pull and keep the original for comparison.\n2. Call texel_live and give me the URL, so I can watch every render.\n3. Say in one line what you'll change, then patch only the layers involved (use their ids); leave everything else as it is.\n4. texel_render after each patch, judge the sheet against rubric R1–R8 in texel://docs/protocol, and use texel_diff against the original to confirm only the intended faces changed.\n5. Save with texel_save (sheet: true), call texel_share, and give me the new link and the files. Answer in the language of my request.`,
+            text: `Keep working on this Texel skin: ${link}\n\nWhat I want changed: ${change}\n\n1. Load it with texel_pull and keep the original for comparison.\n2. Call texel_live and give me the URL, so I can watch every render.\n3. Say in one line what you'll change, then patch only the layers involved with texel_patch (by id); leave everything else as it is.\n4. After each patch, judge the sheet against rubric R1–R8 in texel://docs/protocol, and use texel_diff against the original to confirm only the intended faces changed.\n5. Save with texel_save (sheet: true), call texel_share, and give me the new link and the files. Answer in the language of my request.`,
           },
         },
       ],

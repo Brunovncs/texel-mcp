@@ -1,15 +1,18 @@
 import { suggestHint } from './color';
-import { FACES, PARTS } from './layout';
+import { FACES, type Rig, rigFor } from './layout';
 import type { FaceName, FaceRef, LayerName, PartName } from './types';
 
-export const PART_GROUPS: Record<string, readonly PartName[]> = {
-  all: PARTS,
-  '*': PARTS,
-  arms: ['rightArm', 'leftArm'],
-  legs: ['rightLeg', 'leftLeg'],
-  limbs: ['rightArm', 'leftArm', 'rightLeg', 'leftLeg'],
-  ...Object.fromEntries(PARTS.map((p) => [p, [p]])),
-};
+const groupCache = new WeakMap<Rig, Record<string, readonly PartName[]>>();
+
+/** Selector part names for a layout: `all`/`*`, its groups (arms, legs…) and each part. */
+export function partGroups(rig: Rig): Record<string, readonly PartName[]> {
+  let g = groupCache.get(rig);
+  if (!g) {
+    g = { all: rig.parts, '*': rig.parts, ...rig.def.groups, ...Object.fromEntries(rig.parts.map((p) => [p, [p]])) };
+    groupCache.set(rig, g);
+  }
+  return g;
+}
 
 export const FACE_GROUPS: Record<string, readonly FaceName[]> = {
   all: FACES,
@@ -28,8 +31,12 @@ const SELECTOR = /^([^.@]+)(?:\.([^.@]+))?(?:@([^.@]+))?$/;
 
 export type SelectorResult = { ok: true; refs: FaceRef[] } | { ok: false; error: string; hint?: string };
 
-/** Parse "<parts>[.<faces>][@<layer>]". Parts and faces may be joined with "+". Arrays are unions. */
-export function parseSelector(sel: unknown): SelectorResult {
+/**
+ * Parse "<parts>[.<faces>][@<layer>]" against a layout. Parts and faces may be joined with "+".
+ * Arrays are unions. Faces or layers a part doesn't have (a flat item's sides, a creeper's hat) are
+ * left out; a selector that ends up with no face at all is an error.
+ */
+export function parseSelector(sel: unknown, rig: Rig = rigFor('player')): SelectorResult {
   const list = Array.isArray(sel) ? sel : [sel];
   if (list.length === 0) return { ok: false, error: 'target is empty' };
   const refs: FaceRef[] = [];
@@ -41,7 +48,7 @@ export function parseSelector(sel: unknown): SelectorResult {
     if (!m && item.includes('+')) {
       const split = splitJoined(item.replace(/\s+/g, ''));
       if (split) {
-        const r = parseSelector(split);
+        const r = parseSelector(split, rig);
         if (!r.ok) return r;
         for (const ref of r.refs) {
           const key = `${ref.part}.${ref.face}@${ref.layer}`;
@@ -51,21 +58,35 @@ export function parseSelector(sel: unknown): SelectorResult {
       }
     }
     if (!m) return { ok: false, error: `malformed selector "${item}"`, hint: 'expected "<parts>[.<faces>][@<layer>]", e.g. "arms.front@overlay"' };
-    const parts = expand(m[1], PART_GROUPS, 'part');
+    const parts = expand(m[1], partGroups(rig), 'part', rig);
     if (!parts.ok) return parts;
-    const faces = expand(m[2] ?? 'all', FACE_GROUPS, 'face');
+    const faces = expand(m[2] ?? 'all', FACE_GROUPS, 'face', rig);
     if (!faces.ok) return faces;
-    const layers = expand(m[3] ?? 'base', LAYER_GROUPS, 'layer');
+    const layers = expand(m[3] ?? 'base', LAYER_GROUPS, 'layer', rig);
     if (!layers.ok) return layers;
+    let added = 0;
     for (const layer of layers.values)
-      for (const part of parts.values)
+      for (const part of parts.values) {
+        if (!rig.hasLayer(part, layer as LayerName)) continue;
+        const own = rig.faces(part);
         for (const face of faces.values) {
+          if (!own.includes(face as FaceName)) continue;
+          added++;
           const key = `${part}.${face}@${layer}`;
           if (!seen.has(key)) {
             seen.add(key);
-            refs.push({ part: part as PartName, face: face as FaceName, layer: layer as LayerName });
+            refs.push({ part, face: face as FaceName, layer: layer as LayerName });
           }
         }
+      }
+    if (!added) {
+      const flat = parts.values.every((p) => rig.faces(p).length === 1);
+      return {
+        ok: false,
+        error: `"${item}" selects no face in the ${rig.layout} layout`,
+        hint: flat ? `${parts.values.join(', ')} is flat: only ".front" exists` : `parts with an overlay here: ${rig.parts.filter((p) => rig.hasLayer(p, 'overlay')).join(', ') || 'none'}`,
+      };
+    }
   }
   return { ok: true, refs };
 }
@@ -90,11 +111,16 @@ function expand(
   text: string,
   groups: Record<string, readonly string[]>,
   kind: string,
+  rig: Rig,
 ): { ok: true; values: string[] } | { ok: false; error: string; hint?: string } {
   const values: string[] = [];
   for (const token of text.split('+')) {
-    const g = groups[token];
-    if (!g) return { ok: false, error: `unknown ${kind} "${token}"`, hint: suggestHint(token, Object.keys(groups)) ?? `valid: ${Object.keys(groups).join(', ')}` };
+    const g = Object.hasOwn(groups, token) ? groups[token] : undefined;
+    if (!g) {
+      const where = kind === 'part' && rig.layout !== 'player' ? ` in the ${rig.layout} layout` : '';
+      const mirrored = kind === 'part' && /^left(Arm|Leg)$/.test(token) && rig.part(token.replace('left', 'right')) ? `${token} reuses ${token.replace('left', 'right')}'s texture (mirrored) in this layout; target that instead` : null;
+      return { ok: false, error: `unknown ${kind} "${token}"${where}`, hint: mirrored ?? suggestHint(token, Object.keys(groups)) ?? `valid: ${Object.keys(groups).join(', ')}` };
+    }
     for (const v of g) if (!values.includes(v)) values.push(v);
   }
   return { ok: true, values };

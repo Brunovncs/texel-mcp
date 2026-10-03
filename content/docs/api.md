@@ -16,16 +16,17 @@ Open `/studio/`. Every method is synchronous unless noted and returns plain JSON
 | `removeLayer(idOrIndex)` | Review | Delete a layer. |
 | `toggleLayer(idOrIndex, enabled?)` | Review | Enable/disable without deleting. |
 | `setPalette(patch)` | Review | Merge palette entries (`null` deletes a key). |
-| `review()` | Review | `{ ok, score, issues, stats, ascii, next }`. |
+| `applyPatch(patch)` | Review + `{ applied, skipped }` | Apply a [spec patch](/docs/spec.md#patches) to the current spec. Layers without an id get `<op>-<index>` first. |
+| `review()` | Review | `{ ok, score, art, issues, stats, ascii, next }`. |
 | `reviewMarkdown()` | string | Review as markdown, with text render. |
 | `validate(spec)` | Issue[] | Check a spec without loading it. |
 | `setView({ yaw, pitch, overlay, animate })` | void | Pose the 3D preview for screenshots. |
-| `textureDataURL()` | string | The 64×64 skin PNG as a data URL. |
+| `textureDataURL()` | string | The texture PNG (64×64 for a player skin, the layout's size otherwise) as a data URL. |
 | `sheetDataURL()` | string | Review sheet (front, back, right, left, texture) PNG. |
 | `shareURL()` | Promise&lt;string&gt; | Short link (`/s/<id>`) that reopens this exact spec; falls back to a long `#z=` link offline. |
 | `download(filename?)` | void | Save the PNG. |
 | `examples()` | Promise&lt;object&gt; | The example index. |
-| `loadExample(id)` | Promise&lt;Review&gt; | Load `explorer`, `knight`, `robot`, `astronaut`. |
+| `loadExample(id)` | Promise&lt;Review&gt; | Load an example by id: `explorer`, `knight`, `robot`, `astronaut`, `wizard`, `cozy`, `miner-zombie`, `creeper`, `bronze-armor`, `banner-cape` or `ember-blade` (see `/examples/index.json`). |
 
 ```js
 const r = texel.setSpec(mySpec);
@@ -49,7 +50,7 @@ On browsers that implement [WebMCP](https://github.com/webmachinelearning/webmcp
 | `texel_review` | `{ format?: "json" \| "markdown" }` |
 | `texel_set_view` | `{ yaw?, pitch?, overlay?, animate? }` |
 | `texel_share_url` | none |
-| `texel_docs` | `{ page: "protocol" \| "spec" \| "art-guide" \| "api" }` |
+| `texel_docs` | `{ page: "protocol" \| "spec" \| "art-guide" \| "families" \| "api" \| "install" }` |
 
 ## 3. URL
 
@@ -72,13 +73,19 @@ node texel.mjs init > spec.json                 # starter spec
 node texel.mjs build spec.json -o skin.png --sheet sheet.png
 node texel.mjs review spec.json                 # markdown + text render
 node texel.mjs review spec.json --json          # machine-readable
+node texel.mjs patch spec.json fix.json -o spec.json --sheet sheet.png   # apply a patch, print the review
+node texel.mjs sheet spec.json -o sheet.png     # review sheet only
 node texel.mjs live spec.json --open            # live session (see below)
 node texel.mjs share spec.json                  # short share link
 node texel.mjs pull <link> -o spec.json         # spec behind a share link
+node texel.mjs family guild.json -o skins/ --lineup lineup.png
+node texel.mjs import skin.png -o spec.json     # existing PNG to an editable spec
+node texel.mjs diff before.json after.json      # which faces changed
+node texel.mjs format spec.json                 # canonical formatting
 cat spec.json | node texel.mjs build - -o skin.png
 ```
 
-Exit code `1` means the spec has errors. Open `sheet.png` to look at the result (front | back | right | left | texture).
+Exit code `1` means the spec has errors. `patch` takes a [patch](/docs/spec.md#patches) file; without `-o` it prints the patched spec to stdout and the review to stderr. `-` reads the spec from stdin. Open `sheet.png` to look at the result (front | back | right | left | texture).
 
 A DOM-free ES module with the compiler is also published at `/texel-core.mjs` (`compile`, `review`, `renderSheet`, `encodePNG`, `formatSpec`, …).
 

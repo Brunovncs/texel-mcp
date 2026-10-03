@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, watchFile, writeFileSync } from 'n
 import { basename, join } from 'node:path';
 import { deflateSync, inflateSync } from 'node:zlib';
 import {
+  applyPatch,
   compile,
   decodePNG,
   diffTextures,
@@ -9,7 +10,9 @@ import {
   encodePNG,
   expandFamily,
   formatSpec,
+  layoutsToMarkdown,
   longShareURL,
+  resolveLayout,
   PROTOCOL,
   resolveShareLink,
   renderLineup,
@@ -18,6 +21,8 @@ import {
   reviewToMarkdown,
   shareURL,
   textureToSpec,
+  withIds,
+  type SkinSpec,
 } from '../core';
 import { openBrowser, startLive } from '../live/server';
 import { SITE_ORIGIN } from '../live/site';
@@ -28,25 +33,30 @@ usage:
   node texel.mjs live   <spec.json> [--port 4747] [--open]
   node texel.mjs build  <spec.json|-> [-o skin.png] [--sheet sheet.png]
   node texel.mjs review <spec.json|-> [--json]
+  node texel.mjs patch  <spec.json|-> <patch.json> [-o patched.json] [--sheet sheet.png]
   node texel.mjs sheet  <spec.json|-> [-o sheet.png]
   node texel.mjs family <family.json|-> [-o out-dir] [--lineup lineup.png]
-  node texel.mjs import <skin.png> [-o spec.json]
+  node texel.mjs import <texture.png> [-o spec.json] [--layout zombie]
   node texel.mjs diff   <before.json> <after.json>
   node texel.mjs share  <spec.json|-> [--long]
   node texel.mjs pull   <link|id> [-o skin.json]
   node texel.mjs format <spec.json|->
-  node texel.mjs init
+  node texel.mjs layouts
+  node texel.mjs init   [--layout player|zombie|skeleton|creeper|cape|item|…]
 
 live   serves the spec to the studio and re-pushes it on every save, so the user can watch while
        you work. Run it in the background, give the user the printed URL, then just edit the file.
 share  prints a short link (${SITE_ORIGIN}/s/<id>) that opens the skin in the studio.
 pull   downloads the spec behind a share link (short /s/<id> or long #z= link) to keep editing it.
+layouts lists the texture layouts beyond player skins (mobs, armor, capes, items, blocks) and their parts.
+patch  applies a patch ({ "patch": [{ "do": "update", "id": …, "set": … }] }) and reviews the result.
+       Without -o the patched spec goes to stdout and the review to stderr.
 
 "-" reads the spec from stdin. Exit code is 1 when the spec has errors.
-Docs: /llms.txt · /docs/spec.md · /docs/protocol.md`;
+Docs: ${SITE_ORIGIN}/llms.txt · ${SITE_ORIGIN}/docs/spec.md · ${SITE_ORIGIN}/docs/protocol.md`;
 
 const STARTER = {
-  $schema: '/schema/skinspec.v1.json',
+  $schema: 'https://www.texel.dev.br/schema/skinspec.v1.json',
   version: 1,
   name: 'Starter',
   model: 'classic',
@@ -122,11 +132,11 @@ async function main(argv: string[]) {
       if (result.ok) {
         const out = flag(rest, '-o') ?? 'skin.png';
         writeFileSync(out, png(result.texture));
-        process.stderr.write(`wrote ${out} (64x64, ${result.model})\n`);
+        process.stderr.write(`wrote ${out} (${result.texture.width}x${result.texture.height}, ${result.layout === 'player' ? result.model : result.layout})\n`);
         const sheet = flag(rest, '--sheet');
         if (sheet) {
-          writeFileSync(sheet, png(renderSheet(result.texture, result.model).image));
-          process.stderr.write(`wrote ${sheet} (front | back | right | left | texture)\n`);
+          writeFileSync(sheet, png(renderSheet(result.texture, result.rig).image));
+          process.stderr.write(`wrote ${sheet} (views | texture)\n`);
         }
       }
       process.stdout.write(reviewToMarkdown(r, { includeAscii: false }) + '\n');
@@ -138,10 +148,42 @@ async function main(argv: string[]) {
       process.stdout.write(rest.includes('--json') ? JSON.stringify(r, null, 2) + '\n' : reviewToMarkdown(r) + '\n');
       process.exit(result.ok ? 0 : 1);
     }
+    case 'patch': {
+      const patchFile = rest[0];
+      if (!patchFile || patchFile === '-o') fail('patch needs a spec file and a patch file');
+      let spec: SkinSpec, body: unknown;
+      try {
+        spec = JSON.parse(readSpec(file));
+        body = JSON.parse(readSpec(patchFile));
+      } catch (e) {
+        fail(`invalid JSON: ${(e as Error).message}`);
+      }
+      if (!Array.isArray(spec?.layers)) fail('the first file must be a spec with a "layers" array');
+      const p = applyPatch(withIds(spec), body);
+      for (const i of p.issues) process.stderr.write(`${i.level}: ${i.path}: ${i.message}${i.hint ? ` (${i.hint})` : ''}\n`);
+      if (p.issues.some((i) => i.level === 'error')) process.exit(1);
+      const result = compile(p.spec);
+      const report = `applied ${p.applied} of ${p.applied + p.issues.length} patch entries\n\n${reviewToMarkdown(review(result), { includeAscii: false })}\n`;
+      const sheet = flag(rest, '--sheet');
+      if (sheet) {
+        writeFileSync(sheet, png(renderSheet(result.texture, result.rig).image));
+        process.stderr.write(`wrote ${sheet}\n`);
+      }
+      const out = flag(rest, '-o');
+      if (out) {
+        writeFileSync(out, formatSpec(p.spec));
+        process.stderr.write(`wrote ${out}\n`);
+        process.stdout.write(report);
+      } else {
+        process.stdout.write(formatSpec(p.spec));
+        process.stderr.write(report);
+      }
+      process.exit(result.ok ? 0 : 1);
+    }
     case 'sheet': {
       const result = compile(readSpec(file));
       const out = flag(rest, '-o') ?? 'sheet.png';
-      writeFileSync(out, png(renderSheet(result.texture, result.model).image));
+      writeFileSync(out, png(renderSheet(result.texture, result.rig).image));
       process.stderr.write(`wrote ${out}\n`);
       process.exit(result.ok ? 0 : 1);
     }
@@ -160,14 +202,16 @@ async function main(argv: string[]) {
         lines.push(`| ${m.id} | ${m.spec.name} | ${r.score} | ${r.issues.filter((i) => i.level !== 'info').map((i) => i.code).join(', ') || '-'} |`);
       }
       const lineup = flag(rest, '--lineup');
-      if (lineup) writeFileSync(lineup, png(renderLineup(built.map((m) => ({ texture: m.result.texture, model: m.result.model })), 6)));
+      if (lineup) writeFileSync(lineup, png(renderLineup(built.map((m) => ({ texture: m.result.texture, model: m.result.model, rig: m.result.rig })), 6)));
       process.stderr.write(`wrote ${built.length} skins to ${dir}/${lineup ? ` and ${lineup}` : ''}\n`);
       process.stdout.write(lines.join('\n') + '\n');
       process.exit(built.every((m) => m.result.ok) ? 0 : 1);
     }
     case 'import': {
       if (!file) fail('missing PNG file');
-      const { spec, lossy } = textureToSpec(decodePNG(readFileSync(file), (d) => inflateSync(d)), basename(file).replace(/\.png$/i, ''));
+      const layout = flag(rest, '--layout');
+      if (layout && !resolveLayout(layout)) fail(`unknown layout "${layout}" (see: node texel.mjs layouts)`);
+      const { spec, lossy } = textureToSpec(decodePNG(readFileSync(file), (d) => inflateSync(d)), basename(file).replace(/\.png$/i, ''), layout);
       const out = flag(rest, '-o');
       if (out) writeFileSync(out, formatSpec(spec));
       else process.stdout.write(formatSpec(spec));
@@ -178,7 +222,8 @@ async function main(argv: string[]) {
       const other = rest[0];
       if (!other) fail('diff needs two spec files');
       const a = compile(readSpec(file)), b = compile(readSpec(other));
-      process.stdout.write(diffToMarkdown(diffTextures(a.texture, b.texture, b.model)) + '\n');
+      if (a.layout !== b.layout || a.texture.width !== b.texture.width) fail(`the specs use different layouts (${a.layout}, ${b.layout})`);
+      process.stdout.write(diffToMarkdown(diffTextures(a.texture, b.texture, b.rig)) + '\n');
       return;
     }
     case 'live':
@@ -219,8 +264,32 @@ async function main(argv: string[]) {
       }
       return;
     }
-    case 'init':
-      process.stdout.write(formatSpec(STARTER));
+    case 'init': {
+      const id = flag([file, ...rest], '--layout');
+      const def = resolveLayout(id);
+      if (!def) fail(`unknown layout "${id}" (see: node texel.mjs layouts)`);
+      if (def.id === 'player') {
+        process.stdout.write(formatSpec(STARTER));
+        return;
+      }
+      const parts = Object.keys(def.parts);
+      const starter = {
+        $schema: STARTER.$schema,
+        version: 1,
+        name: `Starter ${def.id}`,
+        layout: def.id,
+        palette: { main: '#6f8f4e', dark: 'main:-18', light: 'main:12' },
+        layers: [
+          def.opaque ? { op: 'fill', target: 'all', color: 'main', note: `parts: ${parts.join(', ')}` } : { op: 'fill', target: parts[0], color: 'main', note: `parts: ${parts.join(', ')}; leave the rest transparent where nothing should show` },
+          { op: 'noise', target: def.opaque ? 'all' : parts[0], colors: ['dark', 'light'], density: 0.2, seed: 1 },
+          ...(def.parts[parts[0]].box[2] ? [{ op: 'lighting' }] : []),
+        ],
+      };
+      process.stdout.write(formatSpec(starter as unknown as SkinSpec));
+      return;
+    }
+    case 'layouts':
+      process.stdout.write(`${layoutsToMarkdown()}\n\nSet "layout" in the spec (default "player"). Selectors use these part names, e.g. "leg.front" or "item".\n`);
       return;
     case undefined:
     case 'help':

@@ -64,9 +64,22 @@ export async function shareURL(site: string, json: string): Promise<{ url: strin
 
 const SHORT_ID = /^[A-Za-z0-9_-]{10}$/;
 
+/** Whether `origin` is the site itself, with or without "www.". */
+export function isSiteOrigin(origin: string, site: string): boolean {
+  try {
+    const a = new URL(origin), b = new URL(site);
+    const bare = (host: string) => host.replace(/^www\./, '');
+    return a.protocol === b.protocol && a.port === b.port && bare(a.hostname) === bare(b.hostname);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Resolve any Texel link to its spec JSON: a short link (`/s/<id>`), a bare id, or a studio link
- * carrying the spec in its hash (`#z=` / `#spec=`). Returns null when it can't be resolved.
+ * carrying the spec in its hash (`#z=` / `#spec=`). Returns null when it can't be resolved. Short
+ * links are only fetched from the site itself (`defaultSite`, with or without www), never from
+ * whatever host a link names.
  */
 export async function resolveShareLink(link: string, defaultSite: string): Promise<string | null> {
   const text = link.trim();
@@ -78,7 +91,7 @@ export async function resolveShareLink(link: string, defaultSite: string): Promi
     return null;
   }
   const id = /^\/s\/([A-Za-z0-9_-]{10})\/?$/.exec(url.pathname)?.[1] ?? url.searchParams.get('s');
-  if (id) return fetchSharedSpec(url.origin, id);
+  if (id) return isSiteOrigin(url.origin, defaultSite) ? fetchSharedSpec(url.origin, id) : null;
   const hash = new URLSearchParams(url.hash.replace(/^#/, ''));
   const z = hash.get('z');
   if (z) return decodeShare(z).catch(() => null);

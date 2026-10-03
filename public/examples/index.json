@@ -5,9 +5,14 @@
     { "id": "robot", "name": "Unit-7", "model": "classic", "url": "/examples/robot.json", "teaches": ["noise grain", "screen face", "stripes vents", "joint bands"] },
     { "id": "astronaut", "name": "Astronaut", "model": "slim", "url": "/examples/astronaut.json", "teaches": ["slim arms", "full-face visor", "asymmetric detail after mirror", "backpack overlay"] },
     { "id": "wizard", "name": "Star Wizard", "model": "classic", "url": "/examples/wizard.json", "teaches": ["material kinds", "regions instead of rows", "face and hair ops", "lighting before details", "~ tone steps"] },
-    { "id": "cozy", "name": "Cozy Knitter", "model": "slim", "url": "/examples/cozy.json", "teaches": ["knit material", "cute face with blush", "ponytail", "slim arms with regions"] }
+    { "id": "cozy", "name": "Cozy Knitter", "model": "slim", "url": "/examples/cozy.json", "teaches": ["knit material", "cute face with blush", "ponytail", "slim arms with regions"] },
+    { "id": "miner-zombie", "name": "Miner Zombie", "layout": "zombie", "url": "/examples/miner-zombie.json", "teaches": ["layout: zombie", "mirrored limbs (paint rightArm/rightLeg only)", "face op on a mob", "helmet on head@overlay"] },
+    { "id": "creeper", "name": "Mossy Creeper", "layout": "creeper", "url": "/examples/creeper.json", "teaches": ["layout: creeper", "one leg texture for four legs", "mottled noise", "pixel face kept exact by lighting"] },
+    { "id": "bronze-armor", "name": "Bronze Armor", "layout": "humanoid", "url": "/examples/bronze-armor.json", "teaches": ["layout: humanoid (armor layer 1)", "designed transparency", "regions on armor (sleeves, boots, collar, belt)", "clear to open the helmet"] },
+    { "id": "banner-cape", "name": "Banner Cape", "layout": "cape", "url": "/examples/banner-cape.json", "teaches": ["layout: cape", "cape.front is the outside", "elytra in the same texture", "border plus inset field"] },
+    { "id": "ember-blade", "name": "Ember Blade", "layout": "item", "url": "/examples/ember-blade.json", "teaches": ["layout: item (16×16)", "one pixels op for a whole item", "outline and transparent background", "diagonal sword like vanilla"] }
   ],
   "families": [
-    { "id": "guild", "name": "Guild uniforms", "members": 6, "url": "/examples/families/guild.json", "teaches": ["matrix axes", "palette overrides", "layer ids toggled per variant"] }
+    { "id": "guild", "name": "Guild uniforms", "members": 6, "url": "/examples/families/guild.json", "teaches": ["matrix axes", "palette overrides", "layer ids toggled per variant", "gear appended per axis value", "a later axis disabling an earlier axis's layer"] }
   ]
 }

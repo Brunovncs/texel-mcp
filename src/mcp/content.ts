@@ -5,10 +5,17 @@ import installDoc from '../../content/docs/install.md';
 import protocolDoc from '../../content/docs/protocol.md';
 import specDoc from '../../content/docs/spec.md';
 import astronaut from '../../public/examples/astronaut.json';
+import bannerCape from '../../public/examples/banner-cape.json';
+import bronzeArmor from '../../public/examples/bronze-armor.json';
+import cozy from '../../public/examples/cozy.json';
+import creeper from '../../public/examples/creeper.json';
+import emberBlade from '../../public/examples/ember-blade.json';
 import explorer from '../../public/examples/explorer.json';
 import guild from '../../public/examples/families/guild.json';
 import knight from '../../public/examples/knight.json';
+import minerZombie from '../../public/examples/miner-zombie.json';
 import robot from '../../public/examples/robot.json';
+import wizard from '../../public/examples/wizard.json';
 import familySchema from '../../public/schema/skinfamily.v1.json';
 import specSchema from '../../public/schema/skinspec.v1.json';
 
@@ -25,7 +32,19 @@ export const DOCS = {
 export type DocPage = keyof typeof DOCS;
 export const DOC_PAGES = Object.keys(DOCS) as [DocPage, ...DocPage[]];
 
-export const EXAMPLES = { explorer, knight, robot, astronaut } as const;
+export const EXAMPLES = {
+  explorer,
+  knight,
+  robot,
+  astronaut,
+  wizard,
+  cozy,
+  'miner-zombie': minerZombie,
+  creeper,
+  'bronze-armor': bronzeArmor,
+  'banner-cape': bannerCape,
+  'ember-blade': emberBlade,
+} as const;
 export type ExampleId = keyof typeof EXAMPLES;
 export const EXAMPLE_IDS = Object.keys(EXAMPLES) as [ExampleId, ...ExampleId[]];
 

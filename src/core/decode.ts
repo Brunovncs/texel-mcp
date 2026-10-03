@@ -1,5 +1,8 @@
 import type { Image } from './types';
 
+/** Largest side accepted; callers check the exact skin size. */
+const MAX_SIDE = 512;
+
 /**
  * Minimal PNG decoder for skin files: non-interlaced, bit depth 8 for truecolor/grayscale,
  * 1–8 for palette images. `inflate` must accept a zlib stream (e.g. node:zlib inflateSync).
@@ -28,6 +31,8 @@ export function decodePNG(bytes: Uint8Array, inflate: (data: Uint8Array) => Uint
     else if (kind === 'IEND') break;
     o += 12 + len;
   }
+  // Before anything is allocated from the header: a forged IHDR could otherwise ask for gigabytes.
+  if (!width || !height || width > MAX_SIDE || height > MAX_SIDE) throw new Error(`PNG is ${width}×${height}; skins are at most ${MAX_SIDE}×${MAX_SIDE}`);
   if (interlace) throw new Error('interlaced PNGs are not supported');
   const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[type];
   if (!channels) throw new Error(`unsupported PNG color type ${type}`);

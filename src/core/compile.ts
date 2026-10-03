@@ -1,6 +1,6 @@
 import { mix, resolveColor, shiftLightness, suggestHint, TRANSPARENT } from './color';
 import { applyLighting, applyMaterial, BEARDS, drawFace, drawHair, EYE_STYLES, FRINGES, HAIR_STYLES, MATERIAL_ALIASES, MATERIALS, MOUTHS, REGIONS, type Material, type Surface } from './components';
-import { boxSize, faceRect, PARTS, SKIN_SIZE } from './layout';
+import { boxSize, LAYOUT_IDS, resolveLayout, type Rig, rigFor } from './layout';
 import { parseSelector } from './selector';
 import type { FaceName, FaceRef, Image, Issue, LayerName, Model, PartName, Rect, RGBA, SkinSpec } from './types';
 
@@ -24,7 +24,9 @@ export const OP_KEYS: Record<string, { required: string[]; optional: string[] }>
   lighting: { required: [], optional: ['target', 'strength'] },
 };
 const COMMON_KEYS = ['op', 'id', 'note', 'enabled'];
-const SPEC_KEYS = ['$schema', 'version', 'name', 'description', 'author', 'tags', 'model', 'palette', 'legend', 'layers'];
+const SPEC_KEYS = ['$schema', 'version', 'name', 'description', 'author', 'tags', 'layout', 'model', 'palette', 'legend', 'layers'];
+/** Points and line ends further out than this are mistakes, and would make a line op loop for ages. */
+const MAX_COORD = 256;
 const RESERVED_CHARS = new Set(['.', '_']);
 const NO_LAYERS: ReadonlySet<number> = new Set();
 
@@ -32,6 +34,9 @@ export interface CompileResult {
   ok: boolean;
   spec: SkinSpec | null;
   model: Model;
+  /** Resolved layout id (aliases like "husk" become "zombie"). */
+  layout: string;
+  rig: Rig;
   texture: Image;
   issues: Issue[];
   /** Palette keys that were referenced at least once. */
@@ -43,24 +48,35 @@ export interface CompileResult {
 type Json = Record<string, unknown>;
 
 class Ctx {
-  readonly data = new Uint8ClampedArray(SKIN_SIZE * SKIN_SIZE * 4);
+  readonly width: number;
+  readonly height: number;
+  readonly data: Uint8ClampedArray;
   readonly issues: Issue[] = [];
   readonly used = new Set<string>();
   /** Layers whose paint is still visible in each texel, for dead-layer detection. */
-  contrib: ReadonlySet<number>[] = Array.from({ length: SKIN_SIZE * SKIN_SIZE }, () => NO_LAYERS);
+  contrib: ReadonlySet<number>[];
   readonly drew = new Set<number>();
   private own: ReadonlySet<number> = NO_LAYERS;
   private current = -1;
   palette: Record<string, string> = {};
   legend: Record<string, string> = {};
-  constructor(public model: Model) {}
+  constructor(public rig: Rig) {
+    this.width = rig.width;
+    this.height = rig.height;
+    this.data = new Uint8ClampedArray(rig.width * rig.height * 4);
+    this.contrib = Array.from({ length: rig.width * rig.height }, () => NO_LAYERS);
+  }
+
+  get model() {
+    return this.rig.model;
+  }
 
   issue(level: Issue['level'], code: string, path: string, message: string, hint?: string) {
     this.issues.push(hint ? { level, code, path, message, hint } : { level, code, path, message });
   }
 
   get(x: number, y: number): RGBA {
-    const i = (y * SKIN_SIZE + x) * 4;
+    const i = (y * this.width + x) * 4;
     return [this.data[i], this.data[i + 1], this.data[i + 2], this.data[i + 3]];
   }
 
@@ -78,10 +94,10 @@ class Ctx {
    * layers that still show through (shade/noise adjust a pixel, copies carry their source's layers).
    */
   set(x: number, y: number, c: RGBA, keep?: ReadonlySet<number>) {
-    const t = y * SKIN_SIZE + x;
+    const t = y * this.width + x;
     this.contrib[t] = keep ? new Set([...keep, this.current]) : this.own;
     this.drew.add(this.current);
-    const i = (y * SKIN_SIZE + x) * 4;
+    const i = t * 4;
     this.data[i] = c[0];
     this.data[i + 1] = c[1];
     this.data[i + 2] = c[2];
@@ -89,7 +105,7 @@ class Ctx {
   }
 
   rect(ref: FaceRef): Rect {
-    return faceRect(ref.part, ref.face, ref.layer, this.model);
+    return this.rig.faceRect(ref.part, ref.face, ref.layer);
   }
 
   color(expr: unknown, path: string): RGBA | null {
@@ -103,14 +119,14 @@ class Ctx {
   }
 
   targets(sel: unknown, path: string): FaceRef[] | null {
-    const r = parseSelector(sel);
+    const r = parseSelector(sel, this.rig);
     if (r.ok) return r.refs;
     this.issue('error', 'bad-selector', path, r.error, r.hint);
     return null;
   }
 }
 
-/** Compile a skin spec (object or JSON text) into a 64x64 RGBA texture. Never throws. */
+/** Compile a skin spec (object or JSON text) into an RGBA texture in its layout (64×64 for a player skin). Never throws. */
 export function compile(input: unknown): CompileResult {
   let raw: unknown = input;
   const early: Issue[] = [];
@@ -123,8 +139,11 @@ export function compile(input: unknown): CompileResult {
     }
   }
   const model: Model = isObj(raw) && raw.model === 'slim' ? 'slim' : 'classic';
-  const ctx = new Ctx(model);
+  const layout = isObj(raw) ? resolveLayout(raw.layout) : resolveLayout(undefined);
+  const ctx = new Ctx(rigFor(layout ?? 'player', model));
   ctx.issues.push(...early);
+  if (isObj(raw) && !layout)
+    ctx.issue('error', 'bad-layout', '$.layout', `unknown layout ${JSON.stringify(raw.layout)}; compiling as "player"`, suggestHint(String(raw.layout), LAYOUT_IDS) ?? `valid: ${LAYOUT_IDS.join(', ')}`);
 
   if (!isObj(raw)) {
     if (!early.length) ctx.issue('error', 'bad-spec', '$', 'spec must be a JSON object');
@@ -135,6 +154,8 @@ export function compile(input: unknown): CompileResult {
   if (spec.version !== 1) ctx.issue('warning', 'version', '$.version', 'missing or unknown "version"; assuming 1', 'add "version": 1');
   if (spec.model !== undefined && spec.model !== 'classic' && spec.model !== 'slim')
     ctx.issue('error', 'bad-model', '$.model', `model must be "classic" or "slim", got ${JSON.stringify(spec.model)}`);
+  else if (spec.model === 'slim' && ctx.rig.layout !== 'player')
+    ctx.issue('warning', 'model-ignored', '$.model', `"model" picks the arm width of a player skin; the ${ctx.rig.layout} layout ignores it`, 'drop "model"');
 
   if (spec.palette !== undefined) {
     if (!isObj(spec.palette)) ctx.issue('error', 'bad-palette', '$.palette', 'palette must be an object of name → color');
@@ -180,7 +201,9 @@ function finish(ctx: Ctx, spec: SkinSpec | null): CompileResult {
     ok: !ctx.issues.some((i) => i.level === 'error'),
     spec,
     model: ctx.model,
-    texture: { width: SKIN_SIZE, height: SKIN_SIZE, data: ctx.data },
+    layout: ctx.rig.layout,
+    rig: ctx.rig,
+    texture: { width: ctx.width, height: ctx.height, data: ctx.data },
     issues: ctx.issues,
     usedPalette: [...ctx.used],
     deadLayers,
@@ -223,6 +246,10 @@ function num(ctx: Ctx, v: unknown, path: string, opts: { int?: boolean; min?: nu
 function point(ctx: Ctx, v: unknown, path: string): [number, number] | null {
   if (!Array.isArray(v) || v.length !== 2 || !v.every((n) => Number.isInteger(n))) {
     ctx.issue('error', 'bad-point', path, `expected [x, y] integers, got ${JSON.stringify(v)}`);
+    return null;
+  }
+  if (v.some((n) => Math.abs(n) > MAX_COORD)) {
+    ctx.issue('error', 'out-of-range', path, `${JSON.stringify(v)} is far outside any face (limit ±${MAX_COORD})`, 'coordinates are local to the face: 0 to its width/height minus 1, or negative to count from the far edge');
     return null;
   }
   return [v[0], v[1]];
@@ -290,7 +317,7 @@ function surface(ctx: Ctx, ref: FaceRef): Surface {
     w: r.w,
     h: r.h,
     get: (x, y) => ctx.get(r.x + x, r.y + y),
-    set: (x, y, c, adjust) => ctx.set(r.x + x, r.y + y, c, adjust ? ctx.contrib[(r.y + y) * SKIN_SIZE + r.x + x] : undefined),
+    set: (x, y, c, adjust) => ctx.set(r.x + x, r.y + y, c, adjust ? ctx.contrib[(r.y + y) * ctx.width + r.x + x] : undefined),
   };
 }
 
@@ -323,7 +350,7 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
   if (!isObj(raw)) return ctx.issue('error', 'bad-op', path, 'each layer must be an object with an "op" field');
   const op = raw;
   const kind = op.op;
-  if (typeof kind !== 'string' || !OP_KEYS[kind])
+  if (typeof kind !== 'string' || !Object.hasOwn(OP_KEYS, kind))
     return ctx.issue('error', 'unknown-op', `${path}.op`, `unknown op ${JSON.stringify(kind)}`, suggestHint(String(kind), Object.keys(OP_KEYS)) ?? `valid ops: ${Object.keys(OP_KEYS).join(', ')}`);
   if (op.enabled === false) return;
   const def = OP_KEYS[kind];
@@ -464,7 +491,7 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
         if (colors && rnd() < density) ctx.set(tx, ty, colors[Math.floor(rnd() * colors.length)] as RGBA);
         if (jitter) {
           const cur = ctx.get(tx, ty);
-          if (cur[3] > 0) ctx.set(tx, ty, shiftLightness(cur, Math.round((rnd() * 2 - 1) * jitter)), ctx.contrib[ty * SKIN_SIZE + tx]);
+          if (cur[3] > 0) ctx.set(tx, ty, shiftLightness(cur, Math.round((rnd() * 2 - 1) * jitter)), ctx.contrib[ty * ctx.width + tx]);
         }
       });
       return;
@@ -473,7 +500,7 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
       const refs = ctx.targets(op.target, `${path}.target`);
       const amount = num(ctx, op.amount, `${path}.amount`, { min: -100, max: 100 });
       if (!checkArea(ctx, op, path) || !refs || amount === null) return;
-      eachPixel(ctx, refs, op, (tx, ty) => ctx.set(tx, ty, shiftLightness(ctx.get(tx, ty), amount), ctx.contrib[ty * SKIN_SIZE + tx]));
+      eachPixel(ctx, refs, op, (tx, ty) => ctx.set(tx, ty, shiftLightness(ctx.get(tx, ty), amount), ctx.contrib[ty * ctx.width + tx]));
       return;
     }
     case 'copy': {
@@ -488,12 +515,15 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
     }
     case 'mirror': {
       const from = op.from as PartName, to = op.to as PartName;
+      const parts = ctx.rig.parts;
       for (const [k, v] of [['from', from], ['to', to]] as const)
-        if (!PARTS.includes(v)) ctx.issue('error', 'bad-part', `${path}.${k}`, `unknown part ${JSON.stringify(v)}`, suggestHint(String(v), PARTS));
+        if (!parts.includes(v)) ctx.issue('error', 'bad-part', `${path}.${k}`, `unknown part ${JSON.stringify(v)}${ctx.rig.layout === 'player' ? '' : ` in the ${ctx.rig.layout} layout`}`, suggestHint(String(v), parts) ?? `valid: ${parts.join(', ')}`);
+      if (!failed() && String(ctx.rig.part(from)?.box) !== String(ctx.rig.part(to)?.box))
+        ctx.issue('error', 'bad-part', path, `"${from}" and "${to}" are different sizes; mirror copies between matching parts`, 'use "copy" with "flip" for anything else');
       const layerOpt = op.layer ?? 'both';
       if (!['base', 'overlay', 'both'].includes(layerOpt as string)) ctx.issue('error', 'bad-layer', `${path}.layer`, 'layer must be "base", "overlay" or "both"');
       if (failed()) return;
-      const layers: LayerName[] = layerOpt === 'both' ? ['base', 'overlay'] : [layerOpt as LayerName];
+      const layers = (layerOpt === 'both' ? (['base', 'overlay'] as LayerName[]) : [layerOpt as LayerName]).filter((l) => ctx.rig.hasLayer(from, l) && ctx.rig.hasLayer(to, l));
       const swap: Record<FaceName, FaceName> = { top: 'top', bottom: 'bottom', front: 'front', back: 'back', right: 'left', left: 'right' };
       for (const layer of layers) {
         const snapshot = { data: new Uint8ClampedArray(ctx.data), contrib: ctx.contrib.slice() };
@@ -506,7 +536,7 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
       const refs = ctx.targets(op.target, `${path}.target`);
       const c = ctx.color(op.color, `${path}.color`);
       // A near word for the kind ("feathers", "steel") is read as the closest one rather than dropping the layer.
-      const alias = typeof op.kind === 'string' ? MATERIAL_ALIASES[op.kind.toLowerCase()] : undefined;
+      const alias = typeof op.kind === 'string' && Object.hasOwn(MATERIAL_ALIASES, op.kind.toLowerCase()) ? MATERIAL_ALIASES[op.kind.toLowerCase()] : undefined;
       if (alias) ctx.issue('info', 'kind-guess', `${path}.kind`, `read kind "${op.kind}" as "${alias}"`, `valid kinds: ${MATERIALS.join(', ')}`);
       const kind: Material | null = alias ?? oneOf(ctx, op.kind, MATERIALS, 'plain', `${path}.kind`);
       const seed = op.seed === undefined ? index + 1 : num(ctx, op.seed, `${path}.seed`, { int: true });
@@ -523,6 +553,7 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
       return;
     }
     case 'face': {
+      if (op.target === undefined && !ctx.rig.part('head')) return unsupported(ctx, path, kind);
       const refs = ctx.targets(op.target ?? 'head.front', `${path}.target`);
       const skin = ctx.color(op.skin, `${path}.skin`);
       const eyes = ctx.color(op.eyes, `${path}.eyes`);
@@ -554,14 +585,15 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
       const fringe = oneOf(ctx, op.fringe, FRINGES, style === 'spiky' || style === 'curly' ? 'full' : 'side', `${path}.fringe`);
       const layer = oneOf(ctx, op.layer, ['base', 'overlay', 'both'] as const, 'both', `${path}.layer`);
       if (!c || !style || !fringe || !layer) return;
-      const layers: LayerName[] = layer === 'both' ? ['base', 'overlay'] : [layer];
+      if (ctx.rig.part('head')?.box[2] !== 8) return unsupported(ctx, path, kind);
+      const layers = (layer === 'both' ? (['base', 'overlay'] as LayerName[]) : [layer]).filter((l) => ctx.rig.hasLayer('head', l));
       for (const l of layers)
         for (const face of ['top', 'back', 'right', 'left', 'front'] as FaceName[]) drawHair(surface(ctx, { part: 'head', face, layer: l }), c, style, fringe, l === 'overlay');
       return;
     }
     case 'lighting': {
       const explicit = op.target !== undefined;
-      const refs = ctx.targets(explicit ? op.target : ['all', 'all@overlay'], `${path}.target`);
+      const refs = explicit ? ctx.targets(op.target, `${path}.target`) : ctx.rig.refs();
       const strength = op.strength === undefined ? 1 : num(ctx, op.strength, `${path}.strength`, { min: 0, max: 3 });
       if (!refs || strength === null) return;
       // The face keeps its exact colors unless it is targeted on purpose.
@@ -579,7 +611,7 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
           for (let x = 0; x < Math.floor(face.w / 2); x++) {
             const l = face.x + x, r = face.x + face.w - 1 - x, ty = face.y + y;
             const [src, dst] = keepLeft ? [l, r] : [r, l];
-            ctx.set(dst, ty, ctx.get(src, ty), ctx.contrib[ty * SKIN_SIZE + src]);
+            ctx.set(dst, ty, ctx.get(src, ty), ctx.contrib[ty * ctx.width + src]);
           }
       }
       return;
@@ -588,6 +620,10 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
 }
 
 /** Copy one face onto another with optional flips; nearest-neighbour resampling when sizes differ. */
+function unsupported(ctx: Ctx, path: string, kind: string) {
+  ctx.issue('error', 'op-unsupported', `${path}.op`, `"${kind}" draws on a character's 8×8×8 head, which the ${ctx.rig.layout} layout doesn't have`, 'paint it with "pixels" or "fill" instead');
+}
+
 function blit(ctx: Ctx, src: FaceRef, dst: FaceRef, flipH: boolean, flipV: boolean, snapshot?: { data: Uint8ClampedArray; contrib: ReadonlySet<number>[] }) {
   const s = ctx.rect(src), d = ctx.rect(dst);
   const from = snapshot?.data ?? new Uint8ClampedArray(ctx.data);
@@ -597,7 +633,7 @@ function blit(ctx: Ctx, src: FaceRef, dst: FaceRef, flipH: boolean, flipV: boole
       let sx = Math.floor((x * s.w) / d.w), sy = Math.floor((y * s.h) / d.h);
       if (flipH) sx = s.w - 1 - sx;
       if (flipV) sy = s.h - 1 - sy;
-      const t = (s.y + sy) * SKIN_SIZE + s.x + sx, i = t * 4;
+      const t = (s.y + sy) * ctx.width + s.x + sx, i = t * 4;
       ctx.set(d.x + x, d.y + y, [from[i], from[i + 1], from[i + 2], from[i + 3]], fromContrib[t]);
     }
 }

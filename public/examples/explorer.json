@@ -1,5 +1,5 @@
 {
-  "$schema": "/schema/skinspec.v1.json",
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
   "version": 1,
   "name": "Explorer",
   "description": "Brown-haired adventurer with a teal shirt, jeans, boots and a satchel strap.",

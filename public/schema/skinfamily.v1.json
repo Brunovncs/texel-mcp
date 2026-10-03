@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "/schema/skinfamily.v1.json",
+  "$id": "https://www.texel.dev.br/schema/skinfamily.v1.json",
   "title": "Texel skin family v1",
-  "description": "Many related skins from one base spec: explicit variants and/or a cartesian matrix of axes. Docs: /docs/families.md",
+  "description": "Many related skins from one base spec: explicit variants and/or a cartesian matrix of axes. Docs: https://www.texel.dev.br/docs/families.md",
   "type": "object",
   "required": ["version", "kind", "base"],
   "additionalProperties": false,
@@ -13,7 +13,7 @@
     "kind": { "const": "family" },
     "name": { "type": "string" },
     "description": { "type": "string" },
-    "base": { "$ref": "/schema/skinspec.v1.json" },
+    "base": { "$ref": "https://www.texel.dev.br/schema/skinspec.v1.json" },
     "variants": {
       "type": "object",
       "description": "Member id → patch.",

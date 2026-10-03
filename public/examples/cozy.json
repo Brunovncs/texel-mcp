@@ -1,5 +1,5 @@
 {
-  "$schema": "/schema/skinspec.v1.json",
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
   "version": 1,
   "name": "Cozy Knitter",
   "description": "Girl with an auburn ponytail, a red knitted sweater with a cream stripe, blue jeans and white sneakers. Slim arms.",

@@ -1,7 +1,6 @@
 import { ART_WEAK } from './art';
 import { toHex } from './color';
 import { compile, type CompileResult } from './compile';
-import { faceRect, PARTS, SKIN_SIZE } from './layout';
 import { review } from './review';
 import type { FaceName, Op, PartName, SkinSpec } from './types';
 
@@ -36,7 +35,7 @@ export function polish(spec: SkinSpec): { spec: SkinSpec; applied: string[] } {
   if (best.r.issues.some((i) => i.code === 'face-hidden'))
     tryFix('face', [...layers(), { op: 'clear', target: 'head.front@overlay', x: 1, y: 3, w: 6, h: 4, id: 'polish-face' }], true);
 
-  const check = (id: string) => best.r.art.checks.find((c) => c.id === id)!.score;
+  const check = (id: string) => best.r.art.checks.find((c) => c.id === id)?.score ?? 1;
 
   if (check('shading') < ART_WEAK && !layers().some((l) => l.op === 'lighting')) tryFix('lighting', [...layers(), { op: 'lighting', id: 'polish-lighting' }]);
 
@@ -50,12 +49,13 @@ export function polish(spec: SkinSpec): { spec: SkinSpec; applied: string[] } {
 
 const SIDES: FaceName[] = ['front', 'back', 'right', 'left'];
 
-function pixels({ texture, model }: CompileResult, part: PartName, face: FaceName) {
-  const r = faceRect(part, face, 'base', model);
+function pixels({ texture, rig }: CompileResult, part: PartName, face: FaceName) {
+  if (!rig.faces(part).includes(face)) return [];
+  const r = rig.faceRect(part, face, 'base');
   const out: string[] = [];
   for (let y = r.y; y < r.y + r.h; y++)
     for (let x = r.x; x < r.x + r.w; x++) {
-      const i = (y * SKIN_SIZE + x) * 4;
+      const i = (y * texture.width + x) * 4;
       if (texture.data[i + 3] === 255) out.push(toHex([texture.data[i], texture.data[i + 1], texture.data[i + 2], 255]));
     }
   return out;
@@ -64,7 +64,7 @@ function pixels({ texture, model }: CompileResult, part: PartName, face: FaceNam
 function colorCounts(spec: SkinSpec) {
   const counts = new Map<string, number>();
   const compiled = compile(spec);
-  for (const part of PARTS) for (const face of SIDES) for (const hex of pixels(compiled, part, face)) counts.set(hex, (counts.get(hex) ?? 0) + 1);
+  for (const part of compiled.rig.parts) for (const face of SIDES) for (const hex of pixels(compiled, part, face)) counts.set(hex, (counts.get(hex) ?? 0) + 1);
   return counts;
 }
 
@@ -72,9 +72,9 @@ function colorCounts(spec: SkinSpec) {
 function flatFaces(spec: SkinSpec) {
   const out: string[] = [];
   const compiled = compile(spec);
-  for (const part of PARTS)
+  for (const part of compiled.rig.parts)
     for (const face of SIDES) {
-      if (part === 'head' && face === 'front') continue;
+      if (part === 'head' && face === 'front' && compiled.rig.def.character) continue;
       const px = pixels(compiled, part, face);
       const counts = new Map<string, number>();
       for (const hex of px) counts.set(hex, (counts.get(hex) ?? 0) + 1);

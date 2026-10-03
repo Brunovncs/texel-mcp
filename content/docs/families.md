@@ -1,6 +1,6 @@
 # Skin families
 
-> Generate many related skins (teams, factions, rarity tiers, colorways) from one base spec and a small set of patches. One file, dozens of consistent skins.
+> Generate many related skins (teams, factions, rarity tiers, colorways) from one base spec and a few variants. One file, dozens of consistent skins.
 
 A **family** is a document with `"kind": "family"`, a `base` skin spec, and members defined by `variants` (explicit list), a `matrix` (cartesian product of axes), or both.
 
@@ -27,7 +27,7 @@ This expands to four members: `ember-recruit`, `ember-captain`, `tide-recruit`, 
 
 ## Variant patches
 
-Every variant (and every matrix axis value) is a patch applied to a copy of the base:
+Every variant (and every matrix axis value) is a patch applied to a copy of the base. This is a smaller format than a [spec patch](/docs/spec.md#patches) (`{ "patch": [{ "do": … }] }`): it can recolor, toggle layers by id and append layers, but it can't change or remove a base layer.
 
 | Key | Effect |
 | --- | --- |

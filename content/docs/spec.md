@@ -1,12 +1,12 @@
 # Skin spec reference
 
-> Complete reference for the Texel skin spec (`version: 1`): structure, colors, selectors, coordinates and all 17 operations.
+> Complete reference for the Texel skin spec (`version: 1`): structure, colors, layouts (player skins, mobs, armor, capes, items, blocks), selectors, coordinates and all 17 operations.
 
 ## Shape
 
 ```json
 {
-  "$schema": "/schema/skinspec.v1.json",
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
   "version": 1,
   "name": "Explorer",
   "description": "What this skin should look like (the brief).",
@@ -24,7 +24,8 @@
 | Key | Type | Notes |
 | --- | --- | --- |
 | `version` | `1` | Required. |
-| `model` | `"classic"` \| `"slim"` | Arm width 4px or 3px. Default `classic`. |
+| `layout` | string | Texture layout. Default `player` (a 64×64 skin). See [Layouts](#layouts) for mobs, armor, capes, items and blocks. |
+| `model` | `"classic"` \| `"slim"` | Player layout only: arm width 4px or 3px. Default `classic`. |
 | `palette` | object | Name → color. Names: letters, digits, `_`, `-`; start with a letter. |
 | `legend` | object | Single char → color, for `pixels` rows. `.` and `_` are reserved. |
 | `layers` | array | Operations, applied top to bottom. Required. |
@@ -60,7 +61,7 @@ The character faces you. **`right`/`left` are the character's own sides**: `righ
 | `rightArm`, `leftArm` (slim) | 3×12 | 4×12 | 3×4 |
 | `rightLeg`, `leftLeg` | 4×12 | 4×12 | 4×4 |
 
-Every part has two layers: `base` (the body) and `overlay` (a slightly larger shell: hat, jacket, sleeves, pants). Overlay starts fully transparent.
+Every part has two layers: `base` (the body) and `overlay` (a slightly larger shell: hat, jacket, sleeves, pants). Overlay starts fully transparent. This section is the `player` layout; other layouts are listed under [Layouts](#layouts).
 
 ### Face-local coordinates
 
@@ -73,6 +74,40 @@ Each operation works in **face-local coordinates**: `(0, 0)` is the top-left pix
 - On `top`, the last row touches the front.
 
 Negative `x`/`y` count from the far edge: `"y": -2` means "the last 2 rows" when `h` is omitted.
+
+## Layouts
+
+`"layout"` picks which texture the spec paints. Everything else works the same: palette, legend, the 17 operations, selectors and face-local coordinates. Each layout has its own part names and texture size; the PNG comes out at that size, ready to drop where the game or the mod expects it.
+
+<!-- layouts:start -->
+| layout | size | parts (box w×h×d; * has @overlay) | used by |
+| --- | --- | --- | --- |
+| `player` (`skin`) | 64×64 | head 8×8×8*, body 8×12×4*, rightArm 4×12×4*, leftArm 4×12×4*, rightLeg 4×12×4*, leftLeg 4×12×4* | player skins (Java and Bedrock, classic and slim); mod NPCs rendered with PlayerModel |
+| `zombie` (`husk`) | 64×64 | head 8×8×8*, body 8×12×4, rightArm 4×12×4, rightLeg 4×12×4 | textures/entity/zombie/zombie.png; textures/entity/zombie/husk.png. Only the top half of the 64×64 texture is used. The left arm and leg reuse the right ones, mirrored. |
+| `drowned` (`drowned_outer_layer`) | 64×64 | head 8×8×8*, body 8×12×4, rightArm 4×12×4, leftArm 4×12×4, rightLeg 4×12×4, leftLeg 4×12×4 | textures/entity/zombie/drowned.png; textures/entity/zombie/drowned_outer_layer.png (same layout, drawn slightly larger; leave it transparent where nothing hangs off). Like a player skin with its own left limbs, but only the head has an overlay (the hat). |
+| `humanoid` (`armor`, `armour`, `legacy`) | 64×32 | head 8×8×8*, body 8×12×4, rightArm 4×12×4, rightLeg 4×12×4 | textures/entity/equipment/humanoid/*.png (armor layer 1: helmet on head + head@overlay, chestplate on body + arms, boots on legs); textures/entity/equipment/humanoid_leggings/*.png (armor layer 2: leggings on body + legs); textures/entity/skeleton/stray_overlay.png and bogged_overlay.png (the clothes over the skeleton); legacy 64×32 player skins. Armor draws slightly larger than the body, and pixels left transparent show the body underneath. The left arm and leg reuse the right ones, mirrored. |
+| `skeleton` (`stray`, `wither_skeleton`, `bogged`) | 64×32 | head 8×8×8*, body 8×12×4, rightArm 2×12×2, rightLeg 2×12×2 | textures/entity/skeleton/skeleton.png; stray.png; wither_skeleton.png; bogged.png. Arms and legs are 2×12×2. Skeletons have see-through gaps: transparent base pixels are fine here. The left arm and leg reuse the right ones, mirrored. |
+| `creeper` | 64×32 | head 8×8×8, body 8×12×4, leg 4×6×4 | textures/entity/creeper/creeper.png. All four legs share one texture. |
+| `enderman` | 64×32 | head 8×8×8*, body 8×12×4, limb 2×30×2 | textures/entity/enderman/enderman.png; enderman_eyes.png (glowing eyes, same layout, transparent elsewhere). head@overlay is the jaw, drawn slightly smaller than the head. All four limbs share one 2×30×2 texture. |
+| `spider` (`cave_spider`) | 64×32 | head 8×8×8, neck 6×6×6, body 10×8×12, leg 16×2×2 | textures/entity/spider/spider.png; cave_spider.png; spider_eyes.png (glowing eyes, same layout). All eight legs share one texture; the left ones are mirrored. In game the legs are angled; the views show them straight out. |
+| `villager` (`zombie_villager`) | 64×64 | head 8×10×8*, nose 2×4×2, hatRim 16×16×1, body 8×12×6, jacket 8×20×6, arm 4×8×4, armsMiddle 8×4×4, leg 4×12×4 | textures/entity/villager/villager.png (base body); villager/type/{biome}.png, villager/profession/{profession}.png, villager/profession_level/{level}.png (overlays in the same layout, mostly transparent); textures/entity/zombie_villager/... (same layout). head@overlay is the hat (the .png.mcmeta "hat" field decides whether it shows). hatRim lies flat around the hat. The arms are crossed in game; the views show them unrotated in front of the body. |
+| `cape` (`elytra`) | 64×32 | cape 10×16×1, elytra 10×20×2 | player capes; textures/entity/equipment/wings/elytra.png. cape.front is the outer side people see from behind the player. The elytra region is one wing; the other wing is the same texture mirrored. |
+| `item` | 16×16 | item 16×16 flat | textures/item/*.png; mod item textures. Leave the background transparent; the game draws the item from its opaque pixels. |
+| `block` | 16×16 | block 16×16 flat | textures/block/*.png (one file per face: e.g. _top, _side, _bottom). Tiles seamlessly next to itself: keep the edges compatible. |
+<!-- layouts:end -->
+
+`*` marks parts with an `@overlay` layer. A flat part (items, blocks) only has `.front`, so `"target": "item"` is enough.
+
+Notes that save a round:
+
+- **Mirrored limbs.** In `zombie`, `humanoid`, `skeleton` and `enderman` the left arm and leg reuse the right ones mirrored in game, so there is only `rightArm`/`rightLeg` (or `limb`) to paint; `leftArm` is an error with a hint. `player` and `drowned` have their own left limbs.
+- **High-level ops.** `face` and `hair` need an 8×8×8 `head` (player, zombie, drowned, humanoid, skeleton, creeper, enderman, spider); elsewhere they report `op-unsupported`. `region` names (`sleeves`, `boots`…) cover the humanoid parts and simply miss elsewhere. `lighting` and `material` work on every layout.
+- **Transparency.** `player`, `zombie`, `drowned`, `creeper`, `enderman`, `spider`, `cape` and `block` should be fully opaque, and the review warns about holes. `humanoid` (armor), `skeleton`, `villager` overlays and `item` are meant to keep transparent pixels: armor gaps show the body, an item's background stays clear.
+- **Several files for one mob.** Vanilla often splits a mob into several textures with the same layout: `enderman_eyes.png`, `spider_eyes.png`, `drowned_outer_layer.png`, the villager's biome and profession overlays, leather armor's `_overlay.png`. Write one spec per file, or a [family](families.md) when they share a palette.
+- **Versions.** The layouts follow Java Edition 1.21.x. Bedrock uses the same UVs for most of them, but not for the drowned.
+- **Bigger textures.** Resource packs at 32× or 64× scale every coordinate. Texel paints at the vanilla size; scale the PNG up by a whole number afterwards if a pack needs it.
+
+The CLI lists the same table with `node texel.mjs layouts`, and `node texel.mjs init --layout creeper` prints a starter spec.
 
 ## Selectors
 
@@ -252,6 +287,8 @@ Light from above and slightly in front, the way the art guide shades by hand: to
 
 To change an existing spec, send only what changes. Layers are addressed by `id`, so give every layer you may revisit one (`withIds` in `/texel-core.mjs` adds `"<op>-<index>"` ids to the rest). Entries apply in order; one that can't apply (unknown id) is skipped and reported, and the others still apply.
 
+Apply one with `node texel.mjs patch skin.json fix.json -o skin.json`, the MCP tool `texel_patch` or `window.texel.applyPatch(patch)` in the studio. They add the `<op>-<index>` ids before patching and keep them in the result, so the next patch can use the same ids.
+
 ```json
 { "patch": [
   { "do": "update", "id": "face", "set": { "eyeStyle": "wide", "mouth": "smile" } },
@@ -275,7 +312,7 @@ To change an existing spec, send only what changes. Layers are addressed by `id`
 
 ## Texture map (for importing / debugging)
 
-UV origin of each box in the 64×64 PNG. Within a box of size w×h×d at (u, v): top `(u+d, v)`, bottom `(u+d+w, v)`, right `(u, v+d)`, front `(u+d, v+d)`, left `(u+d+w, v+d)`, back `(u+2d+w, v+d)`.
+UV origin of each box in the 64×64 player skin PNG (other layouts list their boxes in [Layouts](#layouts); `node texel.mjs layouts` prints them). Within a box of size w×h×d at (u, v): top `(u+d, v)`, bottom `(u+d+w, v)`, right `(u, v+d)`, front `(u+d, v+d)`, left `(u+d+w, v+d)`, back `(u+2d+w, v+d)`.
 
 | Part | base (u, v) | overlay (u, v) |
 | --- | --- | --- |

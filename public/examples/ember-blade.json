@@ -1,0 +1,46 @@
+{
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Ember Blade",
+  "description": "A sword whose blade glows like embers: hot white edge, orange core, iron guard and a leather grip, drawn diagonally like vanilla swords.",
+  "author": "texel",
+  "tags": ["item", "sword", "weapon"],
+  "layout": "item",
+  "palette": {
+    "outline": "#2b1a12",
+    "hot": "#fff1c2",
+    "ember": "#ffb347",
+    "embers": "#d9641e",
+    "iron": "#9aa0aa",
+    "ironDark": "#5a5f69",
+    "grip": "#6b4a2b",
+    "gripDark": "#4a321c"
+  },
+  "legend": { "#": "outline", "w": "hot", "m": "ember", "d": "embers", "g": "iron", "G": "ironDark", "h": "grip", "H": "gripDark", "p": "iron" },
+  "layers": [
+    {
+      "op": "pixels",
+      "id": "sword",
+      "target": "item",
+      "note": "tip at the top right, pommel at the bottom left; the background stays transparent",
+      "rows": [
+        ".............###",
+        "............#wm#",
+        "...........#wmd#",
+        "..........#wmd#.",
+        ".........#wmd#..",
+        "........#wmd#...",
+        ".......#wmd#....",
+        "..##..#wmd#.....",
+        "..#g##wmd#......",
+        "...#gGmd#.......",
+        "....#Gg#........",
+        "...#h#Gg#.......",
+        "..#hH#.##.......",
+        ".#hH#...........",
+        "#pp#............",
+        "##.............."
+      ]
+    }
+  ]
+}

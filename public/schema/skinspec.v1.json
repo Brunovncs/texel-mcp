@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "/schema/skinspec.v1.json",
+  "$id": "https://www.texel.dev.br/schema/skinspec.v1.json",
   "title": "Texel skin spec v1",
-  "description": "Declarative description of a 64x64 Minecraft Java skin. Layers are applied in order (painter's model) and compile deterministically to a PNG. Docs: /docs/spec.md",
+  "description": "Declarative description of a 64x64 Minecraft Java skin. Layers are applied in order (painter's model) and compile deterministically to a PNG. Docs: https://www.texel.dev.br/docs/spec.md",
   "type": "object",
   "required": ["version", "layers"],
   "additionalProperties": false,
@@ -13,7 +13,12 @@
     "description": { "type": "string", "description": "The brief this skin implements. Keep it: reviewers compare the render against it." },
     "author": { "type": "string" },
     "tags": { "type": "array", "items": { "type": "string" } },
-    "model": { "enum": ["classic", "slim"], "default": "classic", "description": "classic = 4px-wide arms, slim = 3px-wide arms." },
+    "layout": {
+      "enum": ["player", "zombie", "drowned", "humanoid", "skeleton", "creeper", "enderman", "spider", "villager", "cape", "item", "block", "skin", "husk", "drowned_outer_layer", "armor", "armour", "legacy", "stray", "wither_skeleton", "bogged", "cave_spider", "zombie_villager", "elytra"],
+      "default": "player",
+      "description": "Texture layout. player = 64×64 skin (default). zombie/husk 64×64, drowned 64×64, humanoid (armor layers, legacy skins) 64×32, skeleton/stray/wither_skeleton/bogged 64×32, creeper 64×32, enderman 64×32, spider 64×32, villager 64×64, cape (cape + elytra) 64×32, item 16×16, block 16×16. Each layout has its own part names (see the spec reference, section Layouts)."
+    },
+    "model": { "enum": ["classic", "slim"], "default": "classic", "description": "Player layout only: classic = 4px-wide arms, slim = 3px-wide arms." },
     "palette": {
       "type": "object",
       "description": "Named colors. Values are color expressions and may reference other keys, e.g. \"skinShade\": \"skin:-10\".",
@@ -34,7 +39,7 @@
       "description": "\"#rgb\" | \"#rrggbb\" | \"#rrggbbaa\" | \"transparent\" | palette key, optionally followed by \":<n>\" to shift HSL lightness by n points (e.g. \"shirt:-12\", \"#88aaff:+5\") or \"~<n>\" (-4..4) for a tone-ramp step that also shifts hue (e.g. \"cloth~-1\")."
     },
     "selector": {
-      "description": "\"<parts>[.<faces>][@<layer>]\". parts: head, body, rightArm, leftArm, rightLeg, leftLeg, arms, legs, limbs, all. faces: top, bottom, right, front, left, back, sides, all. layer: base (default), overlay, both. Join alternatives with \"+\" (\"head.top+back\"). An array is a union.",
+      "description": "\"<parts>[.<faces>][@<layer>]\". Player parts: head, body, rightArm, leftArm, rightLeg, leftLeg, arms, legs, limbs, all (other layouts name their own parts, e.g. leg, cape, elytra, item, block). faces: top, bottom, right, front, left, back, sides, all. layer: base (default), overlay, both. Join alternatives with \"+\" (\"head.top+back\"). An array is a union.",
       "oneOf": [
         { "type": "string", "pattern": "^[A-Za-z*+]+(\\.[A-Za-z*+]+)?(@(base|overlay|both))?$" },
         { "type": "array", "minItems": 1, "items": { "type": "string" } }
@@ -68,7 +73,7 @@
         { "if": { "properties": { "op": { "const": "noise" } } }, "then": { "required": ["target"], "anyOf": [{ "required": ["colors"] }, { "required": ["jitter"] }], "properties": { "region": { "enum": ["collar", "chest", "belt", "waist", "sleeves", "longSleeves", "cuffs", "hands", "gloves", "knees", "shoes", "boots"], "description": "Named rows instead of y/h." }, "target": { "$ref": "#/$defs/selector" }, "colors": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/color" } }, "density": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.2 }, "jitter": { "type": "number", "minimum": 0, "maximum": 50 }, "seed": { "type": "integer" }, "x": { "$ref": "#/$defs/int" }, "y": { "$ref": "#/$defs/int" }, "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" } } } },
         { "if": { "properties": { "op": { "const": "shade" } } }, "then": { "required": ["target", "amount"], "properties": { "region": { "enum": ["collar", "chest", "belt", "waist", "sleeves", "longSleeves", "cuffs", "hands", "gloves", "knees", "shoes", "boots"], "description": "Named rows instead of y/h." }, "target": { "$ref": "#/$defs/selector" }, "amount": { "type": "number", "minimum": -100, "maximum": 100 }, "x": { "$ref": "#/$defs/int" }, "y": { "$ref": "#/$defs/int" }, "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" } } } },
         { "if": { "properties": { "op": { "const": "copy" } } }, "then": { "required": ["from", "to"], "properties": { "from": { "type": "string", "description": "Selector resolving to exactly one face." }, "to": { "$ref": "#/$defs/selector" }, "flip": { "enum": ["h", "v", "hv"] } } } },
-        { "if": { "properties": { "op": { "const": "mirror" } } }, "then": { "required": ["from", "to"], "properties": { "from": { "enum": ["head", "body", "rightArm", "leftArm", "rightLeg", "leftLeg"] }, "to": { "enum": ["head", "body", "rightArm", "leftArm", "rightLeg", "leftLeg"] }, "layer": { "enum": ["base", "overlay", "both"], "default": "both" } } } },
+        { "if": { "properties": { "op": { "const": "mirror" } } }, "then": { "required": ["from", "to"], "properties": { "from": { "type": "string", "description": "A part of the layout, e.g. rightArm." }, "to": { "type": "string", "description": "A part of the same size, e.g. leftArm." }, "layer": { "enum": ["base", "overlay", "both"], "default": "both" } } } },
         { "if": { "properties": { "op": { "const": "symmetrize" } } }, "then": { "required": ["target"], "properties": { "target": { "$ref": "#/$defs/selector" }, "source": { "enum": ["left", "right"], "default": "left" } } } },
         { "if": { "properties": { "op": { "const": "material" } } }, "then": { "required": ["target", "color", "kind"], "properties": { "target": { "$ref": "#/$defs/selector" }, "color": { "$ref": "#/$defs/color" }, "kind": { "enum": ["plain", "skin", "fabric", "knit", "leather", "metal", "fur", "stone", "scales", "wood", "glow"] }, "seed": { "type": "integer" }, "region": { "enum": ["collar", "chest", "belt", "waist", "sleeves", "longSleeves", "cuffs", "hands", "gloves", "knees", "shoes", "boots"], "description": "Named rows instead of y/h." }, "x": { "$ref": "#/$defs/int" }, "y": { "$ref": "#/$defs/int" }, "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" } } } },
         { "if": { "properties": { "op": { "const": "face" } } }, "then": { "required": ["skin", "eyes"], "properties": { "target": { "$ref": "#/$defs/selector" }, "skin": { "$ref": "#/$defs/color" }, "eyes": { "$ref": "#/$defs/color" }, "eyeStyle": { "enum": ["normal", "wide", "cute", "angry", "sad", "closed", "glow", "visor", "narrow"] }, "mouth": { "enum": ["neutral", "smile", "grin", "open", "frown", "fangs", "none"] }, "beard": { "enum": ["none", "stubble", "full", "mustache", "goatee"] }, "nose": { "type": "boolean" }, "white": { "$ref": "#/$defs/color" }, "brows": { "$ref": "#/$defs/color" }, "mouthColor": { "$ref": "#/$defs/color" }, "beardColor": { "$ref": "#/$defs/color" }, "blush": { "anyOf": [{ "type": "boolean" }, { "$ref": "#/$defs/color" }] } } } },

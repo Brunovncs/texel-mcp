@@ -2,7 +2,7 @@
 
 > The loop an AI agent follows to design, test and ship a Minecraft skin with Texel. Version `texel/1`.
 
-A skin is **data, not pixels**: a JSON *spec* made of a palette and an ordered list of drawing operations. The spec compiles deterministically to a 64×64 PNG. Because the source is structured, an agent can reason about it, diff it, patch one layer at a time, and verify every step.
+A skin is **data, not pixels**: a JSON *spec* made of a palette and an ordered list of drawing operations. The spec compiles deterministically to a PNG: a 64×64 player skin by default, or a mob, armor, cape, item or block texture with `"layout"`. Because the source is structured, an agent can reason about it, diff it, patch one layer at a time, and verify every step.
 
 ## The loop
 
@@ -82,7 +82,7 @@ Then look at it. The score only checks hygiene and the art checks only measure; 
 
 Change the smallest thing that fixes the weakest rubric item, then render again. In the browser: `texel.updateLayer("eyes", { rows: [...] })`, `texel.addLayers([...])`, `texel.toggleLayer(3)`. With files: edit the JSON and rebuild.
 
-Writing the change as a [patch](/docs/spec.md#patches) (`{ "patch": [{ "do": "update", "id": "eyes", "set": { … } }] }`) instead of a whole new spec keeps everything else byte for byte, and is a fraction of the output. Layers need ids to be patched; give them ids as you draft.
+Writing the change as a [patch](/docs/spec.md#patches) (`{ "patch": [{ "do": "update", "id": "eyes", "set": { … } }] }`) instead of a whole new spec keeps every other layer as it was, and is a fraction of the output. Apply it with `node texel.mjs patch skin.json fix.json -o skin.json`, the MCP tool `texel_patch` or `texel.applyPatch(patch)`; each one returns the review of the result. Layers need ids to be patched; give them ids as you draft (layers without one get `<op>-<index>`).
 
 Stop when R1–R8 all pass, or after ~6 iterations with diminishing returns.
 

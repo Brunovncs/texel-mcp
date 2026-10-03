@@ -1,4 +1,4 @@
-import { boxSize, faceRect, FACES } from '../core/layout';
+import { type BoxDef, FACES, type Rig, rigFor } from '../core/layout';
 import type { FaceName, LayerName, Model, PartName } from '../core/types';
 
 /** Pivot (joint) position in skin pixels, origin at the top-center of the head; plus box center offset from the pivot. */
@@ -28,30 +28,39 @@ function faceTransform(face: FaceName, w: number, h: number, d: number): string 
   }
 }
 
-function buildBox(part: PartName, layer: LayerName, model: Model): HTMLElement {
-  const [bw, bh, bd] = boxSize(part, model);
-  const inf = layer === 'overlay' ? INFLATE[part] : 0;
+const SWAP: Record<FaceName, FaceName> = { top: 'top', bottom: 'bottom', front: 'front', back: 'back', right: 'left', left: 'right' };
+
+/**
+ * One textured box. `mirror` shows the part's texture flipped with right and left swapped (a
+ * mirrored limb); `tile` wraps every face with the flat texture (a block shown as a cube).
+ */
+function buildBox(rig: Rig, part: PartName, layer: LayerName, opts: { mirror?: boolean; tile?: boolean; inflate?: number } = {}): HTMLElement {
+  const [bw, bh, bd] = opts.tile ? [rig.part(part)!.box[0], rig.part(part)!.box[1], rig.part(part)!.box[0]] : rig.part(part)!.box;
+  const inf = layer === 'overlay' ? (opts.inflate ?? 0.25) : 0;
   const w = bw + inf * 2, h = bh + inf * 2, d = bd + inf * 2;
   const box = document.createElement('div');
   box.className = `sm-box sm-${layer}`;
-  for (const face of FACES) {
-    const r = faceRect(part, face, layer, model);
+  const faces = opts.tile ? FACES : rig.faces(part).length === 1 ? (['front', 'back'] as FaceName[]) : FACES;
+  for (const face of faces) {
+    const src = opts.tile || rig.faces(part).length === 1 ? 'front' : opts.mirror ? SWAP[face] : face;
+    const flip = Boolean(opts.mirror) !== (rig.faces(part).length === 1 && face === 'back');
+    const r = rig.faceRect(part, src, layer);
     const dw = face === 'left' || face === 'right' ? d : w;
     const dh = face === 'top' || face === 'bottom' ? d : h;
     const sx = dw / r.w, sy = dh / r.h;
     const el = document.createElement('div');
     el.className = `sm-face sm-${face}`;
     el.dataset.part = part;
-    el.dataset.face = face;
+    el.dataset.face = src;
     el.dataset.layer = layer;
     el.style.cssText = [
       `width:${u(dw)}`,
       `height:${u(dh)}`,
       `left:${u(-dw / 2)}`,
       `top:${u(-dh / 2)}`,
-      `background-size:${u(64 * sx)} ${u(64 * sy)}`,
+      `background-size:${u(rig.width * sx)} ${u(rig.height * sy)}`,
       `background-position:${u(-r.x * sx)} ${u(-r.y * sy)}`,
-      `transform:${faceTransform(face, w, h, d)}`,
+      `transform:${faceTransform(face, w, h, d)}${flip ? ' scaleX(-1)' : ''}`,
     ].join(';');
     box.appendChild(el);
   }
@@ -74,11 +83,14 @@ export interface ModelView {
   spin?: boolean;
 }
 
-/** A Minecraft player model made of CSS 3D-transformed divs, textured with one skin image. */
+/** A Minecraft model (player, mob, cape, item or block) made of CSS 3D-transformed divs, textured with one image. */
 export class SkinModel {
   readonly root: HTMLElement;
+  /** Width and height of the figure in texture pixels, for fitting it into its host. */
+  extent: [number, number] = [16, 32];
+  onExtent: (() => void) | null = null;
   private figure: HTMLElement;
-  private model: Model | null = null;
+  private key: string | null = null;
   private state: Required<ModelView> = { yaw: -28, pitch: -12, overlay: true, animate: 'idle', spin: false };
 
   constructor(host: HTMLElement, view: ModelView = {}) {
@@ -92,15 +104,49 @@ export class SkinModel {
     visibility?.observe(this.root);
   }
 
-  setSkin(url: string, model: Model) {
-    if (model !== this.model) this.rebuild(model);
+  setSkin(url: string, model: Model, layout = 'player') {
+    const key = `${layout}:${model}`;
+    if (key !== this.key) {
+      this.key = key;
+      const r = rigFor(layout, model);
+      this.root.dataset.layout = r.layout;
+      if (r.layout === 'player') this.rebuild(model);
+      else this.rebuildBoxes(r);
+      this.onExtent?.();
+    }
     this.root.style.setProperty('--skin', `url("${url}")`);
   }
 
+  /** Any layout other than the player: one static box per entry in the layout's box list. */
+  private rebuildBoxes(r: Rig) {
+    this.figure.replaceChildren();
+    const size = (b: BoxDef) => r.part(b.part)!.box;
+    const flat = r.parts.every((p) => r.faces(p).length === 1);
+    const lo = [0, 1, 2].map((i) => Math.min(...r.boxes.map((b) => b.at[i])));
+    const hi = [0, 1, 2].map((i) => Math.max(...r.boxes.map((b) => b.at[i] + (flat && i === 2 ? size(b)[0] : size(b)[i]))));
+    const mid = lo.map((v, i) => (v + hi[i]) / 2);
+    this.extent = [Math.max(hi[0] - lo[0], hi[2] - lo[2]), hi[1] - lo[1]];
+    for (const b of r.boxes) {
+      const [w, h, d] = size(b);
+      const tile = flat && r.layout === 'block';
+      const depth = tile ? w : d;
+      const joint = document.createElement('div');
+      joint.className = `sm-joint sm-part-${b.part}`;
+      joint.style.transform = `translate3d(${u(b.at[0] + w / 2 - mid[0])}, ${u(b.at[1] + h / 2 - mid[1])}, ${u(-(b.at[2] + depth / 2 - mid[2]))})`;
+      const holder = document.createElement('div');
+      holder.className = 'sm-holder';
+      holder.append(buildBox(r, b.part, 'base', { mirror: b.mirror, tile }));
+      if (r.hasLayer(b.part, 'overlay')) holder.append(buildBox(r, b.part, 'overlay', { mirror: b.mirror, inflate: 0.5 }));
+      joint.appendChild(holder);
+      this.figure.appendChild(joint);
+    }
+  }
+
   private rebuild(model: Model) {
-    this.model = model;
+    this.extent = [16, 32];
     this.figure.replaceChildren();
     const r = rig(model);
+    const player = rigFor('player', model);
     for (const part of Object.keys(r) as PartName[]) {
       const { pivot, offset } = r[part];
       const joint = document.createElement('div');
@@ -111,7 +157,7 @@ export class SkinModel {
       const holder = document.createElement('div');
       holder.className = 'sm-holder';
       holder.style.transform = `translateY(${u(offset)})`;
-      holder.append(buildBox(part, 'base', model), buildBox(part, 'overlay', model));
+      holder.append(buildBox(player, part, 'base'), buildBox(player, part, 'overlay', { inflate: INFLATE[part] }));
       swing.appendChild(holder);
       joint.appendChild(swing);
       this.figure.appendChild(joint);
@@ -184,8 +230,11 @@ export class SkinModel {
 
 /** Scale a model to fill its host, following resizes. */
 export function fitModel(model: SkinModel, host: HTMLElement, max = Infinity) {
-  new ResizeObserver(() => {
+  const fit = () => {
     const { width, height } = host.getBoundingClientRect();
-    model.root.style.setProperty('--u', `${Math.max(4, Math.min(width / 22, height / 38, max)).toFixed(2)}px`);
-  }).observe(host);
+    const [w, h] = model.extent;
+    model.root.style.setProperty('--u', `${Math.max(4, Math.min(width / (w + 6), height / (h + 6), max)).toFixed(2)}px`);
+  };
+  model.onExtent = fit;
+  new ResizeObserver(fit).observe(host);
 }

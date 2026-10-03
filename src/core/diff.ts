@@ -1,4 +1,4 @@
-import { allFaceRefs, faceRect, refName, SKIN_SIZE } from './layout';
+import { type Rig, refName, rigFor } from './layout';
 import type { Image, Model } from './types';
 
 export interface FaceChange {
@@ -15,16 +15,18 @@ export interface TextureDiff {
 }
 
 /** Pixel-level diff of two textures, grouped by face, so an agent can verify a patch touched only what it meant to. */
-export function diffTextures(before: Image, after: Image, model: Model): TextureDiff {
-  const mask: Image = { width: SKIN_SIZE, height: SKIN_SIZE, data: new Uint8ClampedArray(SKIN_SIZE * SKIN_SIZE * 4) };
+export function diffTextures(before: Image, after: Image, model: Model | Rig): TextureDiff {
+  const rig = typeof model === 'string' ? rigFor('player', model) : model;
+  if (before.width !== after.width || before.height !== after.height) throw new Error(`the textures differ in size: ${before.width}×${before.height} and ${after.width}×${after.height}`);
+  const mask: Image = { width: after.width, height: after.height, data: new Uint8ClampedArray(after.width * after.height * 4) };
   const faces: FaceChange[] = [];
   let changedPixels = 0;
-  for (const ref of allFaceRefs()) {
-    const r = faceRect(ref.part, ref.face, ref.layer, model);
+  for (const ref of rig.refs()) {
+    const r = rig.faceRect(ref.part, ref.face, ref.layer);
     let changed = 0;
     for (let y = r.y; y < r.y + r.h; y++)
       for (let x = r.x; x < r.x + r.w; x++) {
-        const i = (y * SKIN_SIZE + x) * 4;
+        const i = (y * after.width + x) * 4;
         const a = before.data, b = after.data;
         const same = a[i + 3] === 0 && b[i + 3] === 0 ? true : a[i] === b[i] && a[i + 1] === b[i + 1] && a[i + 2] === b[i + 2] && a[i + 3] === b[i + 3];
         if (!same) {

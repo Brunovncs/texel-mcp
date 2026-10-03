@@ -58,8 +58,8 @@ describe('live session', () => {
     const live = await startLive({ site: 'https://example.test', port: 47470, initial: '{"version":1,"layers":[]}' });
     try {
       expect(live.url).toBe(`https://example.test/studio/?live=${live.port}`);
-      const res = await fetch(`http://127.0.0.1:${live.port}/events`);
-      expect(res.headers.get('access-control-allow-origin')).toBe('*');
+      const res = await fetch(`http://127.0.0.1:${live.port}/events`, { headers: { Origin: 'https://www.example.test' } });
+      expect(res.headers.get('access-control-allow-origin')).toBe('https://www.example.test');
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let text = '';

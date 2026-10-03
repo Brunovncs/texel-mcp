@@ -1,0 +1,27 @@
+{
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Mossy Creeper",
+  "description": "A creeper overgrown with moss: mottled greens, darker moss patches on the head and back, and the classic black face.",
+  "author": "texel",
+  "tags": ["creeper", "mob", "moss"],
+  "layout": "creeper",
+  "palette": {
+    "green": "#5fa04a",
+    "greenDark": "green~-1",
+    "greenLight": "green~1",
+    "moss": "#3f7a2e",
+    "mossDark": "moss~-1",
+    "face": "#141414"
+  },
+  "legend": { "K": "face" },
+  "layers": [
+    { "op": "fill", "id": "base", "target": "all", "color": "green" },
+    { "op": "noise", "id": "mottle", "target": "all", "colors": ["greenDark", "greenLight", "moss"], "density": 0.4, "seed": 3, "note": "creepers read as mottled, never flat" },
+    { "op": "noise", "id": "moss-top", "target": ["head.top", "head.back", "body.back"], "colors": ["moss", "mossDark"], "density": 0.55, "seed": 11 },
+    { "op": "rect", "id": "moss-edge", "target": "head.sides", "h": 1, "color": "moss" },
+    { "op": "pixels", "id": "face", "target": "head.front", "y": 2, "rows": [".KK..KK.", ".KK..KK.", "...KK...", "..KKKK..", "..KKKK..", "..K..K.."] },
+    { "op": "lighting", "id": "light", "note": "the face keeps its exact black" },
+    { "op": "rect", "id": "toes", "target": "leg.sides", "y": -1, "color": "greenDark" }
+  ]
+}

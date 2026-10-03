@@ -1,5 +1,5 @@
 {
-  "$schema": "/schema/skinspec.v1.json",
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
   "version": 1,
   "name": "Knight",
   "description": "Plate-armored knight with a visored helmet, red plume and blue tabard with a gold cross.",

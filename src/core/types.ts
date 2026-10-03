@@ -1,5 +1,6 @@
 export type Model = 'classic' | 'slim';
-export type PartName = 'head' | 'body' | 'rightArm' | 'leftArm' | 'rightLeg' | 'leftLeg';
+/** A part of the texture layout: head, body, rightArm… for players; leg, cape, item… elsewhere. */
+export type PartName = string;
 export type FaceName = 'top' | 'bottom' | 'right' | 'front' | 'left' | 'back';
 export type LayerName = 'base' | 'overlay';
 export type RGBA = [number, number, number, number];
@@ -136,6 +137,9 @@ export interface SkinSpec {
   description?: string;
   author?: string;
   tags?: string[];
+  /** Texture layout: player (default), zombie, humanoid (armor), skeleton, creeper, cape, item, block. */
+  layout?: string;
+  /** Arm width, player layout only. */
   model?: Model;
   palette?: Record<string, ColorExpr>;
   legend?: Record<string, ColorExpr>;

@@ -1,5 +1,5 @@
 {
-  "$schema": "/schema/skinspec.v1.json",
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
   "version": 1,
   "name": "Star Wizard",
   "description": "Old wizard with a long white beard, a starry blue robe with a gold belt, a hood on the back and leather boots.",

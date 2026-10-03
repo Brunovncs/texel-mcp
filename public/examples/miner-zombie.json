@@ -1,0 +1,32 @@
+{
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Miner Zombie",
+  "description": "A zombie that used to be a miner: green skin, torn blue shirt, dark trousers, worn boots and a yellow helmet with a lamp.",
+  "author": "texel",
+  "tags": ["zombie", "mob", "miner"],
+  "layout": "zombie",
+  "palette": {
+    "skin": "#5d8a43",
+    "shirt": "#3f6e9e",
+    "trousers": "#3b3f6a",
+    "boots": "#4a3426",
+    "helmet": "#d8b23a",
+    "lamp": "#fff4b0",
+    "eyes": "#151515"
+  },
+  "layers": [
+    { "op": "material", "id": "skin", "target": "all", "color": "skin", "kind": "skin" },
+    { "op": "material", "id": "shirt", "target": "body", "color": "shirt", "kind": "fabric" },
+    { "op": "material", "id": "sleeves", "target": "arms", "region": "sleeves", "color": "shirt", "kind": "fabric" },
+    { "op": "noise", "id": "tears", "target": "body.front", "y": 5, "h": 7, "colors": ["skin"], "density": 0.15, "seed": 4, "note": "torn shirt shows the skin" },
+    { "op": "material", "id": "trousers", "target": "legs", "color": "trousers", "kind": "fabric" },
+    { "op": "material", "id": "boots", "target": "legs", "region": "boots", "color": "boots", "kind": "leather" },
+    { "op": "face", "id": "face", "skin": "skin", "eyes": "eyes", "eyeStyle": "narrow", "mouth": "open", "brows": "skin~-2" },
+    { "op": "fill", "id": "hair", "target": "head.top+back", "color": "skin~-1" },
+    { "op": "material", "id": "helmet", "target": "head.top@overlay", "color": "helmet", "kind": "metal" },
+    { "op": "rect", "id": "helmet-band", "target": "head.sides@overlay", "h": 2, "color": "helmet" },
+    { "op": "points", "id": "lamp", "target": "head.front@overlay", "points": [[3, 0], [4, 0], [3, 1], [4, 1]], "color": "lamp" },
+    { "op": "lighting", "id": "light" }
+  ]
+}

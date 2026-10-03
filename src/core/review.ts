@@ -1,12 +1,13 @@
 import { ART_WEAK, artReview, type ArtReport } from './art';
 import { resolveColor, rgbToHsl, toHex } from './color';
 import type { CompileResult } from './compile';
-import { faceRect, FACES, PARTS, refName, SKIN_SIZE } from './layout';
+import { type Rig, refName } from './layout';
 import type { FaceRef, Image, Issue, RGBA } from './types';
-import { renderView } from './views';
+import { renderView, viewsOf } from './views';
 
 export interface ReviewStats {
   model: string;
+  layout: string;
   layers: number;
   disabledLayers: number;
   colorsUsed: number;
@@ -30,12 +31,12 @@ export interface Review {
 
 const ASCII_POOL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789#$%&*+=?@^~<>/|';
 
-function pixelsOf(tex: Image, ref: FaceRef, model: CompileResult['model']) {
-  const r = faceRect(ref.part, ref.face, ref.layer, model);
+function pixelsOf(tex: Image, ref: FaceRef, rig: Rig) {
+  const r = rig.faceRect(ref.part, ref.face, ref.layer);
   const out: number[][] = [];
   for (let y = 0; y < r.h; y++)
     for (let x = 0; x < r.w; x++) {
-      const i = ((r.y + y) * SKIN_SIZE + r.x + x) * 4;
+      const i = ((r.y + y) * tex.width + r.x + x) * 4;
       out.push([tex.data[i], tex.data[i + 1], tex.data[i + 2], tex.data[i + 3]]);
     }
   return out;
@@ -44,7 +45,8 @@ function pixelsOf(tex: Image, ref: FaceRef, model: CompileResult['model']) {
 const key = (p: number[]) => (p[3] === 0 ? 'transparent' : toHex(p as [number, number, number, number]));
 
 export function review(result: CompileResult): Review {
-  const { texture: tex, model, spec } = result;
+  const { texture: tex, model, rig, spec } = result;
+  const character = Boolean(rig.def.character);
   const issues: Issue[] = [...result.issues];
   const add = (level: Issue['level'], code: string, path: string, message: string, hint?: string) => issues.push(hint ? { level, code, path, message, hint } : { level, code, path, message });
 
@@ -53,20 +55,21 @@ export function review(result: CompileResult): Review {
   const holes: string[] = [];
   const flat: string[] = [];
 
-  for (const part of PARTS)
-    for (const face of FACES)
+  for (const part of rig.parts)
+    for (const face of rig.faces(part))
       for (const layer of ['base', 'overlay'] as const) {
+        if (!rig.hasLayer(part, layer)) continue;
         const ref: FaceRef = { part, face, layer };
-        const px = pixelsOf(tex, ref, model);
+        const px = pixelsOf(tex, ref, rig);
         const opaque = px.filter((p) => p[3] > 0);
         opaque.forEach((p) => colors.add(key(p)));
         if (layer === 'base') {
           baseTotal += px.length;
           baseOpaque += opaque.length;
           if (opaque.length < px.length) holes.push(`${refName(ref)} (${px.length - opaque.length}px)`);
-          const visible = face !== 'bottom' && (face !== 'top' || part === 'head');
+          const visible = face !== 'bottom' && (face !== 'top' || part === 'head' || rig.layout !== 'player');
           if (visible && px.length >= 32 && opaque.length === px.length) {
-            const over = pixelsOf(tex, { part, face, layer: 'overlay' }, model);
+            const over = rig.hasLayer(part, 'overlay') ? pixelsOf(tex, { part, face, layer: 'overlay' }, rig) : px.map(() => [0, 0, 0, 0]);
             const counts = new Map<string, number>();
             px.forEach((p, i) => {
               const k = key(over[i][3] > 0 ? over[i] : p);
@@ -77,31 +80,38 @@ export function review(result: CompileResult): Review {
         } else overlayPixels += opaque.length;
       }
 
-  if (holes.length)
+  if (!rig.def.opaque && baseOpaque === 0)
+    add('warning', 'empty', '$.layers', `the ${rig.layout} texture is fully transparent`, 'paint something: start with "fill" or "pixels"');
+  if (holes.length && rig.def.opaque)
     add('warning', 'base-transparent', '$.layers', `${holes.length} base-layer face(s) have transparent pixels, which render black in-game: ${holes.slice(0, 8).join(', ')}${holes.length > 8 ? ', …' : ''}`, 'start with a "fill" on "all" so every base pixel is opaque');
 
   const faceFront = new Set<string>();
-  const front = renderView(tex, model, 'front');
-  for (let y = 0; y < 8; y++) for (let x = 4; x < 12; x++) {
-    const i = (y * 16 + x) * 4;
-    faceFront.add(key([...front.data.subarray(i, i + 4)]));
+  if (character) {
+    const front = renderView(tex, rig, 'front');
+    const head = rig.boxes.find((b) => b.part === 'head');
+    const hx = (head?.at[0] ?? 0) - Math.min(...rig.boxes.map((b) => b.at[0])), hy = (head?.at[1] ?? 0) - Math.min(...rig.boxes.map((b) => b.at[1]));
+    for (let y = hy; y < hy + 8; y++) for (let x = hx; x < hx + 8; x++) {
+      const i = (y * front.width + x) * 4;
+      faceFront.add(key([...front.data.subarray(i, i + 4)]));
+    }
   }
-  if (faceFront.size < 3) add('warning', 'blank-face', 'head.front', 'the face (head.front) uses fewer than 3 colors and will read as blank', 'draw eyes, brows and a mouth with a "pixels" op on head.front');
+  if (character && faceFront.size < 3) add('warning', 'blank-face', 'head.front', 'the face (head.front) uses fewer than 3 colors and will read as blank', 'draw eyes, brows and a mouth with a "pixels" op on head.front');
 
   // A face drawn on the base, then hidden under the same color as the rest of the hat layer, is
   // almost always an accident: a hood or hat filled over the whole head ("sides" includes the
   // front). A visor has colors of its own, so it passes.
-  const hat = pixelsOf(tex, { part: 'head', face: 'front', layer: 'overlay' }, model);
-  const eyeArea = [3, 4, 5].flatMap((y) => [1, 2, 5, 6].map((x) => hat[y * 8 + x]));
-  const drawn = new Set(pixelsOf(tex, { part: 'head', face: 'front', layer: 'base' }, model).slice(24, 48).map(key)).size >= 3;
-  const elsewhere = new Set((['right', 'left', 'top', 'back'] as const).flatMap((face) => pixelsOf(tex, { part: 'head', face, layer: 'overlay' }, model).filter((p) => p[3] > 0).map(key)));
+  const hasHat = character && rig.hasLayer('head', 'overlay');
+  const hat = hasHat ? pixelsOf(tex, { part: 'head', face: 'front', layer: 'overlay' }, rig) : [];
+  const eyeArea = hasHat ? [3, 4, 5].flatMap((y) => [1, 2, 5, 6].map((x) => hat[y * 8 + x])) : [];
+  const drawn = hasHat && new Set(pixelsOf(tex, { part: 'head', face: 'front', layer: 'base' }, rig).slice(24, 48).map(key)).size >= 3;
+  const elsewhere = new Set(hasHat ? (['right', 'left', 'top', 'back'] as const).flatMap((face) => pixelsOf(tex, { part: 'head', face, layer: 'overlay' }, rig).filter((p) => p[3] > 0).map(key)) : []);
   if (drawn && eyeArea.every((p) => p[3] === 255) && eyeArea.every((p) => elsewhere.has(key(p))))
     add('warning', 'face-hidden', 'head.front@overlay', 'the hat layer covers the eyes of the face drawn underneath', 'clear the face on the overlay ({ "op": "clear", "target": "head.front@overlay", "x": 1, "y": 3, "w": 6, "h": 4 }), and remember "sides" includes the front');
-  else if (hat.every((p) => p[3] === 255)) add('info', 'hat-covers-face', 'head.front@overlay', 'the hat layer fully covers the face; fine for helmets, a mistake otherwise');
+  else if (hasHat && hat.every((p) => p[3] === 255)) add('info', 'hat-covers-face', 'head.front@overlay', 'the hat layer fully covers the face; fine for helmets, a mistake otherwise');
 
   if (flat.length) add('info', 'flat-surface', '$.layers', `${flat.length} face(s) are ≥90% one color: ${flat.slice(0, 6).join(', ')}${flat.length > 6 ? ', …' : ''}`, 'add depth with "shade" on edges, a "gradient", or "noise" with a small jitter (3–6)');
 
-  if (colors.size > 0 && colors.size < 6) add('info', 'few-colors', '$.palette', `only ${colors.size} distinct colors; most good skins use 15–60`, 'give each material 2–4 tones (highlight, base, shadow)');
+  if (colors.size > 0 && colors.size < (rig.width <= 16 ? 4 : 6)) add('info', 'few-colors', '$.palette', `only ${colors.size} distinct colors; most good ${rig.width <= 16 ? 'item and block textures use 6–16' : 'textures use 15–60'}`, 'give each material 2–4 tones (highlight, base, shadow)');
 
   const palette = spec?.palette && typeof spec.palette === 'object' ? spec.palette : {};
   const used = new Set(result.usedPalette);
@@ -120,14 +130,14 @@ export function review(result: CompileResult): Review {
   for (const i of issues) score -= i.code === 'base-transparent' ? Math.min(20, holes.length * 2) : weight[i.level];
   score = Math.max(0, Math.min(100, score));
 
-  const ascii = asciiViews(tex, model, palette, spec?.legend);
+  const ascii = asciiViews(tex, rig, palette, spec?.legend);
   const ok = !issues.some((i) => i.level === 'error');
   const next: string[] = [];
   if (!ok) next.push('Fix the errors first: ops with errors are skipped entirely.');
   if (issues.some((i) => i.code === 'base-transparent')) next.push('Cover every base pixel (fill "all" first, then paint on top).');
   if (issues.some((i) => i.code === 'blank-face')) next.push('Give the face readable features: 2px-wide eyes, a darker brow row, a mouth.');
   if (issues.some((i) => i.code === 'flat-surface')) next.push('Add shading: darker bottom rows, lighter top row, and subtle noise.');
-  const art = artReview(tex, model, overlayPixels, colors.size);
+  const art = artReview(tex, rig, overlayPixels, colors.size);
   for (const c of art.checks) if (c.score < ART_WEAK) next.push(`${c.rubric} ${c.id} (${c.score}): ${c.hint}.`);
   next.push('Look at the render (front/back/sides) and compare it to the brief; iterate on the weakest area.');
 
@@ -138,6 +148,7 @@ export function review(result: CompileResult): Review {
     art,
     stats: {
       model,
+      layout: rig.layout,
       layers: layers.length,
       disabledLayers: disabled,
       colorsUsed: colors.size,
@@ -150,7 +161,7 @@ export function review(result: CompileResult): Review {
   };
 }
 
-function asciiViews(tex: Image, model: CompileResult['model'], palette: Record<string, string>, legend?: Record<string, string>) {
+function asciiViews(tex: Image, rig: Rig, palette: Record<string, string>, legend?: Record<string, string>) {
   const charOf = new Map<string, string>();
   const names = new Map<string, string>();
   const taken = new Set<string>(['.']);
@@ -210,8 +221,8 @@ function asciiViews(tex: Image, model: CompileResult['model'], palette: Record<s
     }
     return lines.join('\n');
   };
-  const frontTxt = draw(renderView(tex, model, 'front'));
-  const backTxt = draw(renderView(tex, model, 'back'));
+  const frontTxt = draw(renderView(tex, rig, 'front'));
+  const backTxt = viewsOf(rig).includes('back') ? draw(renderView(tex, rig, 'back')) : '';
   const keyOut: Record<string, string> = { '.': 'transparent' };
   for (const [hex, ch] of charOf) keyOut[ch] = names.has(hex) ? `${hex} (${names.get(hex)})` : hex;
   return { front: frontTxt, back: backTxt, key: keyOut };
@@ -221,7 +232,7 @@ function asciiViews(tex: Image, model: CompileResult['model'], palette: Record<s
 export function reviewToMarkdown(r: Review, opts: { includeAscii?: boolean } = {}): string {
   const lines = [`## Texel review: score ${r.score}/100 ${r.ok ? '(valid)' : '(has errors)'}`, ''];
   const s = r.stats;
-  lines.push(`- model: ${s.model} · layers: ${s.layers}${s.disabledLayers ? ` (${s.disabledLayers} disabled)` : ''} · colors used: ${s.colorsUsed} · base coverage: ${s.baseCoverage}% · overlay pixels: ${s.overlayPixels}`, '');
+  lines.push(`- ${s.layout && s.layout !== 'player' ? `layout: ${s.layout}` : `model: ${s.model}`} · layers: ${s.layers}${s.disabledLayers ? ` (${s.disabledLayers} disabled)` : ''} · colors used: ${s.colorsUsed} · base coverage: ${s.baseCoverage}% · overlay pixels: ${s.overlayPixels}`, '');
   if (r.issues.length) {
     lines.push('### Issues');
     for (const i of r.issues) lines.push(`- **${i.level}** \`${i.code}\` at \`${i.path}\`: ${i.message}${i.hint ? `. _${i.hint}_` : ''}`);
@@ -232,8 +243,8 @@ export function reviewToMarkdown(r: Review, opts: { includeAscii?: boolean } = {
   lines.push('');
   if (opts.includeAscii !== false) {
     lines.push('### Text render (front | back, each pixel = 2 chars, "." = transparent; shaded tones shown as their nearest named color)', '```');
-    const f = r.ascii.front.split('\n'), b = r.ascii.back.split('\n');
-    for (let i = 0; i < f.length; i++) lines.push(`${f[i]}   ${b[i]}`);
+    const f = r.ascii.front.split('\n'), b = r.ascii.back ? r.ascii.back.split('\n') : [];
+    for (let i = 0; i < f.length; i++) lines.push(b.length ? `${f[i]}   ${b[i] ?? ''}` : f[i]);
     lines.push('```', '', 'Key: ' + Object.entries(r.ascii.key).map(([c, v]) => `\`${c}\`=${v}`).join(', '), '');
   }
   lines.push('### Suggested next steps', ...r.next.map((n) => `- ${n}`));
