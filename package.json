@@ -1,0 +1,63 @@
+{
+  "name": "texel-mcp",
+  "version": "0.7.0",
+  "description": "MCP server and CLI that compile Minecraft skins and textures from JSON specs (palette + drawing ops) to PNG, with a review an AI agent can act on.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Bruno Veronez",
+  "homepage": "https://www.texel.dev.br",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Brunovncs/texel-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Brunovncs/texel-mcp/issues"
+  },
+  "keywords": [
+    "minecraft",
+    "skin",
+    "texture",
+    "mcp",
+    "model-context-protocol",
+    "ai-agents",
+    "pixel-art",
+    "claude"
+  ],
+  "bin": {
+    "texel-mcp": "dist/texel-mcp.mjs",
+    "texel-cli": "dist/texel.mjs"
+  },
+  "files": [
+    "dist/texel-mcp.mjs",
+    "dist/texel.mjs",
+    "examples",
+    "schema",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "tsx scripts/build.ts",
+    "build:plugin": "tsx scripts/build.ts --plugin",
+    "prepack": "npm run build",
+    "measure": "tsx scripts/measure.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.2.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.0",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "vite": "$vite"
+  }
+}

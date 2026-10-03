@@ -48,7 +48,7 @@ describe('expandFamily', () => {
   });
 
   it('expands the bundled guild example into six valid skins', () => {
-    const f = expandFamily(readFileSync('public/examples/families/guild.json', 'utf8'));
+    const f = expandFamily(readFileSync('examples/families/guild.json', 'utf8'));
     expect(f.ok).toBe(true);
     expect(f.members).toHaveLength(6);
     for (const m of f.members) expect(review(compile(m.spec)).issues.filter((i) => i.level !== 'info'), m.id).toEqual([]);
@@ -57,7 +57,7 @@ describe('expandFamily', () => {
 
 describe('PNG decode, import and diff', () => {
   it('round-trips a skin losslessly through PNG and textureToSpec', () => {
-    const original = compile(readFileSync('public/examples/astronaut.json', 'utf8'));
+    const original = compile(readFileSync('examples/astronaut.json', 'utf8'));
     const bytes = encodePNG(original.texture, (raw) => deflateSync(raw));
     const decoded = decodePNG(bytes, (d) => inflateSync(d));
     expect(decoded.width).toBe(64);

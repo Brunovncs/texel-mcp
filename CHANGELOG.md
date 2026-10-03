@@ -2,6 +2,10 @@
 
 Each release's section is published as `notes` in `/version.json`, and installed tools show it in their update notice, so the agent knows what changed and whether to redo anything. Keep it to one or two lines (under 600 characters, where installed copies cut it), and say whether specs still render the same PNGs. A test fails when the current version has no section.
 
+## Unreleased
+
+The toolchain moves to its own repository and npm package, `texel-mcp`, with `texel-mcp` and `texel-cli` commands. A copy installed with npm is told to update through npm. The Claude Code plugin's single-file server now ships the licenses of what it bundles. Compiler unchanged: specs render the same PNGs.
+
 ## 0.7.0
 
 Every review now has craft advice (`art.advice`): pillow shading, shadows that only get darker, static-like noise and bands that stop at a cube corner, with the faces and the fix; it never changes a score. `sheet --focus head` and `focus` on texel_render show some parts alone from six sides. New `palette` command and `texel_palette` tool: a reference PNG's colors as a palette. `lighting` and `shade` now cool shadows and warm lights like `~` steps, so specs using them render slightly different colors.

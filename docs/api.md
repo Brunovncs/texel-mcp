@@ -65,7 +65,7 @@ On browsers that implement [WebMCP](https://github.com/webmachinelearning/webmcp
 
 Combine them: `/studio/?view=inspect#spec=...` → open, wait for `document.body.dataset.ready === "true"`, screenshot.
 
-## 4. CLI (Node 18+, no dependencies)
+## 4. CLI (Node 20+, no dependencies)
 
 ```bash
 curl -O https://<site>/texel.mjs

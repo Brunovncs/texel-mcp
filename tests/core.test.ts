@@ -105,9 +105,9 @@ describe('review', () => {
   });
 
   it('passes every bundled example without errors or warnings', () => {
-    const index = JSON.parse(readFileSync('public/examples/index.json', 'utf8')).examples as { id: string }[];
+    const index = JSON.parse(readFileSync('examples/index.json', 'utf8')).examples as { id: string }[];
     for (const { id } of index) {
-      const r = review(compile(readFileSync(`public/examples/${id}.json`, 'utf8')));
+      const r = review(compile(readFileSync(`examples/${id}.json`, 'utf8')));
       expect(r.issues.filter((i) => i.level !== 'info'), id).toEqual([]);
     }
   });
@@ -124,7 +124,7 @@ describe('png + format', () => {
   });
 
   it('round-trips through the formatter', () => {
-    const spec = JSON.parse(readFileSync('public/examples/knight.json', 'utf8'));
+    const spec = JSON.parse(readFileSync('examples/knight.json', 'utf8'));
     expect(JSON.parse(formatSpec(spec))).toEqual(spec);
   });
 });

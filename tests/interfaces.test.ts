@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { bundleCli, bundleMcp } from '../plugins/bundles';
+import { bundleCli, bundleMcp } from '../scripts/bundles';
 
 const dir = mkdtempSync(join(tmpdir(), 'texel-'));
 const spec = {

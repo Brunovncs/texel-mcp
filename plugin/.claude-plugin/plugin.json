@@ -1,8 +1,10 @@
 {
   "name": "texel",
   "version": "0.7.0",
-  "description": "Design, render, review and export Minecraft skins as JSON specs. MCP tools with an interactive 3D viewer, plus the minecraft-skin-design skill.",
-  "author": { "name": "Bruno Veronez" },
+  "description": "Design, render, review and export Minecraft skins and textures as JSON specs. MCP tools with an interactive 3D viewer, plus the minecraft-skin-design skill.",
+  "author": { "name": "Bruno Veronez", "url": "https://github.com/Brunovncs" },
+  "homepage": "https://www.texel.dev.br",
+  "repository": "https://github.com/Brunovncs/texel-mcp",
   "license": "MIT",
-  "keywords": ["minecraft", "skins", "pixel-art", "mcp", "mcp-apps"]
+  "keywords": ["minecraft", "skins", "textures", "pixel-art", "mcp", "mcp-apps"]
 }

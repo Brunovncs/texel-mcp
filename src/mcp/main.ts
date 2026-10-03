@@ -12,6 +12,7 @@ if (args.includes('--version')) {
 if (args.includes('--help')) {
   process.stdout.write(`texel-mcp ${SERVER_VERSION}: Texel MCP server (stdio)
 
+  claude mcp add texel -- npx -y texel-mcp
   claude mcp add texel -- node /path/to/texel-mcp.mjs
   options: --workspace <dir>   directory for saved files (default: $TEXEL_WORKSPACE or cwd)
   env:     TEXEL_NO_UPDATE_CHECK=1 skips the daily check for a newer release

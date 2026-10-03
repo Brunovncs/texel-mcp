@@ -15,7 +15,7 @@ A skin is a JSON **spec**, a palette plus an ordered list of drawing operations 
 
 Prefer the Texel MCP tools when they are available (`texel_render`, `texel_patch`, `texel_live`, `texel_share`, `texel_validate`, `texel_save`, `texel_render_family`, `texel_save_family`, `texel_import_png`, `texel_palette`, `texel_diff`, `texel_read_docs`, `texel_get_example`).
 
-Without MCP, use the CLI (Node 18+). Download https://www.texel.dev.br/texel.mjs once into this skill's folder, next to this SKILL.md (e.g. `~/.claude/skills/minecraft-skin-design/texel.mjs`), and run it from there in every project, so there is one copy to keep current; `node <path>/texel.mjs --version` prints its version. Below, `texel.mjs` stands for that path:
+Without MCP, use the CLI (Node 20+). Download https://www.texel.dev.br/texel.mjs once into this skill's folder, next to this SKILL.md (e.g. `~/.claude/skills/minecraft-skin-design/texel.mjs`), and run it from there in every project, so there is one copy to keep current; `node <path>/texel.mjs --version` prints its version. Below, `texel.mjs` stands for that path:
 
 ```bash
 node texel.mjs live spec.json --open          # background: the user watches every save

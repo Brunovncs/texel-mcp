@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
@@ -101,13 +101,29 @@ export async function checkForUpdate(current: string, options: CheckOptions): Pr
   return release && isNewer(release.version, current) ? { ...release, current } : null;
 }
 
+/** Whether the running script came from an npm install or npx (it then updates through npm, not by download). */
+export function installedByNpm(file: string | undefined): boolean {
+  if (!file) return false;
+  let real = file;
+  try {
+    real = realpathSync(file);
+  } catch {
+    // A path that no longer resolves is judged as given.
+  }
+  return /[\\/]node_modules[\\/]/.test(real);
+}
+
 /**
  * Instructions for the agent: what to download over what. `file` is the running script. The notice
  * comes with a finished result, so it says that result stands and the update is for the next call.
  */
 export function updateNotice(u: Update, tool: 'cli' | 'mcp', file = process.argv[1]): string {
-  const self =
-    tool === 'cli'
+  const npm = installedByNpm(file);
+  const self = npm
+    ? tool === 'cli'
+      ? '- run `npm install -g texel-mcp@latest` (or call it as `npx -y -p texel-mcp@latest texel-cli`), then restart any running `texel-cli live`'
+      : '- run `npm install -g texel-mcp@latest`, or point the MCP config at `npx -y texel-mcp@latest`, then ask the user to restart the Texel MCP server'
+    : tool === 'cli'
       ? `- ${u.files.cli} → replace ${file ? resolve(file) : 'texel.mjs'}, then restart any running \`texel.mjs live\` from the new copy`
       : `- ${u.files.mcp} → replace ${file ? resolve(file) : 'texel-mcp.mjs'}, then ask the user to restart the Texel MCP server`;
   return [

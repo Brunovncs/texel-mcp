@@ -1,11 +1,11 @@
 {
   "name": "texel",
-  "owner": { "name": "Bruno Veronez" },
+  "owner": { "name": "Bruno Veronez", "url": "https://github.com/Brunovncs" },
   "plugins": [
     {
       "name": "texel",
       "source": "./plugin",
-      "description": "Minecraft skin design tools: MCP server with 3D viewer and the minecraft-skin-design skill."
+      "description": "Minecraft skin and texture tools: MCP server with a 3D viewer and the minecraft-skin-design skill."
     }
   ]
 }

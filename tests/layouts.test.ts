@@ -210,7 +210,7 @@ describe('layouts', () => {
   });
 
   it('stay in sync with the spec reference table', () => {
-    const doc = readFileSync('content/docs/spec.md', 'utf8');
+    const doc = readFileSync('docs/spec.md', 'utf8');
     const table = /<!-- layouts:start -->\n([\s\S]*?)\n<!-- layouts:end -->/.exec(doc)?.[1];
     expect(table).toBe(layoutsToMarkdown());
   });
