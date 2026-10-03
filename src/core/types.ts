@@ -17,9 +17,14 @@ export interface Rect {
   m?: [number, number, number, number];
 }
 
-export interface FaceRef {
+/** One face of one part, both layers together (as seen in game). */
+export interface PartFace {
   part: PartName;
   face: FaceName;
+}
+
+/** One layer of one face. */
+export interface FaceRef extends PartFace {
   layer: LayerName;
 }
 

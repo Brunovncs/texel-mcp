@@ -1,4 +1,4 @@
-import { mix, shiftLightness, tone } from './color';
+import { mix, shiftLightness, shiftTone, tone } from './color';
 import type { FaceName, FaceRef, PartName, RGBA } from './types';
 
 /**
@@ -61,7 +61,7 @@ export function applyLighting(s: Surface, strength: number) {
     if (!shift) continue;
     for (let x = 0; x < s.w; x++) {
       const c = s.get(x, y);
-      if (c[3] > 0) s.set(x, y, shiftLightness(c, shift), true);
+      if (c[3] > 0) s.set(x, y, shiftTone(c, shift), true);
     }
   }
 }

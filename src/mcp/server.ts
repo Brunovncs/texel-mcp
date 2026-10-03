@@ -5,26 +5,34 @@ import { z } from 'zod';
 import {
   applyPatch,
   compile,
+  CRAFT_ADVICE_CODES,
+  type CompileResult,
   decodePNG,
   diffTextures,
   diffToMarkdown,
   encodePNG,
   expandFamily,
+  extractPalette,
   formatSpec,
+  paletteToMarkdown,
+  type Image,
   PROTOCOL,
+  renderCloseUp,
   renderLineup,
   renderSheet,
+  referencePalette,
+  REFERENCE_MAX_SIDE,
+  resolveParts,
+  resolveShareLink,
+  type Review,
   review,
   reviewToMarkdown,
   scaleImage,
-  resolveShareLink,
+  SWATCH_ROLES,
   shareURL,
+  type SkinSpec,
   textureToSpec,
   withIds,
-  type CompileResult,
-  type Image,
-  type Review,
-  type SkinSpec,
 } from '../core';
 import { DOC_PAGES, DOCS, EXAMPLE_IDS, EXAMPLES, FAMILY_EXAMPLES, SCHEMAS } from './content';
 import { Workspace } from './workspace';
@@ -38,8 +46,8 @@ export const VIEWER_MIME = 'text/html;profile=mcp-app';
 /** Key under which render results carry the texture for the MCP App viewer (kept out of model context). */
 export const TEXTURE_META_KEY = 'texel/texture';
 
-const INSTRUCTIONS = `Texel compiles Minecraft skin specs (JSON: palette + ordered drawing ops) into PNGs: 64×64 player skins by default, and with "layout" also zombies, skeletons, armor, creepers, endermen, spiders, villagers, capes/elytra, items and blocks (texel://docs/spec, section "Layouts"). Protocol ${PROTOCOL}.
-Workflow: read the "spec" docs (texel_read_docs or resource texel://docs/spec), draft a spec, call texel_render, look at the returned review sheet image and the issues, fix the weakest area (texel_patch changes a few layers by id), render again, then texel_save and texel_share.
+const INSTRUCTIONS = `Texel compiles Minecraft skin specs (JSON: palette + ordered drawing ops) into PNGs: 64×64 player skins by default, and with "layout" also mobs (zombies, skeletons, creepers, pigs, cows, wolves, cats, iron golems…), armor, capes/elytra, items and blocks (texel://docs/spec, section "Layouts"). Protocol ${PROTOCOL}.
+Workflow: read the "spec" docs (texel_read_docs or resource texel://docs/spec), draft a spec, call texel_render, look at the returned review sheet image and the issues, fix the weakest area (texel_patch changes a few layers by id), render again, then texel_save and texel_share. To judge one area up close, pass focus (e.g. ["head"]) to texel_render; to match a reference image, start the palette with texel_palette.
 When a person is waiting on the result, call texel_live first and give them the URL: every texel_render then appears in their open studio tab, so they can watch and steer while you work.
 For many related skins (teams, factions, tiers), write a family (kind: "family") and use texel_render_family / texel_save_family.
 The score only measures technical hygiene; judge appearance from the sheet image against the brief.`;
@@ -51,6 +59,10 @@ const patchInput = z
   .union([z.string(), z.record(z.string(), z.unknown())])
   .describe('A patch ({ patch: [{ do: "update", id, set }, …] }) as a JSON object or JSON text. Format: texel://docs/spec, section "Patches".');
 const includeInput = z.array(z.enum(['sheet', 'texture', 'ascii'])).default(['sheet']).describe('Extra outputs. "sheet" is the review image; "ascii" adds a text render for models without vision.');
+const focusInput = z
+  .array(z.string())
+  .optional()
+  .describe('Also return a close-up of these parts or groups alone (e.g. ["head"], ["arms"]) from all six sides, large, on gray: for judging a face, a hood or one garment.');
 const familyInput = z
   .union([z.string(), z.record(z.string(), z.unknown())])
   .describe('A skin family ({ kind: "family", base, variants?, matrix? }) as a JSON object or JSON text. Format: texel://docs/families');
@@ -65,6 +77,17 @@ const reviewShape = z.object({
   art: z.object({
     score: z.number().describe('0–100 from the art checks: face, silhouette, shading, texture, back, depth, colors.'),
     checks: z.array(z.object({ id: z.string(), rubric: z.string(), score: z.number(), note: z.string(), hint: z.string() })),
+    advice: z
+      .array(
+        z.object({
+          code: z.enum(CRAFT_ADVICE_CODES),
+          faces: z.array(z.object({ part: z.string(), face: z.string() })),
+          edges: z.array(z.object({ part: z.string(), faces: z.tuple([z.string(), z.string()]), rows: z.array(z.number()) })).optional(),
+          message: z.string(),
+          hint: z.string(),
+        }),
+      )
+      .describe('Classic pixel-art mistakes found in the texture, with the faces where they show. Advisory: never changes a score.'),
   }),
   issues: z.array(issueShape),
   stats: z.object({ layers: z.number(), disabledLayers: z.number(), colorsUsed: z.number(), baseCoverage: z.number(), overlayPixels: z.number(), paletteSize: z.number() }),
@@ -106,12 +129,24 @@ export function createTexelServer(workspace = new Workspace(), update?: Promise<
       return { ...result, content: [...result.content, textBlock(text)] };
     }) as never)) as typeof server.registerTool;
 
+  interface RenderOptions {
+    /** Text before the review (a patch summary). */
+    before?: string;
+    /** Extra fields for structuredContent. */
+    extra?: Record<string, unknown>;
+    /** Parts or groups for a close-up. */
+    focus?: string[];
+  }
+
   /** Review a compiled spec, push it to the live session, and return the render outputs. */
-  const rendered = (result: CompileResult, include: string[], before = '', extra: Record<string, unknown> = {}): CallToolResult => {
+  const rendered = (result: CompileResult, include: string[], { before = '', extra = {}, focus }: RenderOptions = {}): CallToolResult => {
+    const parts = focus?.length ? resolveParts(result.rig, focus) : null;
+    if (parts && !parts.ok) return toolError(`focus: ${parts.error}${parts.hint ? ` (${parts.hint})` : ''}`);
     const r = review(result);
     if (live && result.spec) live.push(formatSpec(result.spec));
     const content: CallToolResult['content'] = [textBlock(before + reviewToMarkdown(r, { includeAscii: include.includes('ascii') }))];
     if (include.includes('sheet')) content.push(imageBlock(renderSheet(result.texture, result.rig).image));
+    if (parts?.ok) content.push(textBlock(`Close-up of ${parts.parts.join(', ')}: front | back | right | left | top | bottom.`), imageBlock(renderCloseUp(result.texture, result.rig, parts.parts).image));
     if (include.includes('texture')) content.push(imageBlock(scaleImage(result.texture, 4)));
     return {
       content,
@@ -127,13 +162,13 @@ export function createTexelServer(workspace = new Workspace(), update?: Promise<
     {
       title: 'Render skin',
       description:
-        'Compile a skin spec and review it. Returns a review sheet image (front | back | right | left views + raw texture), the review (score, issues with JSON paths and fix hints, suggested next steps) and, on request, the texture (64×64 for a player skin) and a text render. Deterministic; never modifies files.',
-      inputSchema: z.object({ spec: specInput, include: includeInput }),
+        'Compile a skin spec and review it. Returns a review sheet image (front | back | right | left views + raw texture), the review (score, issues with JSON paths and fix hints, art checks, craft advice, suggested next steps) and, on request, the texture (64×64 for a player skin), a text render and a close-up of some parts. Deterministic; never modifies files.',
+      inputSchema: z.object({ spec: specInput, include: includeInput, focus: focusInput }),
       outputSchema: reviewShape,
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
       _meta: { ui: { resourceUri: VIEWER_URI } },
     },
-    async ({ spec, include }) => rendered(compile(spec), include),
+    async ({ spec, include, focus }) => rendered(compile(spec), include, { focus }),
   );
 
   server.registerTool(
@@ -160,7 +195,7 @@ export function createTexelServer(workspace = new Workspace(), update?: Promise<
       if (p.issues.some((i) => i.level === 'error')) return toolError(p.issues.map((i) => i.message).join('\n'));
       const skipped = p.issues.map((i) => `- ${i.code} at ${i.path}: ${i.message}${i.hint ? ` (${i.hint})` : ''}`).join('\n');
       const before = `Applied ${p.applied} of ${p.applied + p.issues.length} patch entries.${skipped ? `\n${skipped}` : ''}\n\n\`\`\`json\n${formatSpec(p.spec)}\`\`\`\n\n`;
-      return rendered(compile(p.spec), include, before, { spec: p.spec as unknown as Record<string, unknown>, applied: p.applied, skipped: p.issues });
+      return rendered(compile(p.spec), include, { before, extra: { spec: p.spec as unknown as Record<string, unknown>, applied: p.applied, skipped: p.issues } });
     },
   );
 
@@ -354,6 +389,38 @@ Give this URL to the user. Each texel_render now updates their studio tab (${liv
         };
       } catch (e) {
         return toolError(`Import failed: ${(e as Error).message}`);
+      }
+    },
+  );
+
+  server.registerTool(
+    'texel_palette',
+    {
+      title: 'Palette from a reference image',
+      description:
+        'Read a reference PNG in the workspace (concept art, a photo of a figure, another skin) and return its main colors, most common first, each with a role (shadow, midtone, highlight, neutral, accent), as a ready spec "palette" and "legend". Use it to match a reference instead of guessing hex values; derive the other tones with "~" steps.',
+      inputSchema: z.object({
+        path: z.string().min(1).describe('Path to a .png file, relative to the workspace.'),
+        colors: z.number().int().min(2).max(32).default(12).describe('How many colors to keep.'),
+      }),
+      outputSchema: z.object({
+        entries: z.array(
+          z.object({ key: z.string(), char: z.string().nullable(), color: z.string(), share: z.number(), perceptualLightness: z.number(), role: z.enum(SWATCH_ROLES) }),
+        ),
+        palette: z.record(z.string(), z.string()),
+        legend: z.record(z.string(), z.string()),
+      }),
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ path, colors }) => {
+      try {
+        const image = decodePNG(readFileSync(workspace.resolve(path)), (d) => inflateSync(d), { maxSide: REFERENCE_MAX_SIDE });
+        const swatches = extractPalette(image, { colors });
+        if (!swatches.length) return toolError(`${path} has no opaque pixels.`);
+        const result = referencePalette(swatches);
+        return { content: [textBlock(paletteToMarkdown(result))], structuredContent: { ...result } };
+      } catch (e) {
+        return toolError(`Palette failed: ${(e as Error).message}`);
       }
     },
   );

@@ -1,4 +1,4 @@
-import { mix, resolveColor, shiftLightness, suggestHint, TRANSPARENT } from './color';
+import { mix, resolveColor, shiftLightness, shiftTone, suggestHint, TRANSPARENT } from './color';
 import { applyLighting, applyMaterial, BEARDS, drawFace, drawHair, EYE_STYLES, FRINGES, HAIR_STYLES, MATERIAL_ALIASES, MATERIALS, MOUTHS, REGIONS, type Material, type Surface } from './components';
 import { boxSize, LAYOUT_IDS, resolveLayout, type Rig, rigFor, texel } from './layout';
 import { parseSelector } from './selector';
@@ -503,7 +503,7 @@ function applyOp(ctx: Ctx, raw: unknown, index: number) {
       const refs = ctx.targets(op.target, `${path}.target`);
       const amount = num(ctx, op.amount, `${path}.amount`, { min: -100, max: 100 });
       if (!checkArea(ctx, op, path) || !refs || amount === null) return;
-      eachPixel(ctx, refs, op, (tx, ty) => ctx.set(tx, ty, shiftLightness(ctx.get(tx, ty), amount), ctx.contrib[ty * ctx.width + tx]));
+      eachPixel(ctx, refs, op, (tx, ty) => ctx.set(tx, ty, shiftTone(ctx.get(tx, ty), amount), ctx.contrib[ty * ctx.width + tx]));
       return;
     }
     case 'copy': {

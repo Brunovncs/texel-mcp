@@ -65,6 +65,8 @@ Every render returns a **review**: `score` (0–100 technical health), `issues` 
 
 It also returns **art checks** (`art.score` 0–100 and one entry per rubric item R2–R7 plus color count) measured from the pixels: face contrast, lightness gaps between parts, light from above, flat or noisy faces, a designed back, overlay depth. Weak checks come with a hint and show up in `next`. They are proxies, good for ranking drafts and choosing what to fix first.
 
+And **craft advice** (`art.advice`): classic pixel-art mistakes found in the texture, each with the faces where it shows and the fix. `pillow-shading` (every edge of a face darker than its middle), `unshifted-shadows` (shadows that keep the lit color's hue, so shading reads gray), `confetti-noise` (texture like static instead of clusters) and `edge-mismatch` (a band or trim that stops at a cube corner instead of wrapping around). Advice never changes a score: a deliberate style can trip it, so fix what you didn't mean.
+
 Then look at it. The score only checks hygiene and the art checks only measure; neither can tell whether the skin matches the brief or looks good. Screenshot `/studio/?view=inspect` (3D angles + flat sheet) or open the `--sheet` PNG and judge it against the rubric:
 
 | # | Check | Pass when |

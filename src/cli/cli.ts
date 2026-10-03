@@ -8,6 +8,7 @@ import {
   diffTextures,
   diffToMarkdown,
   encodePNG,
+  extractPalette,
   expandFamily,
   formatSpec,
   layoutsToMarkdown,
@@ -16,10 +17,15 @@ import {
   PROTOCOL,
   resolveShareLink,
   renderLineup,
+  renderCloseUp,
   renderSheet,
+  resolveParts,
   review,
   reviewToMarkdown,
   shareURL,
+  paletteToMarkdown,
+  referencePalette,
+  REFERENCE_MAX_SIDE,
   textureToSpec,
   withIds,
   type SkinSpec,
@@ -35,7 +41,8 @@ usage:
   node texel.mjs build  <spec.json|-> [-o skin.png] [--sheet sheet.png]
   node texel.mjs review <spec.json|-> [--json]
   node texel.mjs patch  <spec.json|-> <patch.json> [-o patched.json] [--sheet sheet.png]
-  node texel.mjs sheet  <spec.json|-> [-o sheet.png]
+  node texel.mjs sheet  <spec.json|-> [-o sheet.png] [--focus head,arms]
+  node texel.mjs palette <image.png> [--colors 12] [--json]
   node texel.mjs family <family.json|-> [-o out-dir] [--lineup lineup.png]
   node texel.mjs import <texture.png> [-o spec.json] [--layout zombie]
   node texel.mjs diff   <before.json> <after.json>
@@ -51,6 +58,10 @@ live   serves the spec to the studio and re-pushes it on every save, so the user
 share  prints a short link (${SITE_ORIGIN}/s/<id>) that opens the skin in the studio.
 pull   downloads the spec behind a share link (short /s/<id> or long #z= link) to keep editing it.
 layouts lists the texture layouts beyond player skins (mobs, armor, capes, items, blocks) and their parts.
+sheet  --focus draws only the named parts (or groups) from all six sides, large, on gray: for
+       judging a face, a hood or one garment on its own.
+palette reads a reference PNG (concept art, a photo, another skin) and prints its main colors with a
+       role each (shadow, midtone, highlight, neutral, accent) as a ready "palette" and "legend".
 patch  applies a patch ({ "patch": [{ "do": "update", "id": …, "set": … }] }) and reviews the result.
        Without -o the patched spec goes to stdout and the review to stderr.
 
@@ -193,9 +204,33 @@ async function main(argv: string[]) {
     case 'sheet': {
       const result = compile(readSpec(file));
       const out = flag(rest, '-o') ?? 'sheet.png';
-      writeFileSync(out, png(renderSheet(result.texture, result.rig).image));
-      process.stderr.write(`wrote ${out}\n`);
+      const focus = flag(rest, '--focus');
+      if (focus) {
+        const parts = resolveParts(result.rig, focus.split(','));
+        if (!parts.ok) fail(`${parts.error}${parts.hint ? ` (${parts.hint})` : ''}`);
+        writeFileSync(out, png(renderCloseUp(result.texture, result.rig, parts.parts).image));
+        process.stderr.write(`wrote ${out} (${parts.parts.join(', ')}: front | back | right | left | top | bottom)\n`);
+      } else {
+        writeFileSync(out, png(renderSheet(result.texture, result.rig).image));
+        process.stderr.write(`wrote ${out}\n`);
+      }
       process.exit(result.ok ? 0 : 1);
+    }
+    case 'palette': {
+      if (!file) fail('palette needs a PNG file');
+      let image: ReturnType<typeof decodePNG>;
+      try {
+        image = decodePNG(readFileSync(file), (d) => inflateSync(d), { maxSide: REFERENCE_MAX_SIDE });
+      } catch (e) {
+        fail(`${file}: ${(e as Error).message}`);
+      }
+      const colors = flag(rest, '--colors');
+      if (colors !== undefined && !/^\d+$/.test(colors)) fail(`--colors takes a whole number (2–32), not "${colors}"`);
+      const swatches = extractPalette(image, colors === undefined ? {} : { colors: Number(colors) });
+      if (!swatches.length) fail(`${file} has no opaque pixels`);
+      const result = referencePalette(swatches);
+      process.stdout.write(`${rest.includes('--json') ? JSON.stringify(result, null, 2) : paletteToMarkdown(result)}\n`);
+      return;
     }
     case 'family': {
       const family = expandFamily(readSpec(file));

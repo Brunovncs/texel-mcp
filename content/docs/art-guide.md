@@ -98,5 +98,9 @@ The high-level ops are a floor, not a ceiling: they guarantee a readable face, w
 | Arms painted 4 px wide on a slim model | Slim arm fronts are 3 px wide; use `pixels` rows of 3 chars. |
 | Forgetting back and sides | Check `back`, `right` and `left` views in the review. |
 | Black outlines everywhere | Use darker tones of the local color instead. |
+| Every face darker at its edges (pillow shading) | Light comes from above: lighter top rows, darker bottom rows and inner sides (`lighting`). |
+| Shadows that are only darker (gray-looking shading) | Darken with `~` steps (`"cloth~-1"`), which also cool the hue; `:` only changes lightness. |
+| Noise like TV static | Texture in clusters of 2–3 pixels: lower `noise` density or jitter, or use a `material` kind. |
+| A belt or stripe that stops at the corner | Paint bands on every side face (`"body.front+sides"`), or end them a pixel before the edge. |
 | `noise` / `shade` as the last layers | They also hit eyes, collars and buttons. Texture broad areas first, then paint details. |
 | Same value head/body/legs | Vary lightness between parts. |

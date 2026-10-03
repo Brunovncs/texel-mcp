@@ -1,7 +1,8 @@
 import { ART_RUBRIC, ART_WEAK, artReview, type ArtReport } from './art';
 import { resolveColor, rgbToHsl, toHex } from './color';
 import type { CompileResult } from './compile';
-import { type Rig, refName, texel } from './layout';
+import { type Rig, refName } from './layout';
+import { readFaceLayer } from './pixels';
 import type { FaceRef, Image, Issue, RGBA } from './types';
 import { renderView, viewsOf } from './views';
 
@@ -21,7 +22,7 @@ export interface Review {
   /** 0–100 technical health score: validity + in-game hygiene. It does NOT judge artistic quality; look at the render for that. */
   score: number;
   issues: Issue[];
-  /** Art checks (face, silhouette, shading, texture, back, depth, colors): how good it is likely to look. */
+  /** Art checks (face, silhouette, shading, texture, back, depth, colors): how good it is likely to look; plus craft advice. */
   art: ArtReport;
   stats: ReviewStats;
   /** Text renders so non-visual agents can "see" the skin. */
@@ -31,19 +32,10 @@ export interface Review {
 
 const ASCII_POOL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789#$%&*+=?@^~<>/|';
 
-function pixelsOf(tex: Image, ref: FaceRef, rig: Rig) {
-  const r = rig.faceRect(ref.part, ref.face, ref.layer);
-  const out: number[][] = [];
-  for (let y = 0; y < r.h; y++)
-    for (let x = 0; x < r.w; x++) {
-      const [tx, ty] = texel(r, x, y);
-      const i = (ty * tex.width + tx) * 4;
-      out.push([tex.data[i], tex.data[i + 1], tex.data[i + 2], tex.data[i + 3]]);
-    }
-  return out;
-}
+/** Every pixel of one face layer, row by row. */
+const pixelsOf = (tex: Image, ref: FaceRef, rig: Rig) => readFaceLayer(tex, rig, ref).flat();
 
-const key = (p: number[]) => (p[3] === 0 ? 'transparent' : toHex(p as [number, number, number, number]));
+const key = (p: RGBA) => (p[3] === 0 ? 'transparent' : toHex(p));
 
 export function review(result: CompileResult): Review {
   const { texture: tex, model, rig, spec } = result;
@@ -70,7 +62,7 @@ export function review(result: CompileResult): Review {
           if (opaque.length < px.length && !rig.part(part)?.cutout) holes.push(`${refName(ref)} (${px.length - opaque.length}px)`);
           const visible = face !== 'bottom' && (face !== 'top' || part === 'head' || rig.layout !== 'player');
           if (visible && px.length >= 32 && opaque.length === px.length) {
-            const over = rig.hasLayer(part, 'overlay') ? pixelsOf(tex, { part, face, layer: 'overlay' }, rig) : px.map(() => [0, 0, 0, 0]);
+            const over = rig.hasLayer(part, 'overlay') ? pixelsOf(tex, { part, face, layer: 'overlay' }, rig) : px.map((): RGBA => [0, 0, 0, 0]);
             const counts = new Map<string, number>();
             px.forEach((p, i) => {
               const k = key(over[i][3] > 0 ? over[i] : p);
@@ -93,7 +85,7 @@ export function review(result: CompileResult): Review {
     const hx = (head?.at[0] ?? 0) - Math.min(...rig.boxes.map((b) => b.at[0])), hy = (head?.at[1] ?? 0) - Math.min(...rig.boxes.map((b) => b.at[1]));
     for (let y = hy; y < hy + 8; y++) for (let x = hx; x < hx + 8; x++) {
       const i = (y * front.width + x) * 4;
-      faceFront.add(key([...front.data.subarray(i, i + 4)]));
+      faceFront.add(key([...front.data.subarray(i, i + 4)] as RGBA));
     }
   }
   if (character && faceFront.size < 3) add('warning', 'blank-face', 'head.front', 'the face (head.front) uses fewer than 3 colors and will read as blank', 'draw eyes, brows and a mouth with a "pixels" op on head.front');
@@ -140,6 +132,7 @@ export function review(result: CompileResult): Review {
   if (issues.some((i) => i.code === 'flat-surface')) next.push('Add shading: darker bottom rows, lighter top row, and subtle noise.');
   const art = artReview(tex, rig, overlayPixels, colors.size);
   for (const c of art.checks) if (c.score < ART_WEAK) next.push(`${c.rubric} ${c.id} (${c.score}): ${c.hint}.`);
+  for (const a of art.advice) next.push(`${a.code}: ${a.hint}.`);
   next.push('Look at the render (front/back/sides) and compare it to the brief; iterate on the weakest area.');
 
   return {
@@ -244,6 +237,11 @@ export function reviewToMarkdown(r: Review, opts: { includeAscii?: boolean } = {
   const skipped = ART_RUBRIC.filter(([id]) => !r.art.checks.some((c) => c.id === id));
   if (skipped.length) lines.push(`- not measured for this layout: ${skipped.map(([id, rubric]) => `${rubric} ${id}`).join(', ')}`);
   lines.push('- R1 (does it match the brief) is never measured: look at the sheet', '');
+  if (r.art.advice.length) {
+    lines.push('### Craft advice (never changes a score; ignore what is a deliberate style)', '');
+    for (const a of r.art.advice) lines.push(`- \`${a.code}\`: ${a.message}. _${a.hint}_`);
+    lines.push('');
+  }
   if (opts.includeAscii !== false) {
     lines.push('### Text render (front | back, each pixel = 2 chars, "." = transparent; shaded tones shown as their nearest named color)', '```');
     const f = r.ascii.front.split('\n'), b = r.ascii.back ? r.ascii.back.split('\n') : [];

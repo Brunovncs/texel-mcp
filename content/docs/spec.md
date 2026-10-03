@@ -239,7 +239,7 @@ Seeded, deterministic texture. `colors` + `density` (0–1, default 0.2) scatter
 ```
 
 ### shade
-Shift lightness of existing pixels by `amount` (−100…100). The workhorse for depth.
+Shift lightness of existing pixels by `amount` (−100…100), with the hue drift of a `~` step: darker turns slightly cooler, lighter slightly warmer (grays stay gray). The workhorse for depth.
 ```json
 { "op": "shade", "target": "rightLeg.left+back", "amount": -7 }
 ```
@@ -296,7 +296,7 @@ Hair on the whole head, wrapping the top, back and sides, with volume on the ove
 ```
 
 ### lighting
-Light from above and slightly in front, the way the art guide shades by hand: tops lighter, bottom rows and bottoms darker, backs and the inner faces of limbs darker. With no `target` it lights everything except `head.front` (the face, on mobs too). `strength` scales it (default 1, 0–3). Put it after the broad fills and before small details, so buttons and eyes keep their exact colors.
+Light from above and slightly in front, the way the art guide shades by hand: tops lighter, bottom rows and bottoms darker, backs and the inner faces of limbs darker. With no `target` it lights everything except `head.front` (the face, on mobs too). `strength` scales it (default 1, 0–3). Like `shade`, it cools what it darkens and warms what it lights. Put it after the broad fills and before small details, so buttons and eyes keep their exact colors.
 ```json
 { "op": "lighting" }
 ```

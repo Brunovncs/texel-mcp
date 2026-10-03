@@ -784,7 +784,7 @@ const SLIM: Record<string, Partial<PartDef>> = { rightArm: { box: [3, 12, 4] }, 
 const SLIM_BOXES: Record<string, [number, number, number]> = { rightArm: [-7, 0, -2], leftArm: [4, 0, -2] };
 const FLAT_FACES: readonly FaceName[] = ['front'];
 /** A box with no width (a hoglin's mane) is a plane seen from the sides. */
-const SIDE_FACES: readonly FaceName[] = ['right', 'left'];
+const PLANE_FACES: readonly FaceName[] = ['right', 'left'];
 const rigs = new Map<string, Rig>();
 
 export function rigFor(layout: LayoutDef | string = 'player', model: Model = 'classic'): Rig {
@@ -802,7 +802,7 @@ export function rigFor(layout: LayoutDef | string = 'player', model: Model = 'cl
   }
   const boxes = slim ? def.boxes.map((b) => (SLIM_BOXES[b.part] ? { ...b, at: SLIM_BOXES[b.part] } : b)) : def.boxes;
   const names = Object.keys(parts);
-  const faces = (part: PartName) => (parts[part]?.box[2] === 0 ? FLAT_FACES : parts[part]?.box[0] === 0 ? SIDE_FACES : FACES);
+  const faces = (part: PartName) => (parts[part]?.box[2] === 0 ? FLAT_FACES : parts[part]?.box[0] === 0 ? PLANE_FACES : FACES);
   const rig: Rig = {
     layout: def.id,
     model: def.id === 'player' ? model : 'classic',
@@ -896,6 +896,61 @@ function local(r: Rect, tx: number, ty: number): [number, number] | null {
   // m is a signed permutation matrix, so its inverse is its transpose (+ 0 turns −0 into 0).
   const [x, y] = r.m ? [r.m[0] * dx + r.m[2] * dy + 0, r.m[1] * dx + r.m[3] * dy + 0] : [dx, dy];
   return x >= 0 && y >= 0 && x < r.w && y < r.h ? [x, y] : null;
+}
+
+/** A face-local pixel: column, then row. */
+export type FacePixel = readonly [x: number, y: number];
+
+/** Two pixels side by side across an edge: `a` on the edge's first face, `b` on its second. */
+export interface EdgePair {
+  a: FacePixel;
+  b: FacePixel;
+}
+
+/** Two faces of one box that meet at an edge, with the pixels that touch across it. */
+export interface FaceEdge {
+  part: PartName;
+  faces: readonly [FaceName, FaceName];
+  pairs: EdgePair[];
+}
+
+/** The axis each face looks along: x for the sides, y for top and bottom, z for front and back. */
+const NORMAL_AXIS: Record<FaceName, 0 | 1 | 2> = { right: 0, left: 0, top: 1, bottom: 1, front: 2, back: 2 };
+
+/**
+ * The twelve edges of a part's box, in face-local pixels. Works on the box as seen in game, so a
+ * turned part's edges join the faces that meet in game. Flat and zero-width parts have none.
+ */
+export function boxEdges(rig: Rig, part: PartName): FaceEdge[] {
+  const def = rig.part(part);
+  if (!def || rig.faces(part).length !== FACES.length) return [];
+  const box = def.box;
+  const edges = new Map<string, FaceEdge>();
+  for (const a of FACES) {
+    const { w, h } = rig.faceRect(part, a, 'base');
+    const n = NORMAL_AXIS[a];
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const p = facePoint(box, a, x, y);
+        for (const axis of [0, 1, 2] as const) {
+          if (axis === n) continue;
+          for (const bound of [0, box[axis]]) {
+            if (Math.abs(p[axis] - bound) !== 0.5) continue;
+            // The neighbor's center: on the edge's other plane, half a pixel in from this face.
+            const q: Vec3 = [...p];
+            q[axis] = bound;
+            q[n] = p[n] === 0 ? 0.5 : box[n] - 0.5;
+            const [b, bx, by] = pointFace(box, q);
+            if (FACES.indexOf(b) <= FACES.indexOf(a)) continue;
+            const key = `${a}|${b}`;
+            const edge = edges.get(key) ?? { part, faces: [a, b], pairs: [] };
+            edge.pairs.push({ a: [x, y], b: [bx, by] });
+            edges.set(key, edge);
+          }
+        }
+      }
+  }
+  return [...edges.values()];
 }
 
 function boxFace(u: number, v: number, [w, h, d]: [number, number, number], face: FaceName): Rect {

@@ -75,6 +75,8 @@ node texel.mjs review spec.json                 # markdown + text render
 node texel.mjs review spec.json --json          # machine-readable
 node texel.mjs patch spec.json fix.json -o spec.json --sheet sheet.png   # apply a patch, print the review
 node texel.mjs sheet spec.json -o sheet.png     # review sheet only
+node texel.mjs sheet spec.json -o head.png --focus head   # close-up: some parts alone, all six sides
+node texel.mjs palette reference.png --colors 12   # palette and legend from a reference PNG
 node texel.mjs live spec.json --open            # live session (see below)
 node texel.mjs share spec.json                  # short share link
 node texel.mjs pull <link> -o spec.json         # spec behind a share link
@@ -85,9 +87,9 @@ node texel.mjs format spec.json                 # canonical formatting
 cat spec.json | node texel.mjs build - -o skin.png
 ```
 
-Exit code `1` means the spec has errors. `patch` takes a [patch](/docs/spec.md#patches) file; without `-o` it prints the patched spec to stdout and the review to stderr. `-` reads the spec from stdin. Open `sheet.png` to look at the result (front | back | right | left | texture).
+Exit code `1` means the spec has errors. `patch` takes a [patch](/docs/spec.md#patches) file; without `-o` it prints the patched spec to stdout and the review to stderr. `-` reads the spec from stdin. Open `sheet.png` to look at the result (front | back | right | left | texture). `--focus` takes part or group names (`head`, `arms`, `body+legs`) and draws them alone on gray, from the front, back, sides, top and bottom; top and bottom read like face-local coordinates (back at the top). `palette` reads PNGs up to 2048×2048 and gives each color a role: `shadow`, `midtone`, `highlight`, `neutral` or `accent` (small, vivid, of a hue no larger color has).
 
-A DOM-free ES module with the compiler is also published at `/texel-core.mjs` (`compile`, `review`, `renderSheet`, `encodePNG`, `formatSpec`, …).
+A DOM-free ES module with the compiler is also published at `/texel-core.mjs` (`compile`, `review`, `renderSheet`, `renderCloseUp`, `extractPalette`, `referencePalette`, `encodePNG`, `formatSpec`, …).
 
 ## 5. Live sessions
 

@@ -59,6 +59,25 @@ export function shiftLightness(c: RGBA, pct: number): RGBA {
   return hslToRgb(h, s, Math.min(1, Math.max(0, l + pct / 100)), c[3]);
 }
 
+/** Hue a painter's ramp drifts toward, as a fraction of a turn: lighter tones toward yellow, darker toward blue. */
+export const WARM_HUE = 60 / 360;
+export const COOL_HUE = 230 / 360;
+/** HSL lightness points in one tone step (`~1`). */
+const TONE_STEP_POINTS = 9;
+/** Hue drift of one tone step, as a fraction of a turn (about 4°). */
+const HUE_DRIFT_PER_STEP = 0.012;
+/** Below this HSL saturation a color is a gray, and keeps its hue. */
+const GRAY_SATURATION = 0.06;
+
+/** `h` moved toward the warm or cool target by `amount` (fractions of a turn), never past it. Grays keep their hue. */
+function driftHue(h: number, s: number, lighter: boolean, amount: number): number {
+  if (s < GRAY_SATURATION) return h;
+  let d = (lighter ? WARM_HUE : COOL_HUE) - h;
+  if (d > 0.5) d -= 1;
+  if (d < -0.5) d += 1;
+  return (h + Math.sign(d) * Math.min(Math.abs(d), amount) + 1) % 1;
+}
+
 /**
  * One step along a pixel-art tone ramp (-4..4). Lighter steps warm toward yellow and lose a little
  * saturation; darker steps cool toward blue and gain some, which reads richer than plain lightness.
@@ -66,17 +85,19 @@ export function shiftLightness(c: RGBA, pct: number): RGBA {
 export function tone(c: RGBA, step: number): RGBA {
   if (step === 0 || c[3] === 0) return c;
   const [h, s, l] = rgbToHsl(c);
-  let hue = h;
-  if (s >= 0.06) {
-    const target = step > 0 ? 60 / 360 : 230 / 360;
-    let d = target - h;
-    if (d > 0.5) d -= 1;
-    if (d < -0.5) d += 1;
-    const move = Math.min(Math.abs(d), Math.abs(step) * 0.012);
-    hue = (h + Math.sign(d) * move + 1) % 1;
-  }
+  const hue = driftHue(h, s, step > 0, Math.abs(step) * HUE_DRIFT_PER_STEP);
   const sat = step < 0 ? Math.min(1, s + 0.04 * -step) : Math.max(0, s - 0.02 * step);
-  return hslToRgb(hue, sat, Math.min(1, Math.max(0, l + step * 0.09)), c[3]);
+  return hslToRgb(hue, sat, Math.min(1, Math.max(0, l + step * (TONE_STEP_POINTS / 100))), c[3]);
+}
+
+/**
+ * Lightness shift by `pct` points with the hue drift of a tone ramp (shadows cooler, light warmer),
+ * for shading that should read like painted light rather than a gray overlay. Saturation is kept.
+ */
+export function shiftTone(c: RGBA, pct: number): RGBA {
+  if (pct === 0 || c[3] === 0) return c;
+  const [h, s, l] = rgbToHsl(c);
+  return hslToRgb(driftHue(h, s, pct > 0, (Math.abs(pct) * HUE_DRIFT_PER_STEP) / TONE_STEP_POINTS), s, Math.min(1, Math.max(0, l + pct / 100)), c[3]);
 }
 
 export function mix(a: RGBA, b: RGBA, t: number): RGBA {
@@ -89,6 +110,39 @@ export function luminance([r, g, b]: RGBA): number {
     return n <= 0.03928 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4;
   };
   return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+}
+
+/** CIE L*a*b* coordinates: perceptual lightness 0–100, then the green–red and blue–yellow axes. */
+export type Lab = [l: number, a: number, b: number];
+
+/** Perceptual lightness (CIE L*), 0–100. Not HSL lightness, which `:` shifts and `shiftLightness` uses. */
+export function perceptualLightness(c: RGBA): number {
+  const y = luminance(c);
+  return y > 0.008856 ? 116 * Math.cbrt(y) - 16 : 903.3 * y;
+}
+
+/** CIE L*a*b* (D65) of an sRGB color. */
+export function toLab([r, g, b]: RGBA): Lab {
+  const lin = (v: number) => {
+    const n = v / 255;
+    return n <= 0.03928 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4;
+  };
+  const [rl, gl, bl] = [lin(r), lin(g), lin(b)];
+  const f = (t: number) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  const fx = f((0.4124 * rl + 0.3576 * gl + 0.1805 * bl) / 0.95047);
+  const fy = f(0.2126 * rl + 0.7152 * gl + 0.0722 * bl);
+  const fz = f((0.0193 * rl + 0.1192 * gl + 0.9505 * bl) / 1.08883);
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+
+/** Perceptual color distance (CIE76 ΔE): about 2 is barely visible, above 10 reads as another color. */
+export function deltaE(a: RGBA, b: RGBA): number {
+  return labDistance(toLab(a), toLab(b));
+}
+
+/** ΔE between two colors already in Lab. */
+export function labDistance([l1, a1, b1]: Lab, [l2, a2, b2]: Lab): number {
+  return Math.hypot(l1 - l2, a1 - a2, b1 - b2);
 }
 
 /** `guessed` explains how a near-miss expression was read, e.g. "armor-1" as "armor~-1". */

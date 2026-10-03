@@ -14,6 +14,17 @@ export function partGroups(rig: Rig): Record<string, readonly PartName[]> {
   return g;
 }
 
+export type PartsResult = { ok: true; parts: PartName[] } | { ok: false; error: string; hint?: string };
+
+/** Parts named by part or group names ("head", "arms", "head+legs"), in layout order. Same names and hints as selectors. */
+export function resolveParts(rig: Rig, names: readonly string[]): PartsResult {
+  const text = names.flatMap((n) => n.split('+')).map((n) => n.trim()).filter(Boolean).join('+');
+  if (!text) return { ok: false, error: 'name at least one part, e.g. "head" or "arms"' };
+  const r = expand(text, partGroups(rig), 'part', rig);
+  if (!r.ok) return r;
+  return { ok: true, parts: rig.parts.filter((p) => r.values.includes(p)) };
+}
+
 export const FACE_GROUPS: Record<string, readonly FaceName[]> = {
   all: FACES,
   '*': FACES,

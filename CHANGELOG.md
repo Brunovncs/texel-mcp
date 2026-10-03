@@ -2,6 +2,10 @@
 
 Each release's section is published as `notes` in `/version.json`, and installed tools show it in their update notice, so the agent knows what changed and whether to redo anything. Keep it to one or two lines (under 600 characters, where installed copies cut it), and say whether specs still render the same PNGs. A test fails when the current version has no section.
 
+## 0.7.0
+
+Every review now has craft advice (`art.advice`): pillow shading, shadows that only get darker, static-like noise and bands that stop at a cube corner, with the faces and the fix; it never changes a score. `sheet --focus head` and `focus` on texel_render show some parts alone from six sides. New `palette` command and `texel_palette` tool: a reference PNG's colors as a palette. `lighting` and `shade` now cool shadows and warm lights like `~` steps, so specs using them render slightly different colors.
+
 ## 0.6.0
 
 New layouts: `cold_chicken` (crest and tail fin), `cat` (every cat, the ocelot and the collar; its tail lies back like the body), `iron_golem` (128×128) and `witch` (64×128, the four-step hat and the mole). The review no longer calls a chicken's thin legs holes: parts cut by transparency (legs, crest, fin) are skipped by the opacity check. Specs for the existing layouts render the same PNGs.
