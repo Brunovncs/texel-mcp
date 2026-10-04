@@ -1,4 +1,4 @@
-import type { Issue, Op, SkinSpec } from './types';
+import type { Issue, Op, SkinSpec } from './types.js';
 
 /**
  * Patches: change a spec by layer id instead of rewriting it. A model fixing or editing a skin

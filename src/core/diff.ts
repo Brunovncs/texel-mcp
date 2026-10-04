@@ -1,5 +1,5 @@
-import { type Rig, refName, rigFor, texel } from './layout';
-import type { Image, Model } from './types';
+import { type Rig, refName, rigFor, texel } from './layout.js';
+import type { Image, Model } from './types.js';
 
 export interface FaceChange {
   face: string;

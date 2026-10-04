@@ -1,5 +1,5 @@
-import { labDistance, perceptualLightness, rgbToHsl, toHex, toLab, type Lab } from './color';
-import type { Image, RGBA } from './types';
+import { labDistance, perceptualLightness, rgbToHsl, toHex, toLab, type Lab } from './color.js';
+import type { Image, RGBA } from './types.js';
 
 /**
  * Palette extraction from a reference image (concept art, a photo of a figure, an existing skin):

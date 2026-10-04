@@ -140,7 +140,7 @@ The CLI lists the same table with `node texel.mjs layouts`, and `node texel.mjs 
 | faces | `top` `bottom` `right` `front` `left` `back` · groups: `sides` (the four vertical faces, **front included**: `head.sides@overlay` covers the face), `all` (default) |
 | layer | `base` (default), `overlay`, `both` |
 
-Join alternatives with `+`: `"head.top+back"`, `"arms+legs.sides"`. An array of selectors is a union. Whole selectors joined with `+` are read as a union too: `"body.sides+arms.sides"` is `["body.sides", "arms.sides"]`, and a layer on the last one (`"head.right+head.back@overlay"`) applies to all of them.
+Join alternatives with `+`: `"head.top+back"`, `"arms+legs.sides"`. An array of selectors is a union. Whole selectors joined with `+` are read as a union too: `"body.sides+arms.sides"` is `["body.sides", "arms.sides"]`, and `"head.front+body"` is the face plus the whole body. A layer on the last one (`"head.right+head.back@overlay"`) applies to all of them; a layer on an earlier one only is ambiguous and an error, so write it on each or use an array.
 
 Examples: `"all"` · `"head.front"` · `"legs.sides"` · `"body.front+back@overlay"` · `"arms.top@both"`.
 

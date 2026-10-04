@@ -1,5 +1,5 @@
-import { suggestHint } from './color';
-import type { ColorExpr, Issue, Model, Op, SkinSpec } from './types';
+import { suggestHint } from './color.js';
+import type { ColorExpr, Issue, Model, Op, SkinSpec } from './types.js';
 
 /** A change applied to the family's base spec to produce one member. */
 export interface VariantPatch {

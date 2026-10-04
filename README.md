@@ -11,7 +11,7 @@ It covers player skins (classic and slim) and, through layouts, 25 other texture
 zombies, skeletons, creepers, pigs, wolves and iron golems, armor layers, capes with elytra, and
 16 × 16 items and blocks, all in the Java Edition 1.21 texture layouts.
 
-Texel is open source (MIT) and in development, at version 0.7.0. The format is versioned (`version: 1`)
+Texel is open source (MIT) and in development, at version 0.8.0. The format is versioned (`version: 1`)
 but may still change between minor releases. Treat everything as a beta. The site
 [texel.dev.br](https://www.texel.dev.br) is built on this toolchain.
 
@@ -169,11 +169,11 @@ MCP App and 4 prompts (`design_skin`, `continue_skin`, `design_family`, `critiqu
 
 | Tool | What it does |
 |---|---|
-| `texel_render` | Compile and review a spec; returns the review, the sheet image, optionally a close-up of some parts and the texture. |
-| `texel_patch` | Apply a patch by layer id and render the result. |
+| `texel_render` | Compile and review a spec (inline, or a workspace `file`); returns the review, the sheet image, optionally a close-up of some parts and the texture. |
+| `texel_patch` | Apply a patch by layer id and render the result. Given a workspace `file`, it edits the file in place and returns only the review, so the spec isn't resent on every iteration. |
 | `texel_validate` | Errors and warnings only, no images. |
 | `texel_save` | Write the PNG, the `.skin.json` source and optionally the sheet to the workspace. |
-| `texel_live` | Start a live session: a page on texel.dev.br that shows every render as it happens. |
+| `texel_live` | Start a live session: a page served on 127.0.0.1 that shows every render as it happens (the texel.dev.br studio can follow it too, for editing). |
 | `texel_share` | Store the spec on texel.dev.br and return a short link; falls back to a long self-contained link offline. |
 | `texel_pull` | Load the spec behind a share link, to keep working on it. |
 | `texel_render_family` | Expand a family and return a lineup image and a score per member. |
@@ -251,7 +251,7 @@ examples that were compared (explorer, knight, creeper, ember-blade). All of thi
 Windows machine; the CI workflow runs the same test suite on Linux, but identical bytes across
 operating systems have not been compared directly.
 
-Other counts at version 0.7.0: 13 example specs and 1 example family (6 members), 26 layouts plus
+Other counts at version 0.7.0 (0.8.0 adds no layouts or operations): 13 example specs and 1 example family (6 members), 26 layouts plus
 25 aliases (`husk`, `stray`, `elytra`, `zombified_piglin`, `mooshroom` and others), 17 operations,
 and 113 tests in 10 files.
 
@@ -270,10 +270,10 @@ and 113 tests in 10 files.
   cast of different characters.
 - The art score and the craft advice are heuristics. They have not been validated against human
   judgment, and they say nothing about whether the texture matches the brief. How good a texture looks depends mostly on the agent writing the spec.
-- `texel_share`, `texel_pull`, the short links and live sessions need texel.dev.br: share links
-  are stored there, and the live page is served from there (it reads the spec from a local server
-  on 127.0.0.1). Long `#z=` links work without the site's storage. `TEXEL_SITE` points all of this
-  at another origin.
+- `texel_share`, `texel_pull` and the short links need texel.dev.br: share links are stored there.
+  Long `#z=` links work without the site's storage. Live sessions don't: the local server serves
+  its own page, and the site's studio is only needed to edit a session. `TEXEL_SITE` points all of
+  this at another origin.
 - Once a day the CLI and the server ask texel.dev.br for `version.json` to tell the agent about a
   newer release. The request waits at most 1.5 s, carries no data about the user or the
   specs, and is skipped when `TEXEL_NO_UPDATE_CHECK=1` or `CI` is set.

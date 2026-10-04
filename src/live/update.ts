@@ -118,6 +118,13 @@ export function installedByNpm(file: string | undefined): boolean {
  * comes with a finished result, so it says that result stands and the update is for the next call.
  */
 export function updateNotice(u: Update, tool: 'cli' | 'mcp', file = process.argv[1]): string {
+  // A copy installed by a Claude Code plugin lives in the plugin cache: the plugin updates it, skill included.
+  if (file && /[\\/]\.claude[\\/]plugins[\\/]/.test(file))
+    return [
+      `Texel ${u.version} is available (this ${tool === 'cli' ? 'texel.mjs' : 'MCP server'} is ${u.current}). This ${tool === 'cli' ? 'run' : 'tool call'} completed normally. It came with the Texel Claude Code plugin: ask the user to update the plugin (/plugin in Claude Code) and restart, then tell them what changed:`,
+      ...(u.notes ? [`What changed: ${u.notes}`] : []),
+      'Set TEXEL_NO_UPDATE_CHECK=1 to turn this check off.',
+    ].join('\n');
   const npm = installedByNpm(file);
   const self = npm
     ? tool === 'cli'

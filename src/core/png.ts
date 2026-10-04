@@ -1,4 +1,4 @@
-import type { Image } from './types';
+import type { Image } from './types.js';
 
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);

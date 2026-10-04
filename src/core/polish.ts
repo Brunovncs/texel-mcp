@@ -1,9 +1,9 @@
-import { ART_WEAK } from './art';
-import { toHex } from './color';
-import { compile, type CompileResult } from './compile';
-import { texel } from './layout';
-import { review } from './review';
-import type { FaceName, Op, PartName, SkinSpec } from './types';
+import { ART_WEAK } from './art.js';
+import { toHex } from './color.js';
+import { compile, type CompileResult } from './compile.js';
+import { texel } from './layout.js';
+import { review } from './review.js';
+import type { FaceName, Op, PartName, SkinSpec } from './types.js';
 
 /**
  * Deterministic fixes for what the review can see, at no model cost: cover transparent base pixels,

@@ -90,6 +90,19 @@ describe('mcp texel_patch', () => {
       expect(out.ok).toBe(true);
       const bad = await send('tools/call', { name: 'texel_patch', arguments: { spec, patch: { layers: [] } } });
       expect(bad.result?.isError).toBe(true);
+
+      // A workspace file instead of an inline spec: patched in place, the reply carries no spec.
+      writeFileSync(join(dir, 'knight.json'), JSON.stringify(spec));
+      const onFile = await send('tools/call', { name: 'texel_patch', arguments: { file: 'knight.json', patch, include: [] } });
+      const fileOut = onFile.result?.structuredContent as { file?: string; spec?: unknown; applied: number };
+      expect(onFile.result?.isError).toBeFalsy();
+      expect(fileOut).toMatchObject({ file: 'knight.json', applied: 1 });
+      expect(fileOut.spec).toBeUndefined();
+      expect(JSON.parse(readFileSync(join(dir, 'knight.json'), 'utf8')).layers[1].color).toBe('#aa3333');
+      const rendered = await send('tools/call', { name: 'texel_render', arguments: { file: 'knight.json', include: [] } });
+      expect(rendered.result?.isError).toBeFalsy();
+      const both = await send('tools/call', { name: 'texel_render', arguments: { spec, file: 'knight.json' } });
+      expect(both.result?.isError).toBe(true);
     } finally {
       child.kill();
     }

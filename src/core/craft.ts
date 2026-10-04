@@ -1,9 +1,9 @@
-import { COOL_HUE, deltaE, perceptualLightness, rgbToHsl } from './color';
-import { boxEdges, FACES, type FaceEdge, type Rig } from './layout';
-import { createFaceReader, type FacePixels, type FaceReader } from './pixels';
-import { FACE_GROUPS } from './selector';
-import { mean, stdDev } from './stats';
-import type { FaceName, Image, PartFace, PartName, RGBA } from './types';
+import { COOL_HUE, deltaE, perceptualLightness, rgbToHsl } from './color.js';
+import { boxEdges, FACES, type FaceEdge, type Rig } from './layout.js';
+import { createFaceReader, type FacePixels, type FaceReader } from './pixels.js';
+import { FACE_GROUPS } from './selector.js';
+import { mean, stdDev } from './stats.js';
+import type { FaceName, Image, PartFace, PartName, RGBA } from './types.js';
 
 /**
  * Craft advice: detectors for classic pixel-art mistakes (pillow shading, shadows that only get

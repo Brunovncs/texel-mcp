@@ -1,8 +1,8 @@
-import { mix, resolveColor, shiftLightness, shiftTone, suggestHint, TRANSPARENT } from './color';
-import { applyLighting, applyMaterial, BEARDS, drawFace, drawHair, EYE_STYLES, FRINGES, HAIR_STYLES, MATERIAL_ALIASES, MATERIALS, MOUTHS, REGIONS, type Material, type Surface } from './components';
-import { boxSize, LAYOUT_IDS, resolveLayout, type Rig, rigFor, texel } from './layout';
-import { parseSelector } from './selector';
-import type { FaceName, FaceRef, Image, Issue, LayerName, Model, PartName, Rect, RGBA, SkinSpec } from './types';
+import { mix, resolveColor, shiftLightness, shiftTone, suggestHint, TRANSPARENT } from './color.js';
+import { applyLighting, applyMaterial, BEARDS, drawFace, drawHair, EYE_STYLES, FRINGES, HAIR_STYLES, MATERIAL_ALIASES, MATERIALS, MOUTHS, REGIONS, type Material, type Surface } from './components.js';
+import { boxSize, LAYOUT_IDS, resolveLayout, type Rig, rigFor, texel } from './layout.js';
+import { parseSelector } from './selector.js';
+import type { FaceName, FaceRef, Image, Issue, LayerName, Model, PartName, Rect, RGBA, SkinSpec } from './types.js';
 
 export const OP_KEYS: Record<string, { required: string[]; optional: string[] }> = {
   fill: { required: ['target', 'color'], optional: ['x', 'y', 'w', 'h', 'region'] },

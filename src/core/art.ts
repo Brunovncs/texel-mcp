@@ -1,10 +1,10 @@
-import { perceptualLightness, toHex } from './color';
-import { craftAdvice, type CraftAdvice } from './craft';
-import { type Rig, rigFor } from './layout';
-import { createFaceReader, type FacePixels } from './pixels';
-import { FACE_GROUPS } from './selector';
-import { mean } from './stats';
-import type { FaceName, Image, Model, PartName, RGBA } from './types';
+import { perceptualLightness, toHex } from './color.js';
+import { craftAdvice, type CraftAdvice } from './craft.js';
+import { type Rig, rigFor } from './layout.js';
+import { createFaceReader, type FacePixels } from './pixels.js';
+import { FACE_GROUPS } from './selector.js';
+import { mean } from './stats.js';
+import type { FaceName, Image, Model, PartName, RGBA } from './types.js';
 
 /**
  * Art checks: rough, deterministic proxies for the rubric items that pixels can answer (R2–R7 plus

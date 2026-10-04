@@ -1,5 +1,5 @@
-import { type BoxDef, type Rig, rigFor, texel } from './layout';
-import type { FaceName, Image, Model, PartName } from './types';
+import { type BoxDef, type Rig, rigFor, texel } from './layout.js';
+import type { FaceName, Image, Model, PartName } from './types.js';
 
 export type ViewName = 'front' | 'back' | 'right' | 'left' | 'top' | 'bottom';
 /** The four views from the sides, the ones every volume has. */

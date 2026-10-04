@@ -33,29 +33,17 @@ import {
 import { openBrowser, startLive } from '../live/server';
 import { SITE_ORIGIN } from '../live/site';
 import { checkForUpdate, TEXEL_VERSION, updateNotice } from '../live/update';
+import { usageLines } from './usage';
 
 const HELP = `texel ${TEXEL_VERSION}: compile Texel skin specs (${PROTOCOL}) into Minecraft skins
 
 usage:
-  node texel.mjs live   <spec.json> [--port 4747] [--open]
-  node texel.mjs build  <spec.json|-> [-o skin.png] [--sheet sheet.png]
-  node texel.mjs review <spec.json|-> [--json]
-  node texel.mjs patch  <spec.json|-> <patch.json> [-o patched.json] [--sheet sheet.png]
-  node texel.mjs sheet  <spec.json|-> [-o sheet.png] [--focus head,arms]
-  node texel.mjs palette <image.png> [--colors 12] [--json]
-  node texel.mjs family <family.json|-> [-o out-dir] [--lineup lineup.png]
-  node texel.mjs import <texture.png> [-o spec.json] [--layout zombie]
-  node texel.mjs diff   <before.json> <after.json>
-  node texel.mjs share  <spec.json|-> [--long]
-  node texel.mjs pull   <link|id> [-o skin.json]
-  node texel.mjs format <spec.json|->
-  node texel.mjs layouts
-  node texel.mjs init   [--layout player|zombie|skeleton|creeper|cape|item|…]
-  node texel.mjs --version
+${usageLines().join('\n')}
 
-live   serves the spec to the studio and re-pushes it on every save, so the user can watch while
-       you work. Run it in the background, give the user the printed URL, then just edit the file.
-share  prints a short link (${SITE_ORIGIN}/s/<id>) that opens the skin in the studio.
+live   serves a preview page on this machine and re-pushes the spec on every save, so the user can
+       watch while you work. Run it in the background, give the user the printed URL, then just edit
+       the file. The site's studio can follow the session too, for editing.
+share  prints a short link (${SITE_ORIGIN}/s/<id>): the skin in 3D with a download and an edit button.
 pull   downloads the spec behind a share link (short /s/<id> or long #z= link) to keep editing it.
 layouts lists the texture layouts beyond player skins (mobs, armor, capes, items, blocks) and their parts.
 sheet  --focus draws only the named parts (or groups) from all six sides, large, on gray: for
@@ -123,7 +111,7 @@ async function live(file: string, args: string[]) {
     }
   };
   const session = await startLive({ site: SITE_ORIGIN, port: Number(flag(args, '--port') ?? 4747), initial: read() ?? undefined });
-  process.stdout.write(`Live session for ${file}\nOpen (and share with the user): ${session.url}\nEvery save of the file is pushed to the studio. Ctrl+C to stop.\n`);
+  process.stdout.write(`Live session for ${file}\nOpen (and share with the user): ${session.url}\nTo edit it in the studio instead: ${session.studioUrl}\nEvery save of the file is pushed to both. Ctrl+C to stop.\n`);
   if (!existsSync(file)) process.stdout.write(`waiting for ${file} to be created…\n`);
   if (args.includes('--open')) openBrowser(session.url);
   let last = '';

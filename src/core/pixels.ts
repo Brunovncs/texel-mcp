@@ -1,5 +1,5 @@
-import { type Rig, texel } from './layout';
-import type { FaceRef, Image, PartFace, RGBA } from './types';
+import { type Rig, texel } from './layout.js';
+import type { FaceRef, Image, PartFace, RGBA } from './types.js';
 
 /**
  * Reading a texture face by face. Rows and columns are face-local (row 0 at the top of the face as

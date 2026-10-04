@@ -4,17 +4,21 @@ import type { AddressInfo } from 'node:net';
 import { isSiteOrigin } from '../core/share';
 
 /**
- * Live session: a tiny local HTTP server the studio follows over SSE (`/studio/?live=<port>`).
- * The agent keeps working however it likes (editing a file, calling MCP tools); every new spec is
- * pushed to open studio tabs so the person can watch the skin change while they talk to the agent.
- * Binds to 127.0.0.1 only and serves nothing but the current spec, and only to the site and local
- * pages: other origins and non-loopback Host headers (DNS rebinding) are refused.
+ * Live session: a tiny local HTTP server that serves its own preview page at `/` and pushes every
+ * new spec over SSE (`/events`). The agent keeps working however it likes (editing a file, calling
+ * MCP tools) and the person watches the skin change while they talk to the agent. The page is
+ * same-origin with the stream, so no browser blocks it, and it renders with the agent's compiler.
+ * The site's studio can follow the session too (`/studio/?live=<port>`) for editing. Binds to
+ * 127.0.0.1 only and serves nothing but the current spec, and only to the site and local pages:
+ * other origins and non-loopback Host headers (DNS rebinding) are refused.
  */
 
 export interface LiveSession {
   port: number;
-  /** Studio URL that follows this session. */
+  /** The session's own preview page, on this machine. */
   url: string;
+  /** The site's studio following this session, for editing. */
+  studioUrl: string;
   push(spec: string): void;
   clients(): number;
   close(): Promise<void>;
@@ -74,6 +78,7 @@ export async function startLive(opts: { site: string; port?: number; initial?: s
       return;
     }
     if (path === '/spec') return res.writeHead(current ? 200 : 204, { ...cors, 'Content-Type': 'application/json' }).end(current);
+    if (path === '/' && req.method === 'GET') return res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }).end(livePage(opts.site, port));
     res.writeHead(404, cors).end();
   });
   const heartbeat = setInterval(() => {
@@ -86,7 +91,8 @@ export async function startLive(opts: { site: string; port?: number; initial?: s
   server.unref();
   return {
     port,
-    url: `${opts.site}/studio/?live=${port}`,
+    url: `http://127.0.0.1:${port}/`,
+    studioUrl: `${opts.site}/studio/?live=${port}`,
     push(spec) {
       if (spec === current) return;
       current = spec;
@@ -101,6 +107,13 @@ export async function startLive(opts: { site: string; port?: number; initial?: s
         server.close(() => resolve());
       }),
   };
+}
+
+/** The preview page, or (in an unbundled dev run, where it isn't injected) a pointer to the studio. */
+function livePage(site: string, port: number): string {
+  if (typeof __TEXEL_LIVE_HTML__ === 'string') return __TEXEL_LIVE_HTML__.replace('__TEXEL_SITE__', site.replace(/"/g, '&quot;'));
+  const studio = `${site}/studio/?live=${port}`;
+  return `<!doctype html><meta charset="utf-8"><title>Texel live</title><p>This build has no preview page. Follow the session in the studio: <a href="${studio}">${studio}</a></p>`;
 }
 
 /**

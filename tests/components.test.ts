@@ -191,6 +191,13 @@ describe('selectors and legends models write', () => {
     expect(parseSelector('hed.front+body.front').ok).toBe(false);
   });
 
+  it('reads a part after a face as a new piece, and refuses a layer on an earlier piece only', () => {
+    const r = parseSelector('head.front+body');
+    expect(r.ok && r.refs.map((x) => `${x.part}.${x.face}`)).toEqual(['head.front', 'body.top', 'body.bottom', 'body.right', 'body.front', 'body.left', 'body.back']);
+    expect(parseSelector('arms.front@overlay+legs.front')).toMatchObject({ ok: false, hint: expect.stringContaining('["arms.front@overlay","legs.front"]') });
+    expect(parseSelector('arms.front@overlay+legs.front@base').ok).toBe(true);
+  });
+
   it('ignores a reserved legend character instead of dropping the layer', () => {
     const spec = base([{ op: 'fill', target: 'all', color: '#888888' }, { op: 'pixels', target: 'head.front', y: 4, rows: ['.E....E.'], legend: { '.': '#ffffff', E: '#2244aa' } }]);
     expect(codes(spec)).toContain('legend-reserved');

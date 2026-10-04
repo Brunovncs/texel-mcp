@@ -1,4 +1,4 @@
-import type { FaceName, FaceRef, LayerName, Model, PartName, Rect } from './types';
+import type { FaceName, FaceRef, LayerName, Model, PartName, Rect } from './types.js';
 
 export const SKIN_SIZE = 64;
 export const FACES: readonly FaceName[] = ['top', 'bottom', 'right', 'front', 'left', 'back'];

@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { specSchema } from '../src/core/schema';
 import { bundleCli, bundleMcpWithMeta, rootDir, thirdPartyNotices } from './bundles';
 
 /**
@@ -21,4 +22,6 @@ if (process.argv.includes('--plugin')) {
 } else {
   out('dist/texel-mcp.mjs', (await bundleMcpWithMeta({ standalone: false })).text);
   out('dist/texel.mjs', await bundleCli());
+  // The published schema: hand-written ops (content/schema) plus the layouts from the registry.
+  out('schema/skinspec.v1.json', `${JSON.stringify(specSchema(), null, 2)}\n`);
 }

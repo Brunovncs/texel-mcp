@@ -57,7 +57,11 @@ describe('live session', () => {
   it('streams the current spec and every push to studio clients', async () => {
     const live = await startLive({ site: 'https://example.test', port: 47470, initial: '{"version":1,"layers":[]}' });
     try {
-      expect(live.url).toBe(`https://example.test/studio/?live=${live.port}`);
+      expect(live.url).toBe(`http://127.0.0.1:${live.port}/`);
+      expect(live.studioUrl).toBe(`https://example.test/studio/?live=${live.port}`);
+      const page = await fetch(live.url);
+      expect(page.headers.get('content-type')).toContain('text/html');
+      expect(await page.text()).toContain(live.studioUrl);
       const res = await fetch(`http://127.0.0.1:${live.port}/events`, { headers: { Origin: 'https://www.example.test' } });
       expect(res.headers.get('access-control-allow-origin')).toBe('https://www.example.test');
       const reader = res.body!.getReader();
@@ -81,7 +85,7 @@ describe('live session', () => {
     const second = await startLive({ site: 'https://example.test', port: 47480, initial: '{"version":1,"name":"Second","layers":[]}' });
     try {
       expect(second.port).not.toBe(first.port);
-      expect(second.url).toBe(`https://example.test/studio/?live=${second.port}`);
+      expect(second.studioUrl).toBe(`https://example.test/studio/?live=${second.port}`);
       const res = await fetch(`http://127.0.0.1:${second.port}/spec`, { headers: { Origin: 'https://example.test' } });
       expect(JSON.parse(await res.text()).name).toBe('Second');
     } finally {

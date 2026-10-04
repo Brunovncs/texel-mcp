@@ -48,6 +48,7 @@ export const TEXTURE_META_KEY = 'texel/texture';
 
 const INSTRUCTIONS = `Texel compiles Minecraft skin specs (JSON: palette + ordered drawing ops) into PNGs: 64×64 player skins by default, and with "layout" also mobs (zombies, skeletons, creepers, pigs, cows, wolves, cats, iron golems…), armor, capes/elytra, items and blocks (texel://docs/spec, section "Layouts"). Protocol ${PROTOCOL}.
 Workflow: read the "spec" docs (texel_read_docs or resource texel://docs/spec), draft a spec, call texel_render, look at the returned review sheet image and the issues, fix the weakest area (texel_patch changes a few layers by id), render again, then texel_save and texel_share. To judge one area up close, pass focus (e.g. ["head"]) to texel_render; to match a reference image, start the palette with texel_palette.
+Keep the spec in a workspace file and pass "file" instead of "spec" to texel_render, texel_patch and texel_validate: texel_patch then edits the file in place and replies with only the review, so the spec isn't resent on every iteration.
 When a person is waiting on the result, call texel_live first and give them the URL: every texel_render then appears in their open studio tab, so they can watch and steer while you work.
 For many related skins (teams, factions, tiers), write a family (kind: "family") and use texel_render_family / texel_save_family.
 The score only measures technical hygiene; judge appearance from the sheet image against the brief.`;
@@ -55,6 +56,11 @@ The score only measures technical hygiene; judge appearance from the sheet image
 const specInput = z
   .union([z.string(), z.record(z.string(), z.unknown())])
   .describe('A Texel skin spec (version 1) as a JSON object or JSON text. Format: texel://docs/spec, schema: texel://schema/skinspec.v1');
+const fileInput = z
+  .string()
+  .min(1)
+  .optional()
+  .describe('Instead of "spec": a .json spec file in the workspace, e.g. "skins/knight.json". Saves resending the whole spec on every call; texel_patch then edits the file in place.');
 const patchInput = z
   .union([z.string(), z.record(z.string(), z.unknown())])
   .describe('A patch ({ patch: [{ do: "update", id, set }, …] }) as a JSON object or JSON text. Format: texel://docs/spec, section "Patches".');
@@ -129,6 +135,17 @@ export function createTexelServer(workspace = new Workspace(), update?: Promise<
       return { ...result, content: [...result.content, textBlock(text)] };
     }) as never)) as typeof server.registerTool;
 
+  /** The spec a tool works on: inline, or a workspace file (whose path comes back for writing). */
+  const specSource = (spec: unknown, file: string | undefined): { text: string; path?: string } | { error: string } => {
+    if ((spec === undefined) === (file === undefined)) return { error: 'Pass either "spec" (the spec itself) or "file" (a spec file in the workspace), not both.' };
+    if (file === undefined) return { text: typeof spec === 'string' ? spec : JSON.stringify(spec) };
+    try {
+      return { text: readFileSync(workspace.resolve(file), 'utf8'), path: file };
+    } catch (e) {
+      return { error: `Could not read ${file}: ${(e as Error).message}` };
+    }
+  };
+
   interface RenderOptions {
     /** Text before the review (a patch summary). */
     before?: string;
@@ -163,12 +180,15 @@ export function createTexelServer(workspace = new Workspace(), update?: Promise<
       title: 'Render skin',
       description:
         'Compile a skin spec and review it. Returns a review sheet image (front | back | right | left views + raw texture), the review (score, issues with JSON paths and fix hints, art checks, craft advice, suggested next steps) and, on request, the texture (64×64 for a player skin), a text render and a close-up of some parts. Deterministic; never modifies files.',
-      inputSchema: z.object({ spec: specInput, include: includeInput, focus: focusInput }),
+      inputSchema: z.object({ spec: specInput.optional(), file: fileInput, include: includeInput, focus: focusInput }),
       outputSchema: reviewShape,
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
       _meta: { ui: { resourceUri: VIEWER_URI } },
     },
-    async ({ spec, include, focus }) => rendered(compile(spec), include, { focus }),
+    async ({ spec, file, include, focus }) => {
+      const source = specSource(spec, file);
+      return 'error' in source ? toolError(source.error) : rendered(compile(source.text), include, { focus });
+    },
   );
 
   server.registerTool(
@@ -176,26 +196,34 @@ export function createTexelServer(workspace = new Workspace(), update?: Promise<
     {
       title: 'Patch skin',
       description:
-        'Apply a patch to a spec (update, replace, add or remove layers by id; change palette, legend or meta) and render the result like texel_render. Layers without an id first get "<op>-<index>" and keep it, so the next patch can use the same ids. Entries that cannot apply are skipped and reported. Returns the patched spec, the review and the sheet. Deterministic; never modifies files.',
-      inputSchema: z.object({ spec: specInput, patch: patchInput, include: includeInput }),
-      outputSchema: reviewShape.extend({ spec: z.record(z.string(), z.unknown()), applied: z.number(), skipped: z.array(issueShape) }),
-      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+        'Apply a patch to a spec (update, replace, add or remove layers by id; change palette, legend or meta) and render the result like texel_render. Layers without an id first get "<op>-<index>" and keep it, so the next patch can use the same ids. Entries that cannot apply are skipped and reported. With "spec", returns the patched spec, the review and the sheet. With "file", writes the patched spec back to that file and returns only the review and the sheet.',
+      inputSchema: z.object({ spec: specInput.optional(), file: fileInput, patch: patchInput, include: includeInput }),
+      outputSchema: reviewShape.extend({ spec: z.record(z.string(), z.unknown()).optional(), file: z.string().optional(), applied: z.number(), skipped: z.array(issueShape) }),
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
       _meta: { ui: { resourceUri: VIEWER_URI } },
     },
-    async ({ spec, patch, include }) => {
+    async ({ spec, file, patch, include }) => {
+      const source = specSource(spec, file);
+      if ('error' in source) return toolError(source.error);
       let base: SkinSpec, body: unknown;
       try {
-        base = typeof spec === 'string' ? JSON.parse(spec) : (spec as unknown as SkinSpec);
+        base = JSON.parse(source.text);
         body = typeof patch === 'string' ? JSON.parse(patch) : patch;
       } catch (e) {
         return toolError(`Invalid JSON: ${(e as Error).message}`);
       }
-      if (!Array.isArray(base?.layers)) return toolError('"spec" must be a skin spec with a "layers" array.');
+      if (!Array.isArray(base?.layers)) return toolError('The spec must be a skin spec with a "layers" array.');
       const p = applyPatch(withIds(base), body);
       if (p.issues.some((i) => i.level === 'error')) return toolError(p.issues.map((i) => i.message).join('\n'));
       const skipped = p.issues.map((i) => `- ${i.code} at ${i.path}: ${i.message}${i.hint ? ` (${i.hint})` : ''}`).join('\n');
-      const before = `Applied ${p.applied} of ${p.applied + p.issues.length} patch entries.${skipped ? `\n${skipped}` : ''}\n\n\`\`\`json\n${formatSpec(p.spec)}\`\`\`\n\n`;
-      return rendered(compile(p.spec), include, { before, extra: { spec: p.spec as unknown as Record<string, unknown>, applied: p.applied, skipped: p.issues } });
+      const summary = `Applied ${p.applied} of ${p.applied + p.issues.length} patch entries.${skipped ? `\n${skipped}` : ''}`;
+      const extra = { applied: p.applied, skipped: p.issues };
+      if (source.path) {
+        workspace.write(source.path, formatSpec(p.spec));
+        return rendered(compile(p.spec), include, { before: `${summary}\nSaved to ${source.path}.\n\n`, extra: { ...extra, file: source.path } });
+      }
+      const before = `${summary}\n\n\`\`\`json\n${formatSpec(p.spec)}\`\`\`\n\n`;
+      return rendered(compile(p.spec), include, { before, extra: { ...extra, spec: p.spec as unknown as Record<string, unknown> } });
     },
   );
 
@@ -204,12 +232,14 @@ export function createTexelServer(workspace = new Workspace(), update?: Promise<
     {
       title: 'Validate skin spec',
       description: 'Check a spec for errors and warnings without rendering images. Cheap; use it after every edit.',
-      inputSchema: z.object({ spec: specInput }),
+      inputSchema: z.object({ spec: specInput.optional(), file: fileInput }),
       outputSchema: z.object({ ok: z.boolean(), score: z.number(), issues: z.array(issueShape) }),
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
     },
-    async ({ spec }) => {
-      const r = review(compile(spec));
+    async ({ spec, file }) => {
+      const source = specSource(spec, file);
+      if ('error' in source) return toolError(source.error);
+      const r = review(compile(source.text));
       const text = r.issues.length ? r.issues.map((i) => `${i.level} ${i.code} at ${i.path}: ${i.message}${i.hint ? ` (${i.hint})` : ''}`).join('\n') : 'No issues.';
       return { content: [textBlock(`score ${r.score}/100\n${text}`)], structuredContent: { ok: r.ok, score: r.score, issues: r.issues } };
     },
@@ -253,7 +283,7 @@ export function createTexelServer(workspace = new Workspace(), update?: Promise<
         open: z.boolean().default(false).describe('Also open the URL in the default browser of the machine running this server.'),
         port: z.number().int().min(1024).max(65535).optional().describe('Preferred local port (default 4747; the next free one is used if busy).'),
       }),
-      outputSchema: z.object({ url: z.string(), port: z.number(), viewers: z.number() }),
+      outputSchema: z.object({ url: z.string(), studioUrl: z.string(), port: z.number(), viewers: z.number() }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async ({ open, port }) => {
@@ -265,8 +295,8 @@ export function createTexelServer(workspace = new Workspace(), update?: Promise<
       if (open) openBrowser(live.url);
       return {
         content: [textBlock(`Live preview: ${live.url}
-Give this URL to the user. Each texel_render now updates their studio tab (${live.clients()} viewer(s) connected).`)],
-        structuredContent: { url: live.url, port: live.port, viewers: live.clients() },
+Give this URL to the user. Each texel_render now updates their page (${live.clients()} viewer(s) connected). To edit it in the studio instead: ${live.studioUrl}`)],
+        structuredContent: { url: live.url, studioUrl: live.studioUrl, port: live.port, viewers: live.clients() },
       };
     },
   );

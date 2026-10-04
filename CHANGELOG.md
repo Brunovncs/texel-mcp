@@ -2,9 +2,9 @@
 
 Each release's section is published as `notes` in `/version.json`, and installed tools show it in their update notice, so the agent knows what changed and whether to redo anything. Keep it to one or two lines (under 600 characters, where installed copies cut it), and say whether specs still render the same PNGs. A test fails when the current version has no section.
 
-## Unreleased
+## 0.8.0
 
-The toolchain moves to its own repository and npm package, `texel-mcp`, with `texel-mcp` and `texel-cli` commands. A copy installed with npm is told to update through npm. The Claude Code plugin's single-file server now ships the licenses of what it bundles. Compiler unchanged: specs render the same PNGs.
+The toolchain has its own repository and npm package, `texel-mcp` (commands `texel-mcp`, `texel-cli`); npm installs are told to update through npm, plugin installs through the plugin, whose server now ships the licenses it bundles. `live` serves its own preview page at http://127.0.0.1:<port>/. MCP tools take `file` instead of `spec`, and `texel_patch` edits it in place. A layer on only an earlier piece of a joined selector is an error; "head.front+body" works. The schema lists every layout. Renders unchanged.
 
 ## 0.7.0
 

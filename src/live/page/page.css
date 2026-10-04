@@ -1,0 +1,75 @@
+@import '../../web/styles/model.css';
+
+:root {
+  color-scheme: dark;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: #0b0d11;
+  color: #e9edf3;
+}
+
+body {
+  margin: 0;
+}
+
+.live {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 12px;
+  max-width: 720px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 20px 16px;
+  box-sizing: border-box;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.score {
+  font: 600 14px ui-monospace, monospace;
+}
+
+.score[data-tone='good'] {
+  color: #7cbd3a;
+}
+
+.score[data-tone='mid'] {
+  color: #ffb547;
+}
+
+.score[data-tone='bad'] {
+  color: #ff5d6c;
+}
+
+.stage {
+  display: grid;
+  place-items: center;
+  min-height: 360px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #78a7ff, #a3c2ff 62%, #c3d8ff);
+  overflow: hidden;
+}
+
+.status,
+.links {
+  margin: 0;
+  color: #949eae;
+  font-size: 14px;
+}
+
+a {
+  color: #7cbd3a;
+}
+
+body[data-state='waiting'] .links {
+  visibility: hidden;
+}

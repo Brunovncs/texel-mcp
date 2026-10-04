@@ -19,7 +19,7 @@ import robot from '../../examples/robot.json';
 import wizard from '../../examples/wizard.json';
 import wingedPig from '../../examples/winged-pig.json';
 import familySchema from '../../schema/skinfamily.v1.json';
-import specSchema from '../../schema/skinspec.v1.json';
+import { specSchema } from '../core/schema';
 
 /** Docs and examples are embedded so the server works offline, with no site round-trips. */
 export const DOCS = {
@@ -54,4 +54,4 @@ export const EXAMPLE_IDS = Object.keys(EXAMPLES) as [ExampleId, ...ExampleId[]];
 
 export const FAMILY_EXAMPLES = { guild } as const;
 
-export const SCHEMAS = { 'skinspec.v1': specSchema, 'skinfamily.v1': familySchema } as const;
+export const SCHEMAS = { 'skinspec.v1': specSchema(), 'skinfamily.v1': familySchema } as const;

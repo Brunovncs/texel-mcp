@@ -1,6 +1,6 @@
-import { toHex } from './color';
-import { refName, resolveLayout, rigFor, texel } from './layout';
-import type { Image, Model, Op, RGBA, SkinSpec } from './types';
+import { toHex } from './color.js';
+import { refName, resolveLayout, rigFor, texel } from './layout.js';
+import type { Image, Model, Op, RGBA, SkinSpec } from './types.js';
 
 const LEGEND_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&*+-/:;<=>?@^~|';
 

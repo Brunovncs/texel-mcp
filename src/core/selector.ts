@@ -1,6 +1,6 @@
-import { suggestHint } from './color';
-import { FACES, type Rig, rigFor } from './layout';
-import type { FaceName, FaceRef, LayerName, PartName } from './types';
+import { suggestHint } from './color.js';
+import { FACES, type Rig, rigFor } from './layout.js';
+import type { FaceName, FaceRef, LayerName, PartName } from './types.js';
 
 const groupCache = new WeakMap<Rig, Record<string, readonly PartName[]>>();
 
@@ -54,10 +54,13 @@ export function parseSelector(sel: unknown, rig: Rig = rigFor('player')): Select
   const seen = new Set<string>();
   for (const item of list) {
     if (typeof item !== 'string') return { ok: false, error: 'target must be a string or an array of strings' };
-    const m = SELECTOR.exec(item.replace(/\s+/g, ''));
-    // Models often join whole selectors with "+" ("body.sides+arms.sides"); read that as a union.
-    if (!m && item.includes('+')) {
-      const split = splitJoined(item.replace(/\s+/g, ''));
+    const text = item.replace(/\s+/g, '');
+    const m = SELECTOR.exec(text);
+    // Models often join whole selectors with "+" ("body.sides+arms.sides", "head.front+body"); read that as a union.
+    const facesNameAPart = m?.[2]?.split('+').some((t) => !Object.hasOwn(FACE_GROUPS, t) && Object.hasOwn(partGroups(rig), t));
+    if ((!m || facesNameAPart) && text.includes('+')) {
+      const split = splitJoined(text, rig);
+      if (split && !Array.isArray(split)) return split;
       if (split) {
         const r = parseSelector(split, rig);
         if (!r.ok) return r;
@@ -103,19 +106,31 @@ export function parseSelector(sel: unknown, rig: Rig = rigFor('player')): Select
 }
 
 /**
- * "head.front+head.sides@overlay" → ["head.front@overlay", "head.sides@overlay"]. A piece without
- * a dot extends the one before it ("head.top+back" stays valid). A layer written only on the last
- * piece applies to all of them. Null when it doesn't split into more than one selector.
+ * "head.front+head.sides@overlay" → ["head.front@overlay", "head.sides@overlay"]. A piece without a
+ * dot extends the one before it with more faces ("head.top+back" stays valid), unless it names a
+ * part ("head.front+body" is head.front and the whole body). A layer written on the last piece
+ * applies to the pieces without one; a layer on an earlier piece only, with none on the last, is
+ * ambiguous and refused. Null when the text doesn't split into more than one selector.
  */
-function splitJoined(text: string): string[] | null {
+function splitJoined(text: string, rig: Rig): string[] | { ok: false; error: string; hint: string } | null {
+  const parts = partGroups(rig);
   const groups: string[] = [];
   for (const token of text.split('+')) {
-    if (token.includes('.') || !groups.length) groups.push(token);
+    const name = token.replace(/@.*$/, '');
+    const startsPiece = token.includes('.') || !groups.length || (!Object.hasOwn(FACE_GROUPS, name) && Object.hasOwn(parts, name));
+    if (startsPiece) groups.push(token);
     else groups[groups.length - 1] += `+${token}`;
   }
   if (groups.length < 2) return null;
-  const layer = /@[^.@]+$/.exec(groups[groups.length - 1])?.[0];
-  return groups.map((g) => (layer && !g.includes('@') ? g + layer : g));
+  const layerOf = (g: string) => /@[^.@+]+$/.exec(g)?.[0];
+  const last = layerOf(groups[groups.length - 1]);
+  if (!last && groups.some(layerOf))
+    return {
+      ok: false,
+      error: `"${text}" gives a layer to some pieces only, so the others' layer is ambiguous`,
+      hint: `write the layer on every piece, or use an array: ${JSON.stringify(groups)}`,
+    };
+  return groups.map((g) => (last && !layerOf(g) ? g + last : g));
 }
 
 function expand(

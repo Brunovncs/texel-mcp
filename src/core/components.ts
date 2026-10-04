@@ -1,5 +1,5 @@
-import { mix, shiftLightness, shiftTone, tone } from './color';
-import type { FaceName, FaceRef, PartName, RGBA } from './types';
+import { mix, shiftLightness, shiftTone, tone } from './color.js';
+import type { FaceName, FaceRef, PartName, RGBA } from './types.js';
 
 /**
  * High-level ops: the craft rules from the art guide (face layout, hair that wraps, material

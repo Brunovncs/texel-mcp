@@ -1,10 +1,10 @@
-import { ART_RUBRIC, ART_WEAK, artReview, type ArtReport } from './art';
-import { resolveColor, rgbToHsl, toHex } from './color';
-import type { CompileResult } from './compile';
-import { type Rig, refName } from './layout';
-import { readFaceLayer } from './pixels';
-import type { FaceRef, Image, Issue, RGBA } from './types';
-import { renderView, viewsOf } from './views';
+import { ART_RUBRIC, ART_WEAK, artReview, type ArtReport } from './art.js';
+import { resolveColor, rgbToHsl, toHex } from './color.js';
+import type { CompileResult } from './compile.js';
+import { type Rig, refName } from './layout.js';
+import { readFaceLayer } from './pixels.js';
+import type { FaceRef, Image, Issue, RGBA } from './types.js';
+import { renderView, viewsOf } from './views.js';
 
 export interface ReviewStats {
   model: string;

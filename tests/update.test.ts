@@ -93,6 +93,13 @@ describe('release check', () => {
     expect(cli).toContain('texel-mcp@latest');
   });
 
+  it('sends plugin installs to the plugin update instead of overwriting the cache', () => {
+    const text = updateNotice({ ...release('0.4.0'), notes: 'Compiler unchanged.', current: '0.3.0' }, 'mcp', '/home/u/.claude/plugins/cache/texel/server/texel-mcp.mjs');
+    expect(text).toContain('update the plugin');
+    expect(text).toContain('What changed: Compiler unchanged.');
+    expect(text).not.toContain('→ replace');
+  });
+
   it('says what changed and that a running live needs a restart', () => {
     const text = updateNotice({ ...release('0.4.0'), notes: 'Compiler unchanged.', current: '0.3.0' }, 'cli', '/tools/texel.mjs');
     expect(text).toContain('This run completed normally; before your next Texel command');

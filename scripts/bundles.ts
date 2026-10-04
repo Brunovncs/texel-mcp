@@ -33,11 +33,12 @@ async function bundle(options: BuildOptions): Promise<Bundle> {
 
 /** Zero-dependency Node CLI. */
 export async function bundleCli() {
+  const live = await bundleLiveHtml();
   const { text } = await bundle({
     entryPoints: [resolve(root, 'src/cli/cli.ts')],
     platform: 'node',
     format: 'esm',
-    define: buildDefine,
+    define: { __TEXEL_LIVE_HTML__: JSON.stringify(live), ...buildDefine },
     banner: { js: `#!/usr/bin/env node\n// Texel CLI ${version}. Generated file. Source: ${REPO_URL}` },
   });
   return text;
@@ -53,13 +54,23 @@ export async function bundleViewerHtml() {
   return template.replace('/*__STYLE__*/', () => css.text).replace('/*__SCRIPT__*/', () => js.text.replace(/<\/script/gi, '<\\/script'));
 }
 
+/** The live session's page, served by the local server: inlined CSS + JS. */
+export async function bundleLiveHtml() {
+  const [js, css] = await Promise.all([
+    bundle({ entryPoints: [resolve(root, 'src/live/page/page.ts')], platform: 'browser', format: 'iife', minify: true }),
+    bundle({ entryPoints: [resolve(root, 'src/live/page/page.css')], loader: { '.css': 'css' }, minify: true }),
+  ]);
+  const template = readFileSync(resolve(root, 'src/live/page/page.html'), 'utf8');
+  return template.replace('/*__STYLE__*/', () => css.text).replace('/*__SCRIPT__*/', () => js.text.replace(/<\/script/gi, '<\\/script'));
+}
+
 /**
  * MCP stdio server with docs, examples, schemas and the viewer embedded. With `standalone` the MCP
  * SDK and zod are bundled too (the Claude Code plugin has no install step); otherwise they stay
  * imports, resolved from the package's dependencies.
  */
 export async function bundleMcpWithMeta({ standalone = true } = {}): Promise<Bundle> {
-  const viewer = await bundleViewerHtml();
+  const [viewer, live] = await Promise.all([bundleViewerHtml(), bundleLiveHtml()]);
   const header = `#!/usr/bin/env node\n// Texel MCP server ${version}. Generated file. Source: ${REPO_URL}`;
   return bundle({
     entryPoints: [resolve(root, 'src/mcp/main.ts')],
@@ -68,7 +79,7 @@ export async function bundleMcpWithMeta({ standalone = true } = {}): Promise<Bun
     plugins: [markdownText],
     minify: standalone,
     ...(standalone ? {} : { packages: 'external' as const }),
-    define: { __TEXEL_VIEWER_HTML__: JSON.stringify(viewer), ...buildDefine },
+    define: { __TEXEL_VIEWER_HTML__: JSON.stringify(viewer), __TEXEL_LIVE_HTML__: JSON.stringify(live), ...buildDefine },
     banner: {
       js: standalone
         ? `${header}\n// Bundles third-party packages; their licenses are in THIRD_PARTY_NOTICES.md next to this file.\nimport { createRequire as __createRequire } from 'node:module';\nconst require = __createRequire(import.meta.url);`

@@ -53,7 +53,7 @@ Pick whichever interface your runtime has. They all run the same compiler:
 
 When a person is waiting on the skin, let them watch it being made instead of seeing only the end result. Start the session **before your first draft** and give them the URL:
 
-- **Code execution:** run `node texel.mjs live skin.json --open` in the background. It prints a studio URL (`/studio/?live=<port>`); every time you save `skin.json` their tab updates. Keep using `build` for your own review.
+- **Code execution:** run `node texel.mjs live skin.json --open` in the background. It prints a local preview URL (`http://127.0.0.1:<port>/`); every time you save `skin.json` their tab updates. Keep using `build` for your own review.
 - **MCP:** call `texel_live` and share the returned URL; every `texel_render` then shows up in their tab.
 - **Browser agent:** work in a studio tab the person can see; `window.texel` updates it directly.
 

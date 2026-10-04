@@ -56,8 +56,9 @@ On browsers that implement [WebMCP](https://github.com/webmachinelearning/webmcp
 
 | URL | Effect |
 | --- | --- |
-| `/s/<id>` | A short share link (see *Share links*). |
-| `/studio/?live=<port>` | Follow a live session on this machine (see *Live sessions*). |
+| `/s/<id>` | A short share link (see *Share links*): a page with the skin in 3D, a download and an "edit in the studio" button, and a preview image at `/s/<id>.png` for link unfurls. |
+| `/studio/?s=<id>` | Opens a shared skin in the studio. |
+| `/studio/?live=<port>` | Follow a live session on this machine in the studio, to edit it (see *Live sessions*). |
 | `/studio/#spec=<encodeURIComponent(JSON)>` | Load a spec. Easiest for agents to construct. |
 | `/studio/#z=<base64url(deflate-raw(JSON))>` | Compressed form (what share links use). |
 | `/studio/?example=knight` | Load an example. |
@@ -93,14 +94,14 @@ A DOM-free ES module with the compiler is also published at `/texel-core.mjs` (`
 
 ## 5. Live sessions
 
-A person watching the skin take shape can steer it while you work. The CLI and the MCP server run a tiny local server (127.0.0.1 only) that the studio follows over Server-Sent Events:
+A person watching the skin take shape can steer it while you work. The CLI and the MCP server run a tiny local server (127.0.0.1 only) with its own preview page, which follows every change over Server-Sent Events:
 
 ```bash
-node texel.mjs live skin.json --open      # run in the background; prints https://<site>/studio/?live=4747
+node texel.mjs live skin.json --open      # run in the background; prints http://127.0.0.1:4747/
 # …edit skin.json as usual: every save appears in the person's tab
 ```
 
-With MCP, call `texel_live` once; each `texel_render` is pushed to the open tab. The port defaults to 4747 (the next free one is used if busy). Chromium-based browsers may ask once to allow the page to reach the local network: that is the studio connecting to `127.0.0.1`.
+With MCP, call `texel_live` once; each `texel_render` is pushed to the open page. The port defaults to 4747 (the next free one is used if busy). The page is served by the same local server as the stream, so every browser shows it without prompts, and it renders with your copy of the compiler. Over SSH or in a container, forward the port and open it on the person's machine. The session also prints a studio URL (`/studio/?live=<port>`) for editing in the site's studio; Chromium-based browsers may ask once to let the site reach the local network for that one.
 
 ## 6. Share links
 
