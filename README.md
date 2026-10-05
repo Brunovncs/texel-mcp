@@ -66,6 +66,29 @@ written to the project directory.
 /plugin install texel@texel
 ```
 
+**Or use this prompt.** Paste it into the agent you want to use Texel with (Claude Code, Codex,
+Cursor, Claude Desktop or any other client with MCP support) and it installs the MCP server for you:
+
+```text
+Install the Texel MCP server for me (https://github.com/Brunovncs/texel-mcp).
+
+1. Check that Node.js 20 or later is installed (`node --version`). If it is not, stop and tell me.
+2. Create the folder ~/.texel (%USERPROFILE%\.texel on Windows) and download the single-file
+   server into it:
+   https://raw.githubusercontent.com/Brunovncs/texel-mcp/main/plugin/server/texel-mcp.mjs
+3. Check that it runs: `node <path to texel-mcp.mjs> --version` must print a version number.
+4. Ask me which folder the skins should be saved in. If I don't care, skip the --workspace part
+   below; files then go to the directory the client starts the server in.
+5. Register it as an MCP server named "texel" in the client you are running in, using absolute
+   paths:
+   - Claude Code: claude mcp add --scope user texel -- node <path to texel-mcp.mjs> --workspace <folder>
+   - Any other client: add this to its MCP configuration, keeping the servers already there:
+     {"mcpServers": {"texel": {"command": "node",
+       "args": ["<path to texel-mcp.mjs>", "--workspace", "<folder>"]}}}
+6. Tell me what you changed and whether I need to restart the client. Once the tools are
+   available, call texel_get_example and then texel_render on that example to confirm they work.
+```
+
 **Any MCP client.** The package is named `texel-mcp`. It is not on npm yet; once it is published,
 this configuration works in Claude Desktop, Cursor, VS Code and other clients that read the usual
 `mcpServers` format:
