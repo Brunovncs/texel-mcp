@@ -1,6 +1,7 @@
 {
   "name": "texel-mcp",
   "version": "0.8.1",
+  "mcpName": "io.github.Brunovncs/texel-mcp",
   "description": "MCP server and CLI that compile Minecraft skins and textures from JSON specs (palette + drawing ops) to PNG, with a review an AI agent can act on.",
   "type": "module",
   "license": "MIT",

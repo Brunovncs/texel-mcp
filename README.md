@@ -89,8 +89,8 @@ Install the Texel MCP server for me (https://github.com/Brunovncs/texel-mcp).
    available, call texel_get_example and then texel_render on that example to confirm they work.
 ```
 
-**Any MCP client.** The package is named `texel-mcp`. It is not on npm yet; once it is published,
-this configuration works in Claude Desktop, Cursor, VS Code and other clients that read the usual
+**Any MCP client.** The package is [`texel-mcp` on npm](https://www.npmjs.com/package/texel-mcp).
+This configuration works in Claude Desktop, Cursor, VS Code and other clients that read the usual
 `mcpServers` format:
 
 ```json
@@ -104,14 +104,13 @@ this configuration works in Claude Desktop, Cursor, VS Code and other clients th
 }
 ```
 
-In Claude Code the same is `claude mcp add texel -- npx -y texel-mcp`. Until then, build it from
-this repository (see [Building and testing](#building-and-testing)) and point the client at the
-file: `"command": "node", "args": ["/absolute/path/texel-mcp/dist/texel-mcp.mjs", "--workspace",
+In Claude Code the same is `claude mcp add texel -- npx -y texel-mcp`. To run a local build
+instead (see [Building and testing](#building-and-testing)), point the client at the file: `"command": "node", "args": ["/absolute/path/texel-mcp/dist/texel-mcp.mjs", "--workspace",
 "/absolute/path/skins"]`. `plugin/server/texel-mcp.mjs` is the same server with its dependencies
 bundled, and runs from anywhere with plain `node`.
 
-**CLI.** `npx -y -p texel-mcp texel-cli build skin.json -o skin.png --sheet sheet.png` after
-publication, or `node dist/texel.mjs ...` from a build. It has no dependencies. `--help` lists the
+**CLI.** `npx -y -p texel-mcp texel-cli build skin.json -o skin.png --sheet sheet.png`, or
+`node dist/texel.mjs ...` from a build. It has no dependencies. `--help` lists the
 commands: `build`, `review`, `patch`, `sheet`, `palette`, `family`, `import`, `diff`, `share`,
 `pull`, `live`, `format`, `layouts` and `init`.
 
@@ -300,7 +299,6 @@ and 113 tests in 10 files.
 - Once a day the CLI and the server ask texel.dev.br for `version.json` to tell the agent about a
   newer release. The request waits at most 1.5 s, carries no data about the user or the
   specs, and is skipped when `TEXEL_NO_UPDATE_CHECK=1` or `CI` is set.
-- The package is not published on npm yet.
 
 ## Building and testing
 

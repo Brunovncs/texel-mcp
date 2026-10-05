@@ -1,0 +1,20 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Brunovncs/texel-mcp",
+  "description": "Minecraft skins and textures as code: JSON specs compiled to PNG, with a review an agent can act on.",
+  "repository": {
+    "url": "https://github.com/Brunovncs/texel-mcp",
+    "source": "github"
+  },
+  "version": "0.8.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "texel-mcp",
+      "version": "0.8.1",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

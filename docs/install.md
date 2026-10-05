@@ -19,7 +19,7 @@ The server speaks MCP over stdio. The compiler, docs, examples, schemas and the 
 
 ### From npm
 
-The package is `texel-mcp`. Once it is published on npm, no install step is needed:
+The package is [`texel-mcp` on npm](https://www.npmjs.com/package/texel-mcp), so no install step is needed:
 
 ```bash
 claude mcp add texel --scope user -- npx -y texel-mcp
