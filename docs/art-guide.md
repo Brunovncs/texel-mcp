@@ -33,6 +33,40 @@ Rules of thumb:
 - Never outline the face in black. Contrast comes from value, not lines.
 - Hair should wrap: continue it on `head.top`, `head.back` and the upper/back part of `head.right` / `head.left`.
 
+## Faces that aren't human
+
+Animals and creatures read through the muzzle, the eye shape and the ears, not through a human face painted in fur color.
+
+Dog or bear (muzzle on rows 5–7, ears on the head sides):
+
+```
+FFFFFFFF   F fur          f fur highlight
+FfFFFFfF   W eye white    E pupil
+FFFFFFFF   M muzzle (lighter or darker than the fur)
+FWEFFEWF   N nose (dark, 2 px)
+FWEFFEWF   m mouth line
+FFMNNMFF
+FMMmmMMF
+FFMMMMFF
+```
+
+Cartoon character (big 2×2 eyes, small mouth, no nose):
+
+```
+HHHHHHHH   H hair         S skin
+HSSSSSSH   W eye white    E pupil
+SWWSSWWS   m mouth
+SWESSEWS
+SSSSSSSS
+SSSmmSSS
+SSSSSSSS
+SSSSSSSS
+```
+
+- Cat: eyes with vertical pupils, a small pink nose at x=3–4 on row 5, a "w" mouth on row 6.
+- Robot: a visor band across rows 3–4 (full width, a glowing color) instead of eyes.
+- Monster: one big eye or eyes off-center, teeth as alternating light pixels on row 6.
+
 ## Body landmarks
 
 | Area | Where |
@@ -55,6 +89,12 @@ Minecraft's lighting is flat, so skins carry their own shading. Assume light fro
 4. **Separate overlapping parts:** the row where sleeves end, where shirt meets pants, and where boots begin should have a 1 px shadow.
 5. **Texture, not noise soup:** `noise` with `jitter` 2–5 for cloth/metal grain; 6+ looks dirty. Don't jitter faces or small details.
 6. **Hue-shift shadows** for richer art: shadows slightly cooler/more saturated, highlights warmer. The `~` tone steps do this for you.
+
+## Match the source's style
+
+- Cartoon and anime characters: flat, clean color areas with cel shading (one highlight tone and one shadow tone per color, in shapes, not grain). No noise on skin or fur.
+- Realistic or rugged characters (knights, miners, soldiers): material texture fits: cloth weave, metal scratches, leather grain.
+- Texture is for materials, not for everything. A large area that should read as one smooth color stays smooth, with a gradient for light.
 
 ## Color
 
