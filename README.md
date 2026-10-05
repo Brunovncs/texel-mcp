@@ -105,7 +105,8 @@ This configuration works in Claude Desktop, Cursor, VS Code and other clients th
 ```
 
 In Claude Code the same is `claude mcp add texel -- npx -y texel-mcp`. To run a local build
-instead (see [Building and testing](#building-and-testing)), point the client at the file: `"command": "node", "args": ["/absolute/path/texel-mcp/dist/texel-mcp.mjs", "--workspace",
+instead (see [Building and testing](#building-and-testing)), point the client at the file:
+`"command": "node", "args": ["/absolute/path/texel-mcp/dist/texel-mcp.mjs", "--workspace",
 "/absolute/path/skins"]`. `plugin/server/texel-mcp.mjs` is the same server with its dependencies
 bundled, and runs from anywhere with plain `node`.
 
