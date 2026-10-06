@@ -1,6 +1,6 @@
 {
   "name": "texel",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Design, render, review and export Minecraft skins, mob, block, item, GUI and particle textures and whole resource packs as JSON specs. MCP tools with an interactive 3D viewer, plus the minecraft-skin-design skill.",
   "author": { "name": "Bruno Veronez", "url": "https://github.com/Brunovncs" },
   "homepage": "https://www.texel.dev.br",

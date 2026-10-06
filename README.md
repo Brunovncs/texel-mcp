@@ -210,7 +210,7 @@ the glowing pixels on black. In clients that support MCP Apps,
 ## Tools
 
 The MCP server has 16 tools, resources for the docs, examples and schemas, the `ui://texel/viewer`
-MCP App and 4 prompts (`design_skin`, `continue_skin`, `design_family`, `critique_skin`).
+MCP App and 5 prompts (`design_skin`, `design_texture`, `continue_skin`, `design_family`, `critique_skin`).
 
 | Tool | What it does |
 |---|---|

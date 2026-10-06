@@ -4,7 +4,7 @@ description: Design, render, review and export Minecraft skins (64×64 PNG, clas
 license: MIT
 metadata:
   protocol: texel/1
-  version: 0.9.0
+  version: 0.9.1
 ---
 
 # Minecraft skin design with Texel

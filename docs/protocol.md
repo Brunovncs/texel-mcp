@@ -2,7 +2,7 @@
 
 > The loop an AI agent follows to design, test and ship a Minecraft skin with Texel. Version `texel/1`.
 
-A skin is **data, not pixels**: a JSON *spec* made of a palette and an ordered list of drawing operations. The spec compiles deterministically to a PNG: a 64×64 player skin by default, or a mob, armor, cape, item or block texture with `"layout"`. Because the source is structured, an agent can reason about it, diff it, patch one layer at a time, and verify every step.
+A skin is **data, not pixels**: a JSON *spec* made of a palette and an ordered list of drawing operations. The spec compiles deterministically to a PNG: a 64×64 player skin by default, or with `"layout"` a mob, armor, cape, item, block, plant, GUI sprite, particle or painting texture. The same loop makes all of them; [Other textures](#other-textures) says what changes. Because the source is structured, an agent can reason about it, diff it, patch one layer at a time, and verify every step.
 
 ## The loop
 
@@ -86,7 +86,7 @@ Change the smallest thing that fixes the weakest rubric item, then render again.
 
 Writing the change as a [patch](/docs/spec.md#patches) (`{ "patch": [{ "do": "update", "id": "eyes", "set": { … } }] }`) instead of a whole new spec keeps every other layer as it was, and is a fraction of the output. Apply it with `node texel.mjs patch skin.json fix.json -o skin.json`, the MCP tool `texel_patch` or `texel.applyPatch(patch)`; each one returns the review of the result. Layers need ids to be patched; give them ids as you draft (layers without one get `<op>-<index>`).
 
-Stop when R1–R8 all pass, or after ~6 iterations with diminishing returns.
+Stop when R1–R8 all pass, or after ~6 iterations with diminishing returns. R2, R3 and R7 are about characters: for an item, a block or a GUI sprite judge R1, R4, R5 and R8, plus the checks under [Other textures](#other-textures).
 
 ### 7. Ship
 
@@ -95,6 +95,22 @@ Deliver three things:
 1. The **share link**: `node texel.mjs share skin.json`, `texel_share` or `texel.shareURL()`. It is short (`/s/<id>`) and opens the exact skin in the studio, where the person can also download the PNG.
 2. The **PNG** (CLI `build` output, `texel_save`, or `texel.download()`), uploaded at minecraft.net or any launcher with the model (classic/slim) matching `model`.
 3. The **spec JSON**, the editable source. Give the file path; paste the JSON into the chat only when you cannot save files.
+
+### Other textures
+
+The loop is the same for every layout; the review sheet adds what each needs, and the art guide's last section has the style rules.
+
+| Texture | Draft | Review before shipping |
+| --- | --- | --- |
+| Mob | `layout` from the table in the spec reference; paint the parts it names, mirrored limbs once. | Every view, plus the view from above for animals lying along their body. |
+| Item, plant | A transparent background; an item gets a dark outline in its own color. | The front at 16× on the sheet; no stray pixels in the background. |
+| Block | One spec per block; `block_column`, `block_bottom_top` or `block_orientable` for blocks with a top or a front. | No `tile-seam`; the tiled panel shows no grid; the 3D block reads. |
+| GUI sprite | `"size"`, `gui.scaling` (`nine_slice` for buttons and panels), the `bevel` op. | The resized panels: corners intact, edges repeating cleanly. |
+| Particle | `layout: particle` (8×8); frames for motion. | Every frame on the sheet. |
+| Animated | `animation.frames`, each a patch by layer id. | No `animation-static`; the frames on the sheet change as intended. |
+| Glowing | `"emissive": true` on the ops that paint what glows. | The emissive panel shows only those pixels. |
+
+Ship non-skin textures as files the game reads: `build -o name.png` or `texel_save` write every file (block parts, `.png.mcmeta`, `_eyes`). For a set of textures, or when the user wants to try them in game, set each spec's `asset` (or keep the layout default, which replaces the vanilla texture) and build a resource pack with `node texel.mjs pack` or `texel_pack`; it checks the pack too. Give the zip's path and tell the user to put it in `.minecraft/resourcepacks`. To check a pack the user already has, run `check-pack` / `texel_check_pack`.
 
 ### Continuing a skin
 

@@ -695,6 +695,29 @@ Give this URL to the user. Each texel_render now updates their page (${live.clie
   );
 
   server.registerPrompt(
+    'design_texture',
+    {
+      title: 'Design a texture',
+      description: 'Make a texture other than a player skin (a mob, block, item, GUI sprite, particle, animated or glowing texture) or a set of them as a resource pack.',
+      argsSchema: z.object({
+        brief: z.string().describe('What to make, e.g. "a ruby ore block and a ruby sword" or "a red stone button".'),
+        pack: z.enum(['yes', 'no']).optional().describe('Also build a resource pack with the result.'),
+      }),
+    },
+    ({ brief, pack }) => ({
+      messages: [
+        {
+          role: 'user' as const,
+          content: {
+            type: 'text' as const,
+            text: `Make Minecraft textures with Texel.\n\nBrief: ${brief}\n\n1. Read texel://docs/spec (section Layouts, and Animation, GUI sprites, Blocks and tiling, Resource packs as they apply) and the last section of texel://docs/art-guide. Pick the layout for each texture; fork the closest example (texel_get_example: ember-blade, ash-log, magma-pulse, stone-button, spark, zebra, sky-evoker).\n2. Call texel_live and give me the URL.\n3. Keep each spec in a workspace file and set "asset" where it goes in a pack. Say in one line what you decided the brief left open.\n4. Render each with texel_render and fix every error and warning. Then judge the sheet: blocks must show no seam in the tiled panel, GUI sprites must resize cleanly, frames must change as intended, glowing pixels must be only what glows. Patch by layer id (texel_patch).\n5. Save with texel_save (sheet: true).${pack === 'yes' ? ' Then build a resource pack with texel_pack (models: true for new items and blocks) and report its checks.' : ''} Give me the file paths. Answer in the language of my request.`,
+          },
+        },
+      ],
+    }),
+  );
+
+  server.registerPrompt(
     'design_family',
     {
       title: 'Design a skin family',

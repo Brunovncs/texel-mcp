@@ -75,7 +75,7 @@ With a local build, use `"command": "node"` and `"args": ["/absolute/path/texel-
 | tool | `texel_get_example`, `texel_read_docs` | Offline examples and docs. |
 | resource | `texel://docs/{page}`, `texel://examples/{id}`, `texel://schema/{name}` | Same content as resources. |
 | resource | `ui://texel/viewer` | MCP App: interactive 3D preview with a feedback box that posts back to the chat. |
-| prompt | `design_skin`, `continue_skin`, `design_family`, `critique_skin` | Protocol runbooks with arguments. |
+| prompt | `design_skin`, `design_texture`, `continue_skin`, `design_family`, `critique_skin` | Protocol runbooks with arguments. |
 
 All write tools are confined to the workspace directory; paths outside it are rejected.
 

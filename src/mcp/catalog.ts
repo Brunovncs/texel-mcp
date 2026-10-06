@@ -18,4 +18,4 @@ export const MCP_TOOLS = [
   'texel_read_docs',
 ] as const;
 
-export const MCP_PROMPTS = ['design_skin', 'continue_skin', 'design_family', 'critique_skin'] as const;
+export const MCP_PROMPTS = ['design_skin', 'design_texture', 'continue_skin', 'design_family', 'critique_skin'] as const;

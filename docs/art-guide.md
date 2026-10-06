@@ -1,6 +1,6 @@
 # Skin art guide
 
-> Practical pixel-art rules for 64×64 Minecraft skins, written for agents: where features go, how to shade, and the mistakes that make skins look amateur.
+> Practical pixel-art rules for 64×64 Minecraft skins, written for agents: where features go, how to shade, and the mistakes that make skins look amateur. The last section covers items, blocks, GUI sprites, particles, animation and glow.
 
 ## The face (head.front, 8×8)
 
@@ -144,3 +144,21 @@ The high-level ops are a floor, not a ceiling: they guarantee a readable face, w
 | A belt or stripe that stops at the corner | Paint bands on every side face (`"body.front+sides"`), or end them a pixel before the edge. |
 | `noise` / `shade` as the last layers | They also hit eyes, collars and buttons. Texture broad areas first, then paint details. |
 | Same value head/body/legs | Vary lightness between parts. |
+
+## Items, blocks, GUI and particles
+
+Small textures follow vanilla's own style, which is not a skin's. Measured on the 1.21.11 files: a sword or an apple uses about 11 or 12 colors, stone 4, an ore 10, a particle 5 or 6.
+
+**Items (16×16).** One object, centered, on a transparent background, with a 1-pixel outline in a dark tone of its own color, not black (`"blade~-3"`). Light from the top left: the highlight on the upper-left edges, the shadow on the lower right. Swords, tools and wands run diagonally from bottom left to top right, the way vanilla draws them. Three to five tones per material; leave the inside of large items flat enough to read at 16 pixels.
+
+**Blocks.** A block is seen tiled, so it has no outline and no edge features: nothing lines its border, and shapes that touch one edge continue on the opposite edge (`tile-seam` measures it; look at the tiled panel of the sheet). Keep the contrast low (stone has 4 close grays) and texture in clusters of 2 or 3 pixels, not single-pixel static. An ore is the stone texture with a few clusters of the ore color, each with a highlight and a dark rim. A log's side runs its bark vertically; its `_top` has rings and a bark border. A grass block's side keeps the top 2 to 4 rows green with a ragged lower edge over the dirt.
+
+**Plants.** A transparent background, the stem touching the bottom row, and the silhouette doing most of the work: it is drawn on two crossed planes, so it reads from every side.
+
+**GUI.** Vanilla's palette: panels `#c6c6c6` with a `#ffffff` highlight on the top and left, a `#555555` shadow on the bottom and right and a black outline whose corner pixels are left out; slots `#8b8b8b` inset, `#373737` on the top and left and `#ffffff` on the bottom and right; buttons (1.21) a black outline, a gray face, a lighter top row, `nine_slice` with a border of 3. The `bevel` op draws all of these. Keep a sprite's edges plain where nine-slice repeats them: a gradient along a button's length breaks when the game stretches it.
+
+**Particles (8×8).** A bright core, two or three tones toward the edge, a transparent background. Animate them by shrinking or fading over 3 to 8 frames.
+
+**Animation.** Change little between frames: a few pixels moving, a color pulsing. Two to eight frames at a `frametime` of 2 to 6 reads as motion; `interpolate` smooths a glow or a liquid. Repeating a frame costs nothing: it is stored once.
+
+**Glow.** Mark only what lights up (eyes, runes, a core) as `emissive`, and paint it bright and saturated: the game draws it at full brightness in the dark, so a dull color glows dull.
