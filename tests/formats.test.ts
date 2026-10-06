@@ -236,6 +236,13 @@ describe('resource packs', () => {
     expect(check.issues.filter((i) => i.level !== 'info')).toEqual([]);
   });
 
+  it('hold tools and weapons diagonally, like vanilla', () => {
+    const sword = { result: compile(spec('item', [{ op: 'fill', target: 'item', x: 7, y: 2, w: 2, h: 12, color: '#c01040' }])), name: 'ruby_sword' };
+    const pack = buildPack([sword, ruby], { models: true, deflate });
+    expect(json(pack.files.get('assets/minecraft/models/item/ruby_sword.json')).parent).toBe('minecraft:item/handheld');
+    expect(json(pack.files.get('assets/minecraft/models/item/ruby.json')).parent).toBe('minecraft:item/generated');
+  });
+
   it('write the 1.21.9 pack format fields and report what it cannot place', () => {
     const latest = buildPack([ruby], { deflate });
     expect(json(latest.files.get('pack.mcmeta')).pack).toMatchObject({ min_format: 75, max_format: 75 });

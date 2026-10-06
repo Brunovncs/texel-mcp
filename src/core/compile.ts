@@ -26,7 +26,7 @@ export const OP_KEYS: Record<string, { required: string[]; optional: string[] }>
   bevel: { required: ['target', 'color'], optional: ['style', 'light', 'dark', 'outline', 'depth', 'x', 'y', 'w', 'h', 'region'] },
 };
 const COMMON_KEYS = ['op', 'id', 'note', 'enabled', 'emissive'];
-const SPEC_KEYS = ['$schema', 'version', 'name', 'description', 'author', 'tags', 'layout', 'model', 'size', 'asset', 'palette', 'legend', 'layers', 'animation', 'gui'];
+export const SPEC_KEYS = ['$schema', 'version', 'name', 'description', 'author', 'tags', 'layout', 'model', 'size', 'asset', 'palette', 'legend', 'layers', 'animation', 'gui'];
 export const MAX_FRAMES = 128;
 /** A resource location under textures/: "item/ruby" or "mymod:item/ruby". */
 export const ASSET_PATTERN = /^(?:[a-z0-9_.-]+:)?[a-z0-9_.-]+(?:\/[a-z0-9_.-]+)*$/;

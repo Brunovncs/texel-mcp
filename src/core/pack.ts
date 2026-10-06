@@ -39,6 +39,8 @@ export interface PackBuild {
 }
 
 const NAMESPACE = /^[a-z0-9_.-]+$/;
+/** Items held like a tool, which vanilla draws with item/handheld (diagonal in the hand) instead of item/generated. */
+export const HANDHELD = /(^|_)(sword|axe|pickaxe|shovel|hoe|mace|spear|trident|stick|rod|wand|staff|club|hammer|scythe|sickle|dagger|knife|bone|blaze_rod|breeze_rod)$/;
 const json = (v: unknown) => new TextEncoder().encode(`${JSON.stringify(v, null, 2)}\n`);
 
 /** "Ruby Sword!" → "ruby_sword". */
@@ -107,7 +109,8 @@ export function buildPack(entries: readonly PackEntry[], opts: PackBuildOptions)
     if (!opts.models || !def.model) continue;
     const slots = Object.fromEntries(Object.entries(def.model.textures).map(([slot, part]) => [slot, ref(def.files?.[part] ?? '')]));
     if (def.texture === 'item/') {
-      put(`assets/${ns}/models/item/${id}.json`, json({ parent: def.model.parent, textures: slots }), name);
+      const parent = HANDHELD.test(id) ? 'minecraft:item/handheld' : def.model.parent;
+      put(`assets/${ns}/models/item/${id}.json`, json({ parent, textures: slots }), name);
       if (itemDefinitions) put(`assets/${ns}/items/${id}.json`, json({ model: { type: 'minecraft:model', model: `${ns}:item/${id}` } }), name);
     } else {
       put(`assets/${ns}/models/block/${id}.json`, json({ parent: def.model.parent, textures: slots }), name);

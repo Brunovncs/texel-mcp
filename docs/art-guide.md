@@ -155,7 +155,7 @@ Small textures follow vanilla's own style, which is not a skin's. Measured on th
 
 **Plants.** A transparent background, the stem touching the bottom row, and the silhouette doing most of the work: it is drawn on two crossed planes, so it reads from every side.
 
-**GUI.** Vanilla's palette: panels `#c6c6c6` with a `#ffffff` highlight on the top and left, a `#555555` shadow on the bottom and right and a black outline whose corner pixels are left out; slots `#8b8b8b` inset, `#373737` on the top and left and `#ffffff` on the bottom and right; buttons (1.21) a black outline, a gray face, a lighter top row, `nine_slice` with a border of 3. The `bevel` op draws all of these. Keep a sprite's edges plain where nine-slice repeats them: a gradient along a button's length breaks when the game stretches it.
+**GUI.** Vanilla's palette: panels `#c6c6c6` with a `#ffffff` highlight on the top and left, a `#555555` shadow on the bottom and right and a black outline whose corner pixels are left out; slots `#8b8b8b` inset, `#373737` on the top and left and `#ffffff` on the bottom and right; buttons (1.21) a black outline, a gray face, a lighter top row, `nine_slice` with a border of 3. The `bevel` op draws all of these. A vanilla button is three sprites: `widget/button`, `widget/button_highlighted` (under the mouse, with a white outline) and `widget/button_disabled` (grayed out); make the set, one spec each or a family. Keep a sprite's edges plain where nine-slice repeats them: a gradient along a button's length breaks when the game stretches it.
 
 **Particles (8×8).** A bright core, two or three tones toward the edge, a transparent background. Animate them by shrinking or fading over 3 to 8 frames.
 

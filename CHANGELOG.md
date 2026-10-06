@@ -2,6 +2,10 @@
 
 Each release's section is published as `notes` in `/version.json`, and installed tools show it in their update notice, so the agent knows what changed and whether to redo anything. Keep it to one or two lines (under 600 characters, where installed copies cut it), and say whether specs still render the same PNGs. A test fails when the current version has no section.
 
+## 0.9.2
+
+`pack --models` gives tools and weapons (`ruby_sword`, `iron_hammer`…) the `item/handheld` model, so they are held diagonally like vanilla's. Short share links work again for specs with `asset`, `size`, `animation` or `gui`. The docs cover the three vanilla button sprites and a mod's lang file. Specs render the same PNGs.
+
 ## 0.9.1
 
 The art guide has a section on items, blocks, GUI sprites, particles, animation and glow (vanilla's colors and style), the protocol says how to review and ship each kind of texture, and a new MCP prompt, `design_texture`, runs that loop. Docs and prompts only: specs render the same PNGs.
