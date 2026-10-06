@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { compile, diffTextures, LAYOUT_IDS, LAYOUTS, layoutsToMarkdown, polish, renderLineup, renderSheet, renderView, review, locate, rigFor, texel, textureToSpec, viewsOf, type SkinSpec } from '../src/core';
+import { compile, diffTextures, issueCodesToMarkdown, LAYOUT_IDS, LAYOUTS, layoutsToMarkdown, polish, renderLineup, renderSheet, renderView, review, locate, rigFor, texel, textureToSpec, viewsOf, type SkinSpec } from '../src/core';
 
 const spec = (layout: string, layers: SkinSpec['layers'], extra: Partial<SkinSpec> = {}): SkinSpec => ({ version: 1, layout, layers, ...extra });
 const px = (img: { width: number; data: Uint8ClampedArray }, x: number, y: number) => Array.from(img.data.subarray((y * img.width + x) * 4, (y * img.width + x) * 4 + 4));
@@ -47,6 +47,81 @@ describe('layouts', () => {
     expect(rect('iron_golem', 'leftArm', 'front')).toEqual({ x: 66, y: 64, w: 4, h: 30 });
     expect(rect('witch', 'brim', 'front')).toEqual({ x: 10, y: 74, w: 10, h: 2 });
     expect(rect('witch', 'mole', 'front')).toEqual({ x: 1, y: 1, w: 1, h: 1 });
+  });
+
+  it('match the Java texture UVs of the mobs added in 0.9.0', () => {
+    // [layout, part, face, layer, [x, y, w, h]]: each from the model's texOffs and addBox in 1.21.11.
+    const cases: [string, string, 'front' | 'top' | 'right', 'base' | 'overlay', [number, number, number, number]][] = [
+      ['fox', 'head', 'front', 'base', [7, 11, 8, 6]],
+      ['fox', 'snout', 'front', 'base', [9, 21, 4, 2]],
+      ['rabbit', 'head', 'front', 'base', [37, 5, 5, 4]],
+      ['rabbit', 'rightHindFoot', 'top', 'base', [15, 24, 2, 7]],
+      ['bee', 'body', 'front', 'base', [10, 10, 7, 7]],
+      ['bee', 'wing', 'top', 'base', [6, 18, 9, 6]],
+      ['parrot', 'head', 'front', 'base', [4, 4, 2, 3]],
+      ['parrot', 'feather', 'right', 'base', [2, 22, 4, 5]],
+      ['axolotl', 'head', 'front', 'base', [5, 6, 8, 5]],
+      ['axolotl', 'tail', 'right', 'base', [2, 31, 12, 5]],
+      ['frog', 'head', 'front', 'base', [9, 22, 7, 3]],
+      ['frog', 'leftFoot', 'top', 'base', [10, 32, 8, 8]],
+      ['turtle', 'head', 'front', 'base', [9, 6, 6, 5]],
+      ['turtle', 'rightFrontLeg', 'front', 'base', [32, 35, 13, 1]],
+      ['armadillo', 'body', 'front', 'base', [12, 52, 8, 8]],
+      ['armadillo', 'body', 'front', 'overlay', [12, 32, 8, 8]],
+      ['bat', 'head', 'front', 'base', [2, 9, 4, 3]],
+      ['bat', 'rightWingTip', 'front', 'base', [16, 0, 6, 8]],
+      ['horse', 'head', 'front', 'base', [7, 20, 6, 5]],
+      ['horse', 'body', 'top', 'base', [22, 32, 10, 22]],
+      ['donkey', 'ear', 'front', 'base', [1, 13, 2, 7]],
+      ['donkey', 'chest', 'front', 'base', [29, 24, 8, 8]],
+      ['llama', 'head', 'front', 'base', [6, 20, 8, 18]],
+      ['llama', 'leftChest', 'front', 'base', [48, 44, 8, 8]],
+      ['camel', 'muzzle', 'front', 'base', [56, 6, 5, 5]],
+      ['camel', 'body', 'top', 'base', [27, 25, 15, 27]],
+      ['goat', 'head', 'front', 'base', [44, 56, 5, 7]],
+      ['goat', 'coat', 'front', 'base', [11, 39, 11, 14]],
+      ['panda', 'head', 'front', 'base', [9, 15, 13, 10]],
+      ['panda', 'leg', 'right', 'base', [40, 6, 6, 9]],
+      ['polar_bear', 'head', 'front', 'base', [7, 7, 7, 7]],
+      ['polar_bear', 'mouth', 'front', 'base', [3, 47, 5, 3]],
+      ['slime', 'innerCube', 'front', 'base', [6, 22, 6, 6]],
+      ['slime', 'leftEye', 'front', 'base', [34, 6, 2, 2]],
+      ['magma_cube', 'segment5', 'front', 'base', [40, 17, 8, 1]],
+      ['magma_cube', 'insideCube', 'front', 'base', [28, 44, 4, 4]],
+      ['blaze', 'rod', 'front', 'base', [2, 18, 2, 8]],
+      ['ghast', 'body', 'front', 'base', [32, 32, 32, 32]],
+      ['ghast', 'tentacle', 'right', 'base', [0, 4, 4, 24]],
+      ['happy_ghast', 'body', 'top', 'base', [32, 0, 32, 32]],
+      ['happy_ghast_baby', 'innerBody', 'front', 'base', [16, 48, 16, 16]],
+      ['happy_ghast_harness', 'goggles', 'front', 'base', [10, 74, 32, 10]],
+      ['phantom', 'wingTip', 'top', 'base', [25, 24, 13, 9]],
+      ['phantom', 'head', 'front', 'base', [5, 5, 7, 3]],
+      ['guardian', 'body', 'front', 'base', [16, 16, 12, 12]],
+      ['guardian', 'fin', 'right', 'base', [25, 28, 9, 9]],
+      ['shulker', 'head', 'front', 'base', [6, 58, 6, 6]],
+      ['shulker', 'lid', 'front', 'base', [16, 16, 16, 12]],
+      ['strider', 'leftLeg', 'front', 'base', [4, 59, 4, 16]],
+      ['strider', 'middleBristle', 'front', 'base', [32, 49, 12, 16]],
+      ['warden', 'head', 'front', 'base', [10, 42, 16, 16]],
+      ['warden', 'ribcage', 'front', 'base', [90, 11, 9, 21]],
+      ['illager', 'head', 'front', 'base', [8, 8, 8, 10]],
+      ['illager', 'freeArm', 'front', 'base', [44, 50, 4, 12]],
+      ['armor_stand', 'basePlate', 'top', 'base', [12, 32, 12, 12]],
+      ['armor_stand', 'body', 'front', 'base', [3, 29, 12, 3]],
+      ['snow_golem', 'head', 'front', 'base', [8, 8, 8, 8]],
+      ['snow_golem', 'lowerBody', 'front', 'base', [12, 48, 12, 12]],
+      ['allay', 'rightArm', 'front', 'base', [25, 2, 1, 4]],
+      ['allay', 'wing', 'right', 'base', [16, 22, 8, 5]],
+      ['vex', 'rightArm', 'front', 'base', [25, 2, 2, 4]],
+      ['vex', 'lowerBody', 'front', 'base', [2, 18, 3, 5]],
+      ['squid', 'body', 'front', 'base', [12, 12, 12, 16]],
+      ['squid', 'tentacle', 'front', 'base', [50, 2, 2, 18]],
+      ['dolphin', 'head', 'front', 'base', [6, 6, 8, 7]],
+      ['dolphin', 'tailFin', 'top', 'base', [25, 20, 10, 6]],
+      ['copper_golem', 'head', 'front', 'base', [10, 10, 8, 5]],
+      ['copper_golem', 'rightArm', 'front', 'base', [40, 20, 3, 10]],
+    ];
+    for (const [layout, part, face, layer, [x, y, w, h]] of cases) expect(rigFor(layout).faceRect(part, face, layer), `${layout} ${part}.${face}@${layer}`).toMatchObject({ x, y, w, h });
   });
 
   it('keep both sides of a flat lying fin on their own texture faces', () => {
@@ -130,7 +205,8 @@ describe('layouts', () => {
           for (let lx = 0; lx < r.w; lx++) {
             const [x, y] = texel(r, lx, ly);
             expect(x >= 0 && y >= 0 && x < rig.width && y < rig.height, `${id} ${ref.part}.${ref.face}@${ref.layer}`).toBe(true);
-            if (ref.layer !== 'base') continue;
+            // A few vanilla models share texture pixels between parts on purpose (a bee's antennae).
+            if (ref.layer !== 'base' || rig.part(ref.part)?.shared) continue;
             const k = y * rig.width + x;
             expect(seen.get(k), `${id}: ${ref.part}.${ref.face} overlaps ${seen.get(k)}`).toBeUndefined();
             seen.set(k, `${ref.part}.${ref.face}`);
@@ -213,6 +289,8 @@ describe('layouts', () => {
     const doc = readFileSync('docs/spec.md', 'utf8');
     const table = /<!-- layouts:start -->\n([\s\S]*?)\n<!-- layouts:end -->/.exec(doc)?.[1];
     expect(table).toBe(layoutsToMarkdown());
+    const codes = /<!-- codes:start -->\n([\s\S]*?)\n<!-- codes:end -->/.exec(doc)?.[1];
+    expect(codes, 'regenerate the issue code tables in docs/spec.md').toBe(issueCodesToMarkdown());
   });
 });
 

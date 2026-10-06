@@ -7,13 +7,15 @@ export const CLI_COMMANDS: readonly string[] = [
   'sheet <spec.json|-> [-o sheet.png] [--focus head,arms]',
   'palette <image.png> [--colors 12] [--json]',
   'family <family.json|-> [-o out-dir] [--lineup lineup.png]',
-  'import <texture.png> [-o spec.json] [--layout zombie]',
+  'import <texture.png> [-o spec.json] [--layout zombie] [--pixelize [--size 32x32] [--colors 16] [--outline auto]]',
   'diff <before.json> <after.json>',
+  'pack <spec.json|family.json|folder>… [-o pack.zip|folder] [--namespace mymod] [--mc-version 1.21.11] [--models] [--description text]',
+  'check-pack <folder|pack.zip> [--mc-version 1.21.4] [--json]',
   'share <spec.json|-> [--long]',
   'pull <link|id> [-o skin.json]',
   'format <spec.json|->',
   'layouts',
-  'init [--layout player|zombie|skeleton|creeper|cape|item|…]',
+  'init [--layout player|zombie|creeper|horse|item|block_column|gui|particle|…]',
   '--version',
 ];
 

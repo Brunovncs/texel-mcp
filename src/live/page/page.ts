@@ -18,7 +18,7 @@ model.enableControls(stage);
 async function show(spec: string) {
   const result = compile(spec);
   const r = review(result);
-  model.setSkin(dataURLFromImage(result.texture), result.model, result.layout);
+  model.setSkin(dataURLFromImage(result.texture), result.model, result.layout, result.rig);
   $('name').textContent = String(result.spec?.name ?? '').trim() || 'Untitled skin';
   $('score').textContent = `${r.score}/100`;
   $('score').dataset.tone = !r.ok ? 'bad' : r.score >= 90 ? 'good' : 'mid';

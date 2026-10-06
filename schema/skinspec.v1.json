@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://www.texel.dev.br/schema/skinspec.v1.json",
   "title": "Texel skin spec v1",
-  "description": "Declarative description of a Minecraft texture: a player skin by default, or a mob, armor, cape, item or block texture with \"layout\". Layers are applied in order (painter's model) and compile deterministically to a PNG. Docs: https://www.texel.dev.br/docs/spec.md",
+  "description": "Declarative description of a Minecraft texture: a player skin by default, or a mob, armor, cape, item, block, plant, GUI sprite, particle or painting texture with \"layout\". Layers are applied in order (painter's model) and compile deterministically to PNG files. Docs: https://www.texel.dev.br/docs/spec.md",
   "type": "object",
   "required": [
     "version",
@@ -58,9 +58,52 @@
         "hoglin",
         "iron_golem",
         "witch",
+        "fox",
+        "rabbit",
+        "bee",
+        "parrot",
+        "axolotl",
+        "frog",
+        "turtle",
+        "armadillo",
+        "bat",
+        "horse",
+        "donkey",
+        "llama",
+        "camel",
+        "goat",
+        "panda",
+        "polar_bear",
+        "slime",
+        "magma_cube",
+        "blaze",
+        "ghast",
+        "happy_ghast",
+        "happy_ghast_baby",
+        "happy_ghast_harness",
+        "phantom",
+        "guardian",
+        "shulker",
+        "strider",
+        "warden",
+        "illager",
+        "armor_stand",
+        "snow_golem",
+        "allay",
+        "vex",
+        "squid",
+        "dolphin",
+        "copper_golem",
         "cape",
         "item",
         "block",
+        "block_column",
+        "block_bottom_top",
+        "block_orientable",
+        "plant",
+        "gui",
+        "particle",
+        "painting",
         "skin",
         "husk",
         "drowned_outer_layer",
@@ -85,10 +128,59 @@
         "warm_chicken",
         "zoglin",
         "ocelot",
-        "cat_collar"
+        "cat_collar",
+        "snow_fox",
+        "fox_sleep",
+        "killer_bunny",
+        "caerbannog",
+        "angry_bee",
+        "temperate_frog",
+        "warm_frog",
+        "cold_frog",
+        "sea_turtle",
+        "big_sea_turtle",
+        "zombie_horse",
+        "skeleton_horse",
+        "horse_armor",
+        "mule",
+        "trader_llama",
+        "llama_decor",
+        "camel_husk",
+        "polarbear",
+        "magmacube",
+        "ghast_shooting",
+        "happy_ghast_ropes",
+        "ghastling",
+        "phantom_eyes",
+        "elder_guardian",
+        "guardian_elder",
+        "shulker_box",
+        "strider_cold",
+        "strider_saddle",
+        "vindicator",
+        "evoker",
+        "pillager",
+        "illusioner",
+        "vex_charging",
+        "glow_squid",
+        "exposed_copper_golem",
+        "weathered_copper_golem",
+        "oxidized_copper_golem",
+        "wandering_trader",
+        "wolf_armor",
+        "cube_all",
+        "cube_column",
+        "log",
+        "pillar",
+        "cube_bottom_top",
+        "orientable",
+        "cross",
+        "flower",
+        "sprite",
+        "gui_sprite"
       ],
       "default": "player",
-      "description": "Texture layout (default player, a 64×64 skin): player 64×64, zombie 64×64, drowned 64×64, humanoid 64×32, skeleton 64×32, creeper 64×32, enderman 64×32, spider 64×32, villager 64×64, piglin 64×64, pig 64×64, cow 64×64, cold_cow 64×64, warm_cow 64×64, sheep 64×32, sheep_wool 64×32, chicken 64×32, cold_chicken 64×32, wolf 64×32, cat 64×32, hoglin 128×64, iron_golem 128×128, witch 64×128, cape 64×32, item 16×16, block 16×16. Aliases name vanilla textures that share a layout. Each layout has its own part names (see the spec reference, section Layouts)."
+      "description": "Texture layout (default player, a 64×64 skin): player 64×64, zombie 64×64, drowned 64×64, humanoid 64×32, skeleton 64×32, creeper 64×32, enderman 64×32, spider 64×32, villager 64×64, piglin 64×64, pig 64×64, cow 64×64, cold_cow 64×64, warm_cow 64×64, sheep 64×32, sheep_wool 64×32, chicken 64×32, cold_chicken 64×32, wolf 64×32, cat 64×32, hoglin 128×64, iron_golem 128×128, witch 64×128, fox 48×32, rabbit 64×32, bee 64×64, parrot 32×32, axolotl 64×64, frog 48×48, turtle 128×64, armadillo 64×64, bat 32×32, horse 64×64, donkey 64×64, llama 128×64, camel 128×128, goat 64×64, panda 64×64, polar_bear 128×64, slime 64×32, magma_cube 64×64, blaze 64×32, ghast 128×64, happy_ghast 128×128, happy_ghast_baby 64×64, happy_ghast_harness 128×128, phantom 64×64, guardian 64×64, shulker 64×64, strider 64×128, warden 128×128, illager 64×64, armor_stand 64×64, snow_golem 64×64, allay 32×32, vex 32×32, squid 64×32, dolphin 64×64, copper_golem 64×64, cape 64×32, item 16×16, block 16×16, block_column 32×16, block_bottom_top 48×16, block_orientable 48×16, plant 16×16, gui 16×16, particle 8×8, painting 16×16. Aliases name vanilla textures that share a layout. Each layout has its own part names (see the spec reference, section Layouts)."
     },
     "model": {
       "enum": [
@@ -97,6 +189,29 @@
       ],
       "default": "classic",
       "description": "Player layout only: classic = 4px-wide arms, slim = 3px-wide arms."
+    },
+    "size": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 512
+        },
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 512
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "[width, height] for layouts that take a size: gui (any), painting (multiples of 16), particle, and square HD item, block and plant textures."
+    },
+    "asset": {
+      "type": "string",
+      "pattern": "^(?:[a-z0-9_.-]+:)?[a-z0-9_.-]+(?:/[a-z0-9_.-]+)*$",
+      "description": "Where the texture goes in a resource pack, under assets/<namespace>/textures/, without .png: \"item/ruby\" or \"mymod:entity/guard\". Default: the layout's own (a vanilla path for mobs, item/<name> for items…)."
     },
     "palette": {
       "type": "object",
@@ -122,6 +237,122 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/op"
+      }
+    },
+    "animation": {
+      "type": "object",
+      "required": [
+        "frames"
+      ],
+      "additionalProperties": false,
+      "description": "Frames for item, block, plant, gui and particle textures. Each frame is a patch over the layers (by id); the first is usually {} (the spec as it is). Compiles to a vertical strip of the distinct frames plus a .png.mcmeta, or one file per frame for particles.",
+      "properties": {
+        "frametime": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Ticks per frame (20 ticks = 1 second). Default 1."
+        },
+        "interpolate": {
+          "type": "boolean",
+          "description": "Blend between frames."
+        },
+        "frames": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "patch": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "do"
+                  ]
+                },
+                "description": "Patch entries: { \"do\": \"update\", \"id\": …, \"set\": … }, replace, add, remove, palette, legend."
+              },
+              "time": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Ticks this frame shows, overriding frametime."
+              }
+            }
+          }
+        }
+      }
+    },
+    "gui": {
+      "type": "object",
+      "required": [
+        "scaling"
+      ],
+      "additionalProperties": false,
+      "description": "gui layout only: how the game resizes the sprite, written to its .png.mcmeta.",
+      "properties": {
+        "scaling": {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "enum": [
+                "stretch",
+                "tile",
+                "nine_slice"
+              ]
+            },
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "border": {
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "left",
+                    "top",
+                    "right",
+                    "bottom"
+                  ],
+                  "properties": {
+                    "left": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "top": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "right": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "bottom": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              ]
+            },
+            "stretch_inner": {
+              "type": "boolean"
+            }
+          }
+        }
       }
     }
   },
@@ -182,6 +413,10 @@
           "type": "boolean",
           "default": true,
           "description": "false skips the layer without deleting it."
+        },
+        "emissive": {
+          "type": "boolean",
+          "description": "The pixels this op paints glow: they also go to the emissive texture, <name>_eyes.png. On \"face\", only the eyes."
         }
       }
     },
@@ -209,7 +444,8 @@
             "material",
             "face",
             "hair",
-            "lighting"
+            "lighting",
+            "bevel"
           ]
         }
       },
@@ -1050,6 +1286,65 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 3
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "bevel"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "target",
+              "color"
+            ],
+            "properties": {
+              "target": {
+                "$ref": "#/$defs/selector"
+              },
+              "color": {
+                "$ref": "#/$defs/color"
+              },
+              "style": {
+                "enum": [
+                  "raised",
+                  "inset"
+                ],
+                "default": "raised"
+              },
+              "light": {
+                "$ref": "#/$defs/color"
+              },
+              "dark": {
+                "$ref": "#/$defs/color"
+              },
+              "outline": {
+                "$ref": "#/$defs/color"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8
+              },
+              "x": {
+                "$ref": "#/$defs/int"
+              },
+              "y": {
+                "$ref": "#/$defs/int"
+              },
+              "w": {
+                "$ref": "#/$defs/size"
+              },
+              "h": {
+                "$ref": "#/$defs/size"
+              },
+              "region": {
+                "type": "string"
               }
             }
           }

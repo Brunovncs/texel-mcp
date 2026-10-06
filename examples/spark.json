@@ -1,0 +1,92 @@
+{
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Spark",
+  "description": "A small yellow spark that shrinks and fades over four frames, for a particle.",
+  "layout": "particle",
+  "asset": "particle/spark",
+  "palette": { "core": "#fff6c2", "glow": "#ffc93a", "edge": "#d07a10" },
+  "layers": [
+    {
+      "op": "pixels",
+      "id": "spark",
+      "target": "particle",
+      "legend": { "C": "core", "G": "glow", "E": "edge" },
+      "rows": [
+        "...EE...",
+        "...GG...",
+        "..EGGE..",
+        "EGGCCGGE",
+        "EGGCCGGE",
+        "..EGGE..",
+        "...GG...",
+        "...EE..."
+      ]
+    }
+  ],
+  "animation": {
+    "frames": [
+      {},
+      {
+        "patch": [
+          {
+            "do": "update",
+            "id": "spark",
+            "set": {
+              "rows": [
+                "........",
+                "...EE...",
+                "...GG...",
+                "..GCCG..",
+                "..GCCG..",
+                "...GG...",
+                "...EE...",
+                "........"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "patch": [
+          {
+            "do": "update",
+            "id": "spark",
+            "set": {
+              "rows": [
+                "........",
+                "........",
+                "...EE...",
+                "..EGGE..",
+                "..EGGE..",
+                "...EE...",
+                "........",
+                "........"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "patch": [
+          {
+            "do": "update",
+            "id": "spark",
+            "set": {
+              "rows": [
+                "........",
+                "........",
+                "........",
+                "...EE...",
+                "...EE...",
+                "........",
+                "........",
+                "........"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

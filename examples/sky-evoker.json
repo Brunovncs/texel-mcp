@@ -1,0 +1,46 @@
+{
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Sky Evoker",
+  "description": "An evoker in a deep blue robe with gold trim and glowing cyan eyes; the eyes go to the emissive texture so they shine in the dark.",
+  "layout": "illager",
+  "asset": "entity/illager/evoker",
+  "palette": {
+    "skin": "#9aa39f",
+    "robe": "#27386e",
+    "trim": "#d6a93a",
+    "dark": "#18203f",
+    "eyes": "#5ff3ff",
+    "boots": "#2a2420"
+  },
+  "layers": [
+    { "op": "fill", "target": "all", "color": "skin" },
+    { "op": "noise", "target": "head", "jitter": 3, "seed": 6 },
+    { "op": "clear", "target": "hat", "note": "the hood is the illusioner's; leave it empty" },
+    {
+      "op": "face",
+      "id": "face",
+      "target": "head.front",
+      "skin": "skin",
+      "eyes": "eyes",
+      "eyeStyle": "glow",
+      "mouth": "none",
+      "brows": "dark",
+      "emissive": true
+    },
+    {
+      "op": "material",
+      "target": "body+jacket+arm+armsMiddle+freeArm",
+      "color": "robe",
+      "kind": "fabric",
+      "seed": 4
+    },
+    { "op": "rect", "target": ["freeArm.sides", "arm.sides"], "y": -3, "color": "skin" },
+    { "op": "rect", "target": "jacket.sides", "x": 3, "w": 2, "color": "trim" },
+    { "op": "rect", "target": "jacket.sides", "y": -2, "color": "trim" },
+    { "op": "rect", "target": "armsMiddle.front", "y": 0, "h": 1, "color": "trim" },
+    { "op": "fill", "target": "leg", "color": "dark" },
+    { "op": "rect", "target": "leg.sides+bottom", "y": -3, "color": "boots" },
+    { "op": "lighting" }
+  ]
+}

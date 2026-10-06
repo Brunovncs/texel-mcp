@@ -11,6 +11,8 @@ export const MCP_TOOLS = [
   'texel_save_family',
   'texel_import_png',
   'texel_palette',
+  'texel_pack',
+  'texel_check_pack',
   'texel_diff',
   'texel_get_example',
   'texel_read_docs',

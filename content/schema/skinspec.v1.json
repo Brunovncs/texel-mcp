@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://www.texel.dev.br/schema/skinspec.v1.json",
   "title": "Texel skin spec v1",
-  "description": "Declarative description of a Minecraft texture: a player skin by default, or a mob, armor, cape, item or block texture with \"layout\". Layers are applied in order (painter's model) and compile deterministically to a PNG. Docs: https://www.texel.dev.br/docs/spec.md",
+  "description": "Declarative description of a Minecraft texture: a player skin by default, or a mob, armor, cape, item, block, plant, GUI sprite, particle or painting texture with \"layout\". Layers are applied in order (painter's model) and compile deterministically to PNG files. Docs: https://www.texel.dev.br/docs/spec.md",
   "type": "object",
   "required": [
     "version",
@@ -44,6 +44,29 @@
       "default": "classic",
       "description": "Player layout only: classic = 4px-wide arms, slim = 3px-wide arms."
     },
+    "size": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 512
+        },
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 512
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "[width, height] for layouts that take a size: gui (any), painting (multiples of 16), particle, and square HD item, block and plant textures."
+    },
+    "asset": {
+      "type": "string",
+      "pattern": "^(?:[a-z0-9_.-]+:)?[a-z0-9_.-]+(?:/[a-z0-9_.-]+)*$",
+      "description": "Where the texture goes in a resource pack, under assets/<namespace>/textures/, without .png: \"item/ruby\" or \"mymod:entity/guard\". Default: the layout's own (a vanilla path for mobs, item/<name> for items…)."
+    },
     "palette": {
       "type": "object",
       "description": "Named colors. Values are color expressions and may reference other keys, e.g. \"skinShade\": \"skin:-10\".",
@@ -68,6 +91,122 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/op"
+      }
+    },
+    "animation": {
+      "type": "object",
+      "required": [
+        "frames"
+      ],
+      "additionalProperties": false,
+      "description": "Frames for item, block, plant, gui and particle textures. Each frame is a patch over the layers (by id); the first is usually {} (the spec as it is). Compiles to a vertical strip of the distinct frames plus a .png.mcmeta, or one file per frame for particles.",
+      "properties": {
+        "frametime": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Ticks per frame (20 ticks = 1 second). Default 1."
+        },
+        "interpolate": {
+          "type": "boolean",
+          "description": "Blend between frames."
+        },
+        "frames": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 128,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "patch": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "do"
+                  ]
+                },
+                "description": "Patch entries: { \"do\": \"update\", \"id\": …, \"set\": … }, replace, add, remove, palette, legend."
+              },
+              "time": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Ticks this frame shows, overriding frametime."
+              }
+            }
+          }
+        }
+      }
+    },
+    "gui": {
+      "type": "object",
+      "required": [
+        "scaling"
+      ],
+      "additionalProperties": false,
+      "description": "gui layout only: how the game resizes the sprite, written to its .png.mcmeta.",
+      "properties": {
+        "scaling": {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "enum": [
+                "stretch",
+                "tile",
+                "nine_slice"
+              ]
+            },
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "border": {
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "left",
+                    "top",
+                    "right",
+                    "bottom"
+                  ],
+                  "properties": {
+                    "left": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "top": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "right": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "bottom": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              ]
+            },
+            "stretch_inner": {
+              "type": "boolean"
+            }
+          }
+        }
       }
     }
   },
@@ -128,6 +267,10 @@
           "type": "boolean",
           "default": true,
           "description": "false skips the layer without deleting it."
+        },
+        "emissive": {
+          "type": "boolean",
+          "description": "The pixels this op paints glow: they also go to the emissive texture, <name>_eyes.png. On \"face\", only the eyes."
         }
       }
     },
@@ -155,7 +298,8 @@
             "material",
             "face",
             "hair",
-            "lighting"
+            "lighting",
+            "bevel"
           ]
         }
       },
@@ -996,6 +1140,65 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 3
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "op": {
+                "const": "bevel"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "target",
+              "color"
+            ],
+            "properties": {
+              "target": {
+                "$ref": "#/$defs/selector"
+              },
+              "color": {
+                "$ref": "#/$defs/color"
+              },
+              "style": {
+                "enum": [
+                  "raised",
+                  "inset"
+                ],
+                "default": "raised"
+              },
+              "light": {
+                "$ref": "#/$defs/color"
+              },
+              "dark": {
+                "$ref": "#/$defs/color"
+              },
+              "outline": {
+                "$ref": "#/$defs/color"
+              },
+              "depth": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8
+              },
+              "x": {
+                "$ref": "#/$defs/int"
+              },
+              "y": {
+                "$ref": "#/$defs/int"
+              },
+              "w": {
+                "$ref": "#/$defs/size"
+              },
+              "h": {
+                "$ref": "#/$defs/size"
+              },
+              "region": {
+                "type": "string"
               }
             }
           }

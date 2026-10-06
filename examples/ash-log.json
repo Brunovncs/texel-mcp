@@ -1,0 +1,60 @@
+{
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Ash Log",
+  "description": "A pale gray log: smooth bark with dark horizontal marks on the side, warm rings on the ends. Both textures tile.",
+  "layout": "block_column",
+  "asset": "block/ash_log",
+  "palette": { "bark": "#b9b4a8", "mark": "#4b4640", "wood": "#c79c62", "ring": "#9c7442" },
+  "layers": [
+    { "op": "material", "target": "side", "color": "bark", "kind": "wood", "seed": 3 },
+    {
+      "op": "pixels",
+      "id": "marks",
+      "target": "side",
+      "legend": { "M": "mark", "m": "mark~1" },
+      "rows": [
+        "................",
+        "..MMm...........",
+        "...........mMM..",
+        "................",
+        "......Mm........",
+        "................",
+        "MM...........mMM",
+        "................",
+        "........MMMm....",
+        "................",
+        "..m.............",
+        "...........MM...",
+        "....MMm.........",
+        "................",
+        "M.............mM",
+        "................"
+      ]
+    },
+    { "op": "fill", "target": "end", "color": "bark" },
+    { "op": "fill", "target": "end", "x": 1, "y": 1, "w": 14, "h": 14, "color": "wood" },
+    {
+      "op": "pixels",
+      "target": "end",
+      "x": 2,
+      "y": 2,
+      "legend": { "r": "ring", "c": "wood~1" },
+      "rows": [
+        "rrrrrrrrrrrr",
+        "r..........r",
+        "r.rrrrrrrr.r",
+        "r.r......r.r",
+        "r.r.rrrr.r.r",
+        "r.r.rccr.r.r",
+        "r.r.rccr.r.r",
+        "r.r.rrrr.r.r",
+        "r.r......r.r",
+        "r.rrrrrrrr.r",
+        "r..........r",
+        "rrrrrrrrrrrr"
+      ]
+    },
+    { "op": "noise", "target": "end", "jitter": 3, "seed": 5 }
+  ]
+}

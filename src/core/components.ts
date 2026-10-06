@@ -163,8 +163,11 @@ export interface FaceStyle {
   nose: boolean;
 }
 
-/** An 8×8 face following the art guide's layout: brows on row 3, eyes on row 4, nose 5, mouth 6. */
-export function drawFace(s: Surface, c: FaceColors, st: FaceStyle) {
+/**
+ * An 8×8 face following the art guide's layout: brows on row 3, eyes on row 4, nose 5, mouth 6.
+ * Returns the eye pixels (face-local [x, y]), which an emissive face makes glow.
+ */
+export function drawFace(s: Surface, c: FaceColors, st: FaceStyle): [number, number][] {
   const g: RGBA[][] = Array.from({ length: 8 }, () => Array.from({ length: 8 }, () => c.skin));
   const put = (x: number, y: number, col: RGBA) => {
     if (x >= 0 && x < 8 && y >= 0 && y < 8) g[y][x] = col;
@@ -173,11 +176,14 @@ export function drawFace(s: Surface, c: FaceColors, st: FaceStyle) {
   const shadow = shiftLightness(c.skin, -7), deep = mix(c.skin, [60, 30, 30, 255], 0.6);
   for (let x = 0; x < 8; x++) put(x, 7, shiftLightness(c.skin, -4));
 
+  const browed = new Set<number>();
   const brows = (inner: number, outer: number) => {
     if (!c.brows) return;
     both(1, outer, c.brows);
     both(2, inner, c.brows);
+    for (const [x, y] of [[1, outer], [2, inner]]) browed.add(y * 8 + x).add(y * 8 + 7 - x);
   };
+  const before = g.map((row) => [...row]);
   switch (st.eyeStyle) {
     case 'normal':
       both(1, 4, c.white), both(2, 4, c.eyes), brows(3, 3);
@@ -209,6 +215,8 @@ export function drawFace(s: Surface, c: FaceColors, st: FaceStyle) {
       put(1, 3, tone(c.eyes, 3));
       break;
   }
+  const eyes: [number, number][] = [];
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if (g[y][x] !== before[y][x] && !browed.has(y * 8 + x) && x < s.w && y < s.h) eyes.push([x, y]);
   if (st.nose && st.eyeStyle !== 'visor') put(3, 5, shadow), put(4, 5, shadow);
   if (c.blush) both(1, 5, c.blush);
 
@@ -256,6 +264,7 @@ export function drawFace(s: Surface, c: FaceColors, st: FaceStyle) {
       break;
   }
   for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if (x < s.w && y < s.h) s.set(x, y, g[y][x]);
+  return eyes;
 }
 
 // ---- hair ----------------------------------------------------------------------------------

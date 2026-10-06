@@ -44,6 +44,7 @@
         "legend": { "type": "object", "additionalProperties": { "type": "string" } },
         "enable": { "type": "array", "items": { "type": "string" }, "description": "Base layer ids to enable." },
         "disable": { "type": "array", "items": { "type": "string" }, "description": "Base layer ids to disable." },
+        "patch": { "type": "array", "items": { "type": "object", "required": ["do"] }, "description": "Patch entries over the base layers by id (update, replace, add, remove, palette, legend), applied after enable/disable and before layers: members can differ in shape, not only color." },
         "layers": { "type": "array", "items": { "type": "object" }, "description": "Layers appended after the base layers." }
       }
     }

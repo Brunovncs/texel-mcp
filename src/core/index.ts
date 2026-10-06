@@ -20,6 +20,12 @@ export * from './import.js';
 export * from './diff.js';
 export * from './share.js';
 export * from './schema.js';
+export * from './outputs.js';
+export * from './pixelize.js';
+export * from './zip.js';
+export * from './pack-check.js';
+export * from './pack.js';
+export * from './codes.js';
 
 export const SPEC_VERSION = 1;
 export const PROTOCOL = 'texel/1';

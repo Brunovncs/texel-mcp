@@ -1,3 +1,4 @@
+import { MOB_ALIASES, MOB_LAYOUTS } from './mobs.js';
 import type { FaceName, FaceRef, LayerName, Model, PartName, Rect } from './types.js';
 
 export const SKIN_SIZE = 64;
@@ -26,6 +27,8 @@ export interface PartDef {
   turned?: boolean;
   /** Transparent pixels cut the part's outline (a fin, a crest), so the opacity check skips it. */
   cutout?: boolean;
+  /** Vanilla's own UVs make some of its faces read pixels of another part (a bee's antennae): painting one paints both there. */
+  shared?: boolean;
 }
 
 export interface BoxDef {
@@ -50,6 +53,22 @@ export interface LayoutDef {
   /** Vanilla textures and other uses that share this layout. */
   usedBy: string[];
   note?: string;
+  /** A spec's `size` may set the texture size (a GUI sprite, a painting, an HD item). Only for a layout of one flat part. */
+  resizable?: { square?: boolean; multipleOf?: number };
+  /** In game the texture is several files, one per part: part → suffix of its file name ("" for the plain name). */
+  files?: Record<PartName, string>;
+  /** Each part tiles next to copies of itself (blocks): the review checks the seams and the sheet shows a 3×3 tiling. */
+  tiles?: boolean;
+  /** Frames can animate it: a vertical strip with a .png.mcmeta ('strip'), or one file per frame listed by a particle definition ('sprites'). */
+  animated?: 'strip' | 'sprites';
+  /** Its place in a resource pack under assets/<namespace>/textures/: a vanilla texture, or a folder (ending in "/") for the spec's own name. */
+  texture?: string;
+  /** The vanilla model a block or item uses, with the part each of its texture slots takes. */
+  model?: { parent: string; textures: Record<string, PartName> };
+  /** Also show the model from above, for a layout whose shape only reads from there (a phantom's wings). Lying bodies get it anyway. */
+  topView?: boolean;
+  /** The part on each side of the block, for the block previews: top, bottom (default: top), the side facing the viewer's left (its front) and the others. */
+  cube?: { top: PartName; bottom?: PartName; left: PartName; right: PartName };
 }
 
 const HEAD: PartDef = { box: [8, 8, 8], uv: [0, 0], overlay: [32, 0] };
@@ -59,6 +78,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'player',
     title: 'Player skin',
+    texture: 'entity/player/wide/steve',
     size: [64, 64],
     parts: {
       head: HEAD,
@@ -84,6 +104,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'zombie',
     title: 'Zombie (humanoid, 64×64)',
+    texture: 'entity/zombie/zombie',
     size: [64, 64],
     parts: { head: HEAD, body: BODY, rightArm: { box: [4, 12, 4], uv: [40, 16] }, rightLeg: { box: [4, 12, 4], uv: [0, 16] } },
     groups: { arms: ['rightArm'], legs: ['rightLeg'], limbs: ['rightArm', 'rightLeg'] },
@@ -103,6 +124,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'drowned',
     title: 'Drowned (64×64)',
+    texture: 'entity/zombie/drowned',
     size: [64, 64],
     parts: {
       head: HEAD,
@@ -129,6 +151,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'humanoid',
     title: 'Humanoid 64×32 (armor, legacy skins)',
+    texture: 'entity/equipment/humanoid/iron',
     size: [64, 32],
     parts: { head: HEAD, body: BODY, rightArm: { box: [4, 12, 4], uv: [40, 16] }, rightLeg: { box: [4, 12, 4], uv: [0, 16] } },
     groups: { arms: ['rightArm'], legs: ['rightLeg'], limbs: ['rightArm', 'rightLeg'] },
@@ -151,6 +174,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'skeleton',
     title: 'Skeleton (64×32)',
+    texture: 'entity/skeleton/skeleton',
     size: [64, 32],
     parts: { head: HEAD, body: BODY, rightArm: { box: [2, 12, 2], uv: [40, 16] }, rightLeg: { box: [2, 12, 2], uv: [0, 16] } },
     groups: { arms: ['rightArm'], legs: ['rightLeg'], limbs: ['rightArm', 'rightLeg'] },
@@ -169,6 +193,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'creeper',
     title: 'Creeper (64×32)',
+    texture: 'entity/creeper/creeper',
     size: [64, 32],
     parts: { head: { box: [8, 8, 8], uv: [0, 0] }, body: BODY, leg: { box: [4, 6, 4], uv: [0, 16] } },
     groups: { legs: ['leg'] },
@@ -187,6 +212,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'enderman',
     title: 'Enderman (64×32)',
+    texture: 'entity/enderman/enderman',
     size: [64, 32],
     parts: { head: { box: [8, 8, 8], uv: [0, 0], overlay: [0, 16] }, body: { box: [8, 12, 4], uv: [32, 16] }, limb: { box: [2, 30, 2], uv: [56, 0] } },
     groups: { arms: ['limb'], legs: ['limb'], limbs: ['limb'] },
@@ -205,6 +231,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'spider',
     title: 'Spider (64×32)',
+    texture: 'entity/spider/spider',
     size: [64, 32],
     parts: { head: { box: [8, 8, 8], uv: [32, 4] }, neck: { box: [6, 6, 6], uv: [0, 0] }, body: { box: [10, 8, 12], uv: [0, 12] }, leg: { box: [16, 2, 2], uv: [18, 0] } },
     groups: { legs: ['leg'] },
@@ -224,6 +251,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'villager',
     title: 'Villager (64×64)',
+    texture: 'entity/villager/villager',
     size: [64, 64],
     parts: {
       head: { box: [8, 10, 8], uv: [0, 0], overlay: [32, 0] },
@@ -251,12 +279,14 @@ const LAYOUT_LIST: LayoutDef[] = [
       'textures/entity/villager/villager.png (base body)',
       'villager/type/{biome}.png, villager/profession/{profession}.png, villager/profession_level/{level}.png (overlays in the same layout, mostly transparent)',
       'textures/entity/zombie_villager/... (same layout)',
+      'textures/entity/wandering_trader.png',
     ],
     note: 'head@overlay is the hat (the .png.mcmeta "hat" field decides whether it shows). hatRim lies flat around the hat. The arms are crossed in game; the views show them unrotated in front of the body.',
   },
   {
     id: 'piglin',
     title: 'Piglin (64×64)',
+    texture: 'entity/piglin/piglin',
     size: [64, 64],
     parts: {
       head: { box: [10, 8, 8], uv: [0, 0] },
@@ -299,6 +329,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'pig',
     title: 'Pig (64×64)',
+    texture: 'entity/pig/temperate_pig',
     size: [64, 64],
     parts: {
       head: { box: [8, 8, 8], uv: [0, 0] },
@@ -323,6 +354,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'cow',
     title: 'Cow and mooshroom (64×64)',
+    texture: 'entity/cow/temperate_cow',
     size: [64, 64],
     parts: {
       head: { box: [8, 8, 6], uv: [0, 0] },
@@ -352,6 +384,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'cold_cow',
     title: 'Cold cow (64×64)',
+    texture: 'entity/cow/cold_cow',
     size: [64, 64],
     parts: {
       head: { box: [8, 8, 6], uv: [0, 0] },
@@ -382,6 +415,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'warm_cow',
     title: 'Warm cow (64×64)',
+    texture: 'entity/cow/warm_cow',
     size: [64, 64],
     parts: {
       head: { box: [8, 8, 6], uv: [0, 0] },
@@ -414,6 +448,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'sheep',
     title: 'Sheep (64×32)',
+    texture: 'entity/sheep/sheep',
     size: [64, 32],
     parts: {
       head: { box: [6, 6, 8], uv: [0, 0] },
@@ -436,6 +471,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'sheep_wool',
     title: 'Sheep wool (64×32)',
+    texture: 'entity/sheep/sheep_wool',
     size: [64, 32],
     parts: {
       head: { box: [6, 6, 6], uv: [0, 0] },
@@ -457,6 +493,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'chicken',
     title: 'Chicken (64×32)',
+    texture: 'entity/chicken/temperate_chicken',
     size: [64, 32],
     parts: {
       head: { box: [4, 6, 3], uv: [0, 0] },
@@ -484,6 +521,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'cold_chicken',
     title: 'Cold chicken (64×32)',
+    texture: 'entity/chicken/cold_chicken',
     size: [64, 32],
     parts: {
       head: { box: [4, 6, 3], uv: [0, 0] },
@@ -515,6 +553,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'wolf',
     title: 'Wolf (64×32)',
+    texture: 'entity/wolf/wolf',
     size: [64, 32],
     parts: {
       head: { box: [6, 6, 4], uv: [0, 0] },
@@ -540,12 +579,13 @@ const LAYOUT_LIST: LayoutDef[] = [
       { part: 'tail', at: [-1, 12, 7] },
     ],
     opaque: true,
-    usedBy: ['textures/entity/wolf/wolf.png and its _tame and _angry variants', 'the other wolf variants (ashen, black, chestnut, rusty, snowy, spotted, striped, woods)', 'wolf_collar.png (same layout, transparent but for the collar on the mane)'],
+    usedBy: ['textures/entity/wolf/wolf.png and its _tame and _angry variants', 'the other wolf variants (ashen, black, chestnut, rusty, snowy, spotted, striped, woods)', 'wolf_collar.png (same layout, transparent but for the collar on the mane)', 'textures/entity/equipment/wolf_body/*.png (wolf armor, drawn slightly larger than the wolf) and wolf_armor_crackiness_*.png'],
     note: 'The mane (the shaggy front half) and the body lie along the wolf: their top is its back. Both ears share one texture, and all four legs too; the right legs are mirrored. In game the tail angles back and the head sits half a pixel off the grid; the views show the tail straight down and snap to whole pixels.',
   },
   {
     id: 'cat',
     title: 'Cat and ocelot (64×32)',
+    texture: 'entity/cat/tabby',
     size: [64, 32],
     parts: {
       head: { box: [5, 4, 5], uv: [0, 0] },
@@ -584,6 +624,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'hoglin',
     title: 'Hoglin (128×64)',
+    texture: 'entity/hoglin/hoglin',
     size: [128, 64],
     parts: {
       body: { box: [16, 14, 26], uv: [1, 1] },
@@ -622,6 +663,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'iron_golem',
     title: 'Iron golem (128×128)',
+    texture: 'entity/iron_golem/iron_golem',
     size: [128, 128],
     parts: {
       head: { box: [8, 10, 8], uv: [0, 0] },
@@ -651,6 +693,7 @@ const LAYOUT_LIST: LayoutDef[] = [
   {
     id: 'witch',
     title: 'Witch (64×128)',
+    texture: 'entity/witch',
     size: [64, 128],
     parts: {
       head: { box: [8, 10, 8], uv: [0, 0] },
@@ -686,6 +729,7 @@ const LAYOUT_LIST: LayoutDef[] = [
     usedBy: ['textures/entity/witch.png'],
     note: 'A villager body (robe on jacket, crossed arms) under a pointed hat of four stacked boxes: brim, hatLow, hatHigh, hatTip. The brim covers the top two rows of head.front. The mole is a 1-pixel box on the nose, whose texture sits in head\'s unused top-left corner. In game the hat bends back a little at each step and the nose wiggles; the views show them straight.',
   },
+  ...MOB_LAYOUTS,
   {
     id: 'cape',
     title: 'Cape and elytra (64×32)',
@@ -707,17 +751,135 @@ const LAYOUT_LIST: LayoutDef[] = [
     parts: { item: { box: [16, 16, 0], uv: [0, 0] } },
     boxes: [{ part: 'item', at: [0, 0, 0] }],
     usedBy: ['textures/item/*.png', 'mod item textures'],
-    note: 'Leave the background transparent; the game draws the item from its opaque pixels.',
+    note: 'Leave the background transparent; the game draws the item from its opaque pixels. "size" makes an HD item (32×32, 64×64…). Frames in "animation" make an animated item (a strip and its .png.mcmeta).',
+    resizable: { square: true },
+    animated: 'strip',
+    texture: 'item/',
+    model: { parent: 'minecraft:item/generated', textures: { layer0: 'item' } },
   },
   {
     id: 'block',
-    title: 'Block face (16×16)',
+    title: 'Block, one texture on every side (16×16)',
     size: [16, 16],
     parts: { block: { box: [16, 16, 0], uv: [0, 0] } },
     boxes: [{ part: 'block', at: [0, 0, 0] }],
     opaque: true,
-    usedBy: ['textures/block/*.png (one file per face: e.g. _top, _side, _bottom)'],
-    note: 'Tiles seamlessly next to itself: keep the edges compatible.',
+    usedBy: ['textures/block/*.png of cube_all blocks (stone, dirt, planks, ores, wool)', 'one face of any block'],
+    note: 'Tiles next to copies of itself: the review checks the seams and the sheet shows it tiled 3×3. Blocks with other textures on top or in front have their own layouts: block_column, block_bottom_top, block_orientable.',
+    resizable: { square: true },
+    tiles: true,
+    animated: 'strip',
+    texture: 'block/',
+    model: { parent: 'minecraft:block/cube_all', textures: { all: 'block' } },
+    cube: { top: 'block', left: 'block', right: 'block' },
+  },
+  {
+    id: 'block_column',
+    title: 'Block with ends: logs, pillars (2 × 16×16)',
+    size: [32, 16],
+    parts: { side: { box: [16, 16, 0], uv: [0, 0] }, end: { box: [16, 16, 0], uv: [16, 0] } },
+    boxes: [
+      { part: 'side', at: [0, 0, 0] },
+      { part: 'end', at: [16, 0, 0] },
+    ],
+    opaque: true,
+    usedBy: ['textures/block/oak_log.png + oak_log_top.png and the other logs and stems', 'quartz_pillar, purpur_pillar, basalt, bone_block, hay_block'],
+    note: 'Two files: <name>.png (the side, bark running top to bottom) and <name>_top.png (both ends, the rings). Both tile.',
+    files: { side: '', end: '_top' },
+    tiles: true,
+    animated: 'strip',
+    texture: 'block/',
+    model: { parent: 'minecraft:block/cube_column', textures: { side: 'side', end: 'end' } },
+    cube: { top: 'end', left: 'side', right: 'side' },
+  },
+  {
+    id: 'block_bottom_top',
+    title: 'Block with a top and a bottom: grass, sandstone (3 × 16×16)',
+    size: [48, 16],
+    parts: { side: { box: [16, 16, 0], uv: [0, 0] }, top: { box: [16, 16, 0], uv: [16, 0] }, bottom: { box: [16, 16, 0], uv: [32, 0] } },
+    boxes: [
+      { part: 'side', at: [0, 0, 0] },
+      { part: 'top', at: [16, 0, 0] },
+      { part: 'bottom', at: [32, 0, 0] },
+    ],
+    opaque: true,
+    usedBy: ['textures/block/sandstone.png, sandstone_top.png, sandstone_bottom.png', 'grass_block_side, mycelium_side, podzol_side, crimson_nylium_side (their bottom is another block)'],
+    note: 'Three files: <name>_side.png, <name>_top.png and <name>_bottom.png. The top row of the side meets the top texture in game.',
+    files: { side: '_side', top: '_top', bottom: '_bottom' },
+    tiles: true,
+    animated: 'strip',
+    texture: 'block/',
+    model: { parent: 'minecraft:block/cube_bottom_top', textures: { side: 'side', top: 'top', bottom: 'bottom' } },
+    cube: { top: 'top', bottom: 'bottom', left: 'side', right: 'side' },
+  },
+  {
+    id: 'block_orientable',
+    title: 'Block with a front: furnace, dispenser (3 × 16×16)',
+    size: [48, 16],
+    parts: { front: { box: [16, 16, 0], uv: [0, 0] }, side: { box: [16, 16, 0], uv: [16, 0] }, top: { box: [16, 16, 0], uv: [32, 0] } },
+    boxes: [
+      { part: 'front', at: [0, 0, 0] },
+      { part: 'side', at: [16, 0, 0] },
+      { part: 'top', at: [32, 0, 0] },
+    ],
+    opaque: true,
+    usedBy: ['textures/block/furnace_front.png, furnace_side.png, furnace_top.png', 'dispenser, dropper, observer, carved_pumpkin, loom'],
+    note: 'Three files: <name>_front.png (faces the player who placed it), <name>_side.png (the other three sides) and <name>_top.png (top and bottom).',
+    files: { front: '_front', side: '_side', top: '_top' },
+    tiles: true,
+    animated: 'strip',
+    texture: 'block/',
+    model: { parent: 'minecraft:block/orientable', textures: { front: 'front', side: 'side', top: 'top' } },
+    cube: { top: 'top', left: 'front', right: 'side' },
+  },
+  {
+    id: 'plant',
+    title: 'Plant: flowers, saplings, crops (16×16)',
+    size: [16, 16],
+    parts: { plant: { box: [16, 16, 0], uv: [0, 0] } },
+    boxes: [{ part: 'plant', at: [0, 0, 0] }],
+    usedBy: ['textures/block/*.png of cross blocks: poppy, dandelion, oak_sapling, dead_bush, wheat_stage7'],
+    note: 'Drawn on two crossed planes, so leave the background transparent. The bottom row touches the ground.',
+    resizable: { square: true },
+    animated: 'strip',
+    texture: 'block/',
+    model: { parent: 'minecraft:block/cross', textures: { cross: 'plant' } },
+  },
+  {
+    id: 'gui',
+    title: 'GUI sprite: buttons, slots, panels, icons (any size)',
+    size: [16, 16],
+    parts: { sprite: { box: [16, 16, 0], uv: [0, 0] } },
+    boxes: [{ part: 'sprite', at: [0, 0, 0] }],
+    usedBy: ['textures/gui/sprites/**/*.png (widget/button, container/slot, hud/heart/full, icon/…)', 'textures/gui/container/*.png (whole screens, 256×256)'],
+    note: 'Set "size" to the sprite size (a button is 200×20). "gui": { "scaling": … } is written to its .png.mcmeta: "nine_slice" keeps the corners and tiles the edges and the middle when the game resizes it, "tile" repeats it, "stretch" scales it. The "bevel" op draws raised and inset frames in the vanilla style.',
+    resizable: {},
+    animated: 'strip',
+    texture: 'gui/sprites/',
+  },
+  {
+    id: 'particle',
+    title: 'Particle (8×8)',
+    size: [8, 8],
+    parts: { particle: { box: [8, 8, 0], uv: [0, 0] } },
+    boxes: [{ part: 'particle', at: [0, 0, 0] }],
+    usedBy: ['textures/particle/*.png (flame, heart, glint, generic_0…7)', 'particles/<id>.json (lists the frames)'],
+    note: 'Most vanilla particles are 8×8; "size" changes it. Frames in "animation" become one file per frame (<name>_0.png, <name>_1.png…), listed in order by the particle definition, the way vanilla animates particles.',
+    resizable: {},
+    animated: 'sprites',
+    texture: 'particle/',
+  },
+  {
+    id: 'painting',
+    title: 'Painting (16 pixels per block)',
+    size: [16, 16],
+    parts: { painting: { box: [16, 16, 0], uv: [0, 0] } },
+    boxes: [{ part: 'painting', at: [0, 0, 0] }],
+    opaque: true,
+    usedBy: ['textures/painting/*.png (kebab 1×1, wanderer 1×2, pool 2×1, skeleton 4×3)'],
+    note: 'Set "size" in pixels, 16 per block: a 2×1 painting is [32, 16]. A new painting also needs a painting_variant in a data pack.',
+    resizable: { multipleOf: 16 },
+    texture: 'painting/',
   },
 ];
 
@@ -752,6 +914,17 @@ export const LAYOUT_ALIASES: Readonly<Record<string, string>> = {
   zoglin: 'hoglin',
   ocelot: 'cat',
   cat_collar: 'cat',
+  ...MOB_ALIASES,
+  cube_all: 'block',
+  cube_column: 'block_column',
+  log: 'block_column',
+  pillar: 'block_column',
+  cube_bottom_top: 'block_bottom_top',
+  orientable: 'block_orientable',
+  cross: 'plant',
+  flower: 'plant',
+  sprite: 'gui',
+  gui_sprite: 'gui',
 };
 
 export function resolveLayout(id: unknown): LayoutDef | null {
@@ -787,11 +960,20 @@ const FLAT_FACES: readonly FaceName[] = ['front'];
 const PLANE_FACES: readonly FaceName[] = ['right', 'left'];
 const rigs = new Map<string, Rig>();
 
-export function rigFor(layout: LayoutDef | string = 'player', model: Model = 'classic'): Rig {
-  const def = typeof layout === 'string' ? (resolveLayout(layout) ?? LAYOUTS.player) : layout;
+/**
+ * The rig of a layout. `size` resizes a resizable layout (its one flat part grows with it); callers
+ * check it first with `sizeProblem`, and a size the layout can't take is ignored.
+ */
+export function rigFor(layout: LayoutDef | string = 'player', model: Model = 'classic', size?: readonly [number, number]): Rig {
+  let def = typeof layout === 'string' ? (resolveLayout(layout) ?? LAYOUTS.player) : layout;
+  const resized = size && (size[0] !== def.size[0] || size[1] !== def.size[1]) && !sizeProblem(def, size);
+  if (resized) {
+    const [name, part] = Object.entries(def.parts)[0];
+    def = { ...def, size: [size[0], size[1]], parts: { [name]: { ...part, box: [size[0], size[1], 0] } } };
+  }
   const slim = def.id === 'player' && model === 'slim';
-  const key = `${def.id}:${slim ? 'slim' : 'classic'}`;
-  const cached = rigs.get(key);
+  const key = `${def.id}:${slim ? 'slim' : 'classic'}${resized ? `:${def.size.join('x')}` : ''}`;
+  const cached = typeof layout === 'string' || resized || LAYOUTS[def.id] === layout ? rigs.get(key) : undefined;
   if (cached) return cached;
   const parts: Record<string, PartDef> = {};
   const texBox: Record<string, [number, number, number]> = {};
@@ -825,8 +1007,23 @@ export function rigFor(layout: LayoutDef | string = 'player', model: Model = 'cl
       return out;
     },
   };
-  rigs.set(key, rig);
+  if (typeof layout === 'string' || resized || LAYOUTS[def.id] === layout) rigs.set(key, rig);
   return rig;
+}
+
+export const MAX_TEXTURE_SIDE = 512;
+
+/** Why a layout can't take a texture size, or null when it can. */
+export function sizeProblem(def: LayoutDef, size: readonly unknown[]): string | null {
+  const [w, h] = size;
+  if (size.length !== 2 || !Number.isInteger(w) || !Number.isInteger(h) || (w as number) < 1 || (h as number) < 1 || (w as number) > MAX_TEXTURE_SIDE || (h as number) > MAX_TEXTURE_SIDE)
+    return `"size" is [width, height] in whole pixels, 1 to ${MAX_TEXTURE_SIDE}`;
+  if (w === def.size[0] && h === def.size[1]) return null;
+  if (!def.resizable) return `the ${def.id} layout is always ${def.size.join('×')}`;
+  if (def.resizable.square && w !== h) return `${def.id} textures are square`;
+  const m = def.resizable.multipleOf;
+  if (m && ((w as number) % m || (h as number) % m)) return `${def.id} textures are a multiple of ${m} pixels on each side`;
+  return null;
 }
 
 type Vec3 = [number, number, number];

@@ -1,4 +1,5 @@
 {
+  "ash-log": "3c14eb4413af5bff",
   "astronaut": "743483f2b2903a1f",
   "banner-cape": "4e4fa2fd4d66a10c",
   "bronze-armor": "cf1c9aaa5b1d346e",
@@ -7,9 +8,14 @@
   "ember-blade": "dd36c54bbbf239c4",
   "explorer": "da9f8f3b3cc02acd",
   "knight": "906bb6f0e31b2c48",
+  "magma-pulse": "543997720b1abfc6",
   "miner-zombie": "23534cbff7810406",
   "mud-pig": "a5d76ae2be1ca3f2",
   "robot": "ab1b051da39ced9b",
+  "sky-evoker": "900ad154e234b1f2",
+  "spark": "fac2129d2b4946ce",
+  "stone-button": "3da32f109857ed0f",
   "winged-pig": "a395d8fe058b3293",
-  "wizard": "585d29ff906f8dc6"
+  "wizard": "585d29ff906f8dc6",
+  "zebra": "eac70221759d06ab"
 }

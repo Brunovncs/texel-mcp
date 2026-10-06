@@ -75,6 +75,7 @@ export function decodePNG(bytes: Uint8Array, inflate: (data: Uint8Array) => Uint
     prev = cur;
   }
 
+  const key = trns && (type === 0 || type === 2) ? Array.from({ length: type === 0 ? 1 : 3 }, (_, c) => (trns[c * 2] << 8) | trns[c * 2 + 1]) : null;
   const out = new Uint8ClampedArray(width * height * 4);
   for (let y = 0; y < height; y++)
     for (let x = 0; x < width; x++) {
@@ -90,9 +91,10 @@ export function decodePNG(bytes: Uint8Array, inflate: (data: Uint8Array) => Uint
         continue;
       }
       const i = row + x * channels;
+      // tRNS on a truecolor or grayscale image names one 16-bit sample value that is transparent.
       if (type === 6) out.set(pixels.subarray(i, i + 4), o);
-      else if (type === 2) out.set([pixels[i], pixels[i + 1], pixels[i + 2], 255], o);
-      else if (type === 0) out.set([pixels[i], pixels[i], pixels[i], 255], o);
+      else if (type === 2) out.set([pixels[i], pixels[i + 1], pixels[i + 2], key && pixels[i] === key[0] && pixels[i + 1] === key[1] && pixels[i + 2] === key[2] ? 0 : 255], o);
+      else if (type === 0) out.set([pixels[i], pixels[i], pixels[i], key && pixels[i] === key[0] ? 0 : 255], o);
       else out.set([pixels[i], pixels[i], pixels[i], pixels[i + 1]], o);
     }
   return { width, height, data: out };

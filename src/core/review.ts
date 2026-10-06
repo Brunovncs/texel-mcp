@@ -1,8 +1,9 @@
 import { ART_RUBRIC, ART_WEAK, artReview, type ArtReport } from './art.js';
-import { resolveColor, rgbToHsl, toHex } from './color.js';
+import { deltaE, resolveColor, rgbToHsl, toHex } from './color.js';
 import type { CompileResult } from './compile.js';
 import { type Rig, refName } from './layout.js';
-import { readFaceLayer } from './pixels.js';
+import { distinctFrames } from './outputs.js';
+import { readFaceLayer, readVisibleFace } from './pixels.js';
 import type { FaceRef, Image, Issue, RGBA } from './types.js';
 import { renderView, viewsOf } from './views.js';
 
@@ -15,6 +16,13 @@ export interface ReviewStats {
   baseCoverage: number;
   overlayPixels: number;
   paletteSize: number;
+  /** Tiling parts: how much harder each edge breaks than the texture's own neighbors (1 = seamless; above 2.5 shows). */
+  seams?: Record<string, { horizontal: number; vertical: number }>;
+  /** Animated textures: frames, and how many differ. */
+  frames?: number;
+  distinctFrames?: number;
+  /** Pixels in the emissive texture. */
+  emissivePixels?: number;
 }
 
 export interface Review {
@@ -111,6 +119,24 @@ export function review(result: CompileResult): Review {
   const unused = Object.keys(palette).filter((k) => !used.has(k));
   if (unused.length) add('info', 'unused-palette', '$.palette', `unused palette keys: ${unused.join(', ')}`);
 
+  const seams = rig.def.tiles ? tileSeams(tex, rig) : undefined;
+  for (const [part, s] of Object.entries(seams ?? {})) {
+    const bad = [s.horizontal > SEAM_LIMIT && 'left and right', s.vertical > SEAM_LIMIT && 'top and bottom'].filter(Boolean);
+    if (bad.length)
+      add('warning', 'tile-seam', `${part}.front`, `${part} shows a seam where copies meet: its ${bad.join(' and its ')} edges differ ${Math.max(s.horizontal, s.vertical).toFixed(1)}× more than neighboring pixels inside it`, 'make the edge rows and columns continue into each other: carry the noise and shapes across the edge, avoid an outline or a gradient that ends at it, and look at the tiled panel of the sheet');
+  }
+  let distinct: number | undefined;
+  if (result.frames) {
+    distinct = distinctFrames(result.frames).unique.length;
+    if (distinct === 1 && result.frames.length > 1) add('warning', 'animation-static', '$.animation.frames', `all ${result.frames.length} frames are the same picture, so nothing moves`, 'give each frame a patch that changes something (an "update" of a layer\'s color, position or seed)');
+    else if (distinct < result.frames.length) add('info', 'frames-reused', '$.animation.frames', `${result.frames.length} frames, ${distinct} distinct: repeated frames are stored once and listed by index in the .png.mcmeta`);
+  }
+  let emissivePixels: number | undefined;
+  if (result.emissive) {
+    emissivePixels = 0;
+    for (let i = 3; i < result.emissive.data.length; i += 4) if (result.emissive.data[i]) emissivePixels++;
+  }
+
   const layers = Array.isArray(spec?.layers) ? spec.layers : [];
   for (const i of result.deadLayers) {
     const id = (layers[i] as { id?: unknown } | undefined)?.id;
@@ -149,10 +175,41 @@ export function review(result: CompileResult): Review {
       baseCoverage: Math.round((baseOpaque / Math.max(1, baseTotal)) * 1000) / 10,
       overlayPixels,
       paletteSize: Object.keys(palette).length,
+      ...(seams ? { seams } : {}),
+      ...(result.frames ? { frames: result.frames.length, distinctFrames: distinct } : {}),
+      ...(emissivePixels !== undefined ? { emissivePixels } : {}),
     },
     ascii,
     next,
   };
+}
+
+/** A seam shows when an edge breaks this many times more than the texture's own neighbors do. */
+const SEAM_LIMIT = 2.5;
+/** Differences below this ΔE never make a seam, so a flat texture's edges don't count as broken. */
+const SEAM_FLOOR = 4;
+
+/**
+ * For each part of a tiling layout: the mean color difference across the edge where two copies
+ * meet, over the mean difference between neighbors inside the texture.
+ */
+export function tileSeams(tex: Image, rig: Rig): Record<string, { horizontal: number; vertical: number }> {
+  const out: Record<string, { horizontal: number; vertical: number }> = {};
+  for (const part of rig.parts) {
+    const px = readVisibleFace(tex, rig, { part, face: 'front' });
+    const h = px.length, w = px[0]?.length ?? 0;
+    if (w < 2 || h < 2) continue;
+    const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
+    const d = (a: RGBA, b: RGBA) => (a[3] && b[3] ? deltaE(a, b) : a[3] === b[3] ? 0 : 100);
+    const insideH: number[] = [], insideV: number[] = [], edgeH: number[] = [], edgeV: number[] = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w - 1; x++) insideH.push(d(px[y][x], px[y][x + 1]));
+    for (let y = 0; y < h - 1; y++) for (let x = 0; x < w; x++) insideV.push(d(px[y][x], px[y + 1][x]));
+    for (let y = 0; y < h; y++) edgeH.push(d(px[y][w - 1], px[y][0]));
+    for (let x = 0; x < w; x++) edgeV.push(d(px[h - 1][x], px[0][x]));
+    const ratio = (edge: number[], inside: number[]) => Math.round((Math.max(mean(edge), SEAM_FLOOR) / Math.max(mean(inside), SEAM_FLOOR)) * 10) / 10;
+    out[part] = { horizontal: ratio(edgeH, insideH), vertical: ratio(edgeV, insideV) };
+  }
+  return out;
 }
 
 function asciiViews(tex: Image, rig: Rig, palette: Record<string, string>, legend?: Record<string, string>) {
@@ -226,7 +283,11 @@ function asciiViews(tex: Image, rig: Rig, palette: Record<string, string>, legen
 export function reviewToMarkdown(r: Review, opts: { includeAscii?: boolean } = {}): string {
   const lines = [`## Texel review: score ${r.score}/100 ${r.ok ? '(valid)' : '(has errors)'}`, ''];
   const s = r.stats;
-  lines.push(`- ${s.layout && s.layout !== 'player' ? `layout: ${s.layout}` : `model: ${s.model}`} · layers: ${s.layers}${s.disabledLayers ? ` (${s.disabledLayers} disabled)` : ''} · colors used: ${s.colorsUsed} · base coverage: ${s.baseCoverage}% · overlay pixels: ${s.overlayPixels}`, '');
+  lines.push(`- ${s.layout && s.layout !== 'player' ? `layout: ${s.layout}` : `model: ${s.model}`} · layers: ${s.layers}${s.disabledLayers ? ` (${s.disabledLayers} disabled)` : ''} · colors used: ${s.colorsUsed} · base coverage: ${s.baseCoverage}% · overlay pixels: ${s.overlayPixels}`);
+  if (s.seams) lines.push(`- tiling seams (1 = seamless, over ${SEAM_LIMIT} shows): ${Object.entries(s.seams).map(([p, v]) => `${p} ↔ ${v.horizontal}, ↕ ${v.vertical}`).join(' · ')}`);
+  if (s.frames) lines.push(`- animation: ${s.frames} frames, ${s.distinctFrames} distinct`);
+  if (s.emissivePixels) lines.push(`- emissive: ${s.emissivePixels} glowing pixels (written as <name>_eyes.png)`);
+  lines.push('');
   if (r.issues.length) {
     lines.push('### Issues');
     for (const i of r.issues) lines.push(`- **${i.level}** \`${i.code}\` at \`${i.path}\`: ${i.message}${i.hint ? `. _${i.hint}_` : ''}`);

@@ -1,13 +1,18 @@
-import { existsSync, mkdirSync, readFileSync, watchFile, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync, watchFile } from 'node:fs';
 import { basename, join } from 'node:path';
 import { deflateSync, inflateSync } from 'node:zlib';
 import {
   applyPatch,
+  buildPack,
+  type CompileResult,
+  isFamily,
+  packReportToMarkdown,
+  pixelize,
+  validatePack,
   compile,
   decodePNG,
   diffTextures,
   diffToMarkdown,
-  encodePNG,
   extractPalette,
   expandFamily,
   formatSpec,
@@ -30,6 +35,7 @@ import {
   withIds,
   type SkinSpec,
 } from '../core';
+import { png, readPack, writeAtomic, writePack, writeTextures } from '../live/files';
 import { openBrowser, startLive } from '../live/server';
 import { SITE_ORIGIN } from '../live/site';
 import { checkForUpdate, TEXEL_VERSION, updateNotice } from '../live/update';
@@ -52,8 +58,18 @@ palette reads a reference PNG (concept art, a photo, another skin) and prints it
        role each (shadow, midtone, highlight, neutral, accent) as a ready "palette" and "legend".
 patch  applies a patch ({ "patch": [{ "do": "update", "id": …, "set": … }] }) and reviews the result.
        Without -o the patched spec goes to stdout and the review to stderr.
+build  writes every file the texture is in game next to -o: a block's _top/_side files, an
+       animation strip and its .png.mcmeta, a particle's frames, the glowing pixels as _eyes.
+import --pixelize turns any picture (concept art, a render on a white background, an HD skin) into
+       a texture of the layout's size first: background removed, colors reduced, specks cleaned.
+pack   builds a resource pack (a folder, or a .zip with -o pack.zip) from specs, families and
+       folders of specs: each texture at its "asset" path (or the layout's default), with
+       pack.mcmeta for --mc-version; --models adds models, block states and item definitions.
+check-pack checks a resource pack folder or .zip: pack.mcmeta and its format, file names, PNGs,
+       .mcmeta animations and GUI scaling, entity texture sizes, model, block state, item and
+       particle references, unused textures.
 
-"-" reads the spec from stdin. Exit code is 1 when the spec has errors.
+"-" reads the spec from stdin. Exit codes: 0 done, 1 the spec or pack has errors, 2 bad usage.
 Once a day the CLI checks ${SITE_ORIGIN}/version.json and says on stderr when a newer release is out
 (TEXEL_NO_UPDATE_CHECK=1 turns this off).
 Docs: ${SITE_ORIGIN}/llms.txt · ${SITE_ORIGIN}/docs/spec.md · ${SITE_ORIGIN}/docs/protocol.md`;
@@ -92,7 +108,36 @@ function fail(msg: string): never {
   process.exit(2);
 }
 
-const png = (img: Parameters<typeof encodePNG>[0]) => encodePNG(img, (raw) => deflateSync(raw, { level: 9 }));
+const writeFileSync = writeAtomic;
+
+/** Spec and family files to pack: the files given, and the .json files inside folders given. */
+function packSources(paths: string[]): { name: string; result: CompileResult }[] {
+  const out: { name: string; result: CompileResult }[] = [];
+  const add = (path: string) => {
+    const text = readFileSync(path, 'utf8');
+    const stem = basename(path).replace(/\.json$/i, '').replace(/\.skin$/i, '');
+    let data: unknown;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      fail(`${path}: invalid JSON: ${(e as Error).message}`);
+    }
+    if (isFamily(data)) {
+      const family = expandFamily(data);
+      for (const i of family.issues) process.stderr.write(`${i.level}: ${path} ${i.path}: ${i.message}\n`);
+      for (const m of family.members) out.push({ name: `${stem}_${m.id}`.replace(/-/g, '_'), result: compile(m.spec) });
+    } else out.push({ name: stem, result: compile(data) });
+  };
+  for (const path of paths) {
+    if (!existsSync(path)) fail(`${path} does not exist`);
+    if (statSync(path).isDirectory())
+      for (const name of readdirSync(path).sort()) {
+        if (/\.json$/i.test(name) && !/\.mcmeta$/i.test(name)) add(join(path, name));
+      }
+    else add(path);
+  }
+  return out;
+}
 
 function summary(text: string) {
   const r = review(compile(text));
@@ -140,11 +185,11 @@ async function main(argv: string[]) {
       const r = review(result);
       if (result.ok) {
         const out = flag(rest, '-o') ?? 'skin.png';
-        writeFileSync(out, png(result.texture));
-        process.stderr.write(`wrote ${out} (${result.texture.width}x${result.texture.height}, ${result.layout === 'player' ? result.model : result.layout})\n`);
+        const files = writeTextures(out, result);
+        process.stderr.write(`wrote ${files.join(', ')} (${result.texture.width}x${result.texture.height}, ${result.layout === 'player' ? result.model : result.layout})\n`);
         const sheet = flag(rest, '--sheet');
         if (sheet) {
-          writeFileSync(sheet, png(renderSheet(result.texture, result.rig).image));
+          writeFileSync(sheet, png(renderSheet(result.texture, result.rig, result).image));
           process.stderr.write(`wrote ${sheet} (views | texture)\n`);
         }
       }
@@ -175,7 +220,7 @@ async function main(argv: string[]) {
       const report = `applied ${p.applied} of ${p.applied + p.issues.length} patch entries\n\n${reviewToMarkdown(review(result), { includeAscii: false })}\n`;
       const sheet = flag(rest, '--sheet');
       if (sheet) {
-        writeFileSync(sheet, png(renderSheet(result.texture, result.rig).image));
+        writeFileSync(sheet, png(renderSheet(result.texture, result.rig, result).image));
         process.stderr.write(`wrote ${sheet}\n`);
       }
       const out = flag(rest, '-o');
@@ -199,7 +244,7 @@ async function main(argv: string[]) {
         writeFileSync(out, png(renderCloseUp(result.texture, result.rig, parts.parts).image));
         process.stderr.write(`wrote ${out} (${parts.parts.join(', ')}: front | back | right | left | top | bottom)\n`);
       } else {
-        writeFileSync(out, png(renderSheet(result.texture, result.rig).image));
+        writeFileSync(out, png(renderSheet(result.texture, result.rig, result).image));
         process.stderr.write(`wrote ${out}\n`);
       }
       process.exit(result.ok ? 0 : 1);
@@ -225,12 +270,11 @@ async function main(argv: string[]) {
       for (const i of family.issues) process.stderr.write(`${i.level}: ${i.path}: ${i.message}${i.hint ? ` (${i.hint})` : ''}\n`);
       if (!family.ok) process.exit(1);
       const dir = flag(rest, '-o') ?? 'skins';
-      mkdirSync(dir, { recursive: true });
       const built = family.members.map((m) => ({ ...m, result: compile(m.spec) }));
       const lines = [`## ${family.name}: ${built.length} members`, '', '| id | name | score | issues |', '| --- | --- | --- | --- |'];
       for (const m of built) {
         const r = review(m.result);
-        writeFileSync(join(dir, `${m.id}.png`), png(m.result.texture));
+        if (m.result.ok) writeTextures(join(dir, `${m.id}.png`), m.result);
         writeFileSync(join(dir, `${m.id}.skin.json`), formatSpec(m.spec));
         lines.push(`| ${m.id} | ${m.spec.name} | ${r.score} | ${r.issues.filter((i) => i.level !== 'info').map((i) => i.code).join(', ') || '-'} |`);
       }
@@ -243,13 +287,73 @@ async function main(argv: string[]) {
     case 'import': {
       if (!file) fail('missing PNG file');
       const layout = flag(rest, '--layout');
-      if (layout && !resolveLayout(layout)) fail(`unknown layout "${layout}" (see: node texel.mjs layouts)`);
-      const { spec, lossy } = textureToSpec(decodePNG(readFileSync(file), (d) => inflateSync(d)), basename(file).replace(/\.png$/i, ''), layout);
+      const def = resolveLayout(layout);
+      if (!def) fail(`unknown layout "${layout}" (see: node texel.mjs layouts)`);
+      const name = basename(file).replace(/\.png$/i, '');
+      let image: ReturnType<typeof decodePNG>;
+      try {
+        image = decodePNG(readFileSync(file), (d) => inflateSync(d), { maxSide: rest.includes('--pixelize') ? REFERENCE_MAX_SIDE : undefined });
+      } catch (e) {
+        fail(`${file}: ${(e as Error).message}`);
+      }
+      if (rest.includes('--pixelize')) {
+        const size = flag(rest, '--size');
+        if (size && !/^\d+x\d+$/.test(size)) fail(`--size is WIDTHxHEIGHT, e.g. 32x32, not "${size}"`);
+        const [w, h] = size ? size.split('x').map(Number) : def.size;
+        // A texture with UVs (a skin, a mob) is scaled whole; a picture for a flat texture is cropped to its subject first.
+        const flat = Object.values(def.parts).every((p) => p.box[2] === 0);
+        const colors = flag(rest, '--colors');
+        try {
+          const px = pixelize(image, w, h, {
+            ...(colors !== undefined ? { colors: Number(colors) } : {}),
+            ...(flat ? {} : { fit: 'stretch', background: 'keep', cleanup: false }),
+            ...(flag(rest, '--outline') ? { outline: flag(rest, '--outline') } : {}),
+          });
+          for (const note of px.notes) process.stderr.write(`pixelize: ${note}\n`);
+          image = px.image;
+        } catch (e) {
+          fail(`--pixelize: ${(e as Error).message}`);
+        }
+      }
+      const { spec, lossy } = textureToSpec(image, name, layout);
       const out = flag(rest, '-o');
       if (out) writeFileSync(out, formatSpec(spec));
       else process.stdout.write(formatSpec(spec));
       if (lossy) process.stderr.write('note: colors were quantized to fit the legend alphabet\n');
       return;
+    }
+    case 'pack': {
+      const paths = [file, ...rest.filter((a, i) => !a.startsWith('-') && !['-o', '--namespace', '--mc-version', '--description'].includes(rest[i - 1]))].filter(Boolean) as string[];
+      if (!paths.length) fail('pack needs spec files, family files or folders of them');
+      const out = flag(rest, '-o') ?? 'texel-pack.zip';
+      const pack = buildPack(packSources(paths), {
+        namespace: flag(rest, '--namespace'),
+        version: flag(rest, '--mc-version'),
+        description: flag(rest, '--description'),
+        models: rest.includes('--models'),
+        deflate: (raw) => deflateSync(raw, { level: 9 }),
+      });
+      for (const i of pack.issues) process.stderr.write(`${i.level}: ${i.path}: ${i.message}${i.hint ? ` (${i.hint})` : ''}\n`);
+      if (!pack.ok) process.exit(1);
+      writePack(out, pack.files);
+      const check = validatePack(pack.files, { inflate: (d) => inflateSync(d), target: pack.version });
+      process.stdout.write(`wrote ${out}: ${pack.placed.length} texture(s), ${pack.files.size} files, pack format ${pack.format} (Minecraft ${pack.version})\n`);
+      for (const p of pack.placed) process.stdout.write(`- ${p.name}: ${p.files.join(', ')}\n`);
+      const problems = check.issues.filter((i) => i.level !== 'info');
+      if (problems.length) process.stdout.write(`\n${packReportToMarkdown(check)}\n`);
+      process.exit(check.ok ? 0 : 1);
+    }
+    case 'check-pack': {
+      if (!file) fail('check-pack needs a resource pack folder or .zip');
+      let files: Map<string, Uint8Array>;
+      try {
+        files = readPack(file);
+      } catch (e) {
+        fail(`${file}: ${(e as Error).message}`);
+      }
+      const report = validatePack(files, { inflate: (d) => inflateSync(d), target: flag(rest, '--mc-version') });
+      process.stdout.write(rest.includes('--json') ? `${JSON.stringify(report, null, 2)}\n` : `${packReportToMarkdown(report)}\n`);
+      process.exit(report.ok ? 0 : 1);
     }
     case 'diff': {
       const other = rest[0];
@@ -317,6 +421,7 @@ async function main(argv: string[]) {
           { op: 'noise', target: def.opaque ? 'all' : parts[0], colors: ['dark', 'light'], density: 0.2, seed: 1 },
           ...(def.parts[parts[0]].box[2] ? [{ op: 'lighting' }] : []),
         ],
+        ...(def.texture?.endsWith('/') ? { asset: `${def.texture}starter_${def.id}` } : {}),
       };
       process.stdout.write(formatSpec(starter as unknown as SkinSpec));
       return;

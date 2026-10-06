@@ -1,5 +1,5 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, relative, resolve } from 'node:path';
+import { isAbsolute, relative, resolve } from 'node:path';
+import { writeAtomic } from '../live/files';
 
 /**
  * All file writes are confined to one directory: $TEXEL_WORKSPACE, or the server's working
@@ -21,8 +21,7 @@ export class Workspace {
 
   write(path: string, data: string | Uint8Array): string {
     const full = this.resolve(path);
-    mkdirSync(dirname(full), { recursive: true });
-    writeFileSync(full, data);
+    writeAtomic(full, data);
     return full;
   }
 

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Stone Button",
+  "description": "A 200×20 GUI button in a cool stone gray with a black rounded outline, raised bevel and a faint grain; it resizes with nine-slice borders like the vanilla widget.",
+  "layout": "gui",
+  "size": [200, 20],
+  "asset": "gui/sprites/widget/button",
+  "palette": { "face": "#7d8590", "light": "#b3bac4", "dark": "#4a5059", "line": "#101215" },
+  "layers": [
+    {
+      "op": "bevel",
+      "target": "sprite",
+      "color": "face",
+      "light": "light",
+      "dark": "dark",
+      "outline": "line",
+      "depth": 2
+    },
+    {
+      "op": "noise",
+      "target": "sprite",
+      "x": 3,
+      "y": 3,
+      "w": 194,
+      "h": 14,
+      "jitter": 2,
+      "seed": 9
+    }
+  ],
+  "gui": {
+    "scaling": {
+      "type": "nine_slice",
+      "width": 200,
+      "height": 20,
+      "border": { "left": 20, "top": 4, "right": 20, "bottom": 4 }
+    }
+  }
+}

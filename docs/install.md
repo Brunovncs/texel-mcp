@@ -61,13 +61,15 @@ With a local build, use `"command": "node"` and `"args": ["/absolute/path/texel-
 | tool | `texel_render` | Compile + review; returns the review sheet image. Opens the 3D viewer in MCP Apps hosts. |
 | tool | `texel_patch` | Apply a [spec patch](/docs/spec.md#patches) (change layers by id) and render the result like `texel_render`. |
 | tool | `texel_validate` | Fast error check, no images. |
-| tool | `texel_save` | Write `.png`, `.skin.json` and optional sheet to the workspace. |
+| tool | `texel_save` | Write the texture's files (`.png`, block parts, animation `.png.mcmeta`, `_eyes`), `.skin.json` and an optional sheet to the workspace. |
 | tool | `texel_live` | Start a live session: returns a studio URL where the person watches every `texel_render`. |
 | tool | `texel_share` | Short share link (`/s/<id>`) for a spec. |
 | tool | `texel_pull` | The spec behind a share link, to keep developing an existing skin. |
 | tool | `texel_render_family` | Expand a family; lineup image + per-member scores. |
 | tool | `texel_save_family` | Write every member plus `lineup.png`. |
-| tool | `texel_import_png` | Turn an existing skin PNG into an editable spec. |
+| tool | `texel_import_png` | Turn an existing PNG into an editable spec; with `pixelize`, any picture (concept art, an HD skin) first. |
+| tool | `texel_pack` | Build a resource pack (.zip or folder) from specs, families and folders, with pack.mcmeta, .mcmeta files and, on request, models. |
+| tool | `texel_check_pack` | Check any resource pack: format and versions, names, PNGs, animations, GUI scaling, entity texture sizes, broken references, unused textures. |
 | tool | `texel_palette` | The main colors of a reference PNG as a ready palette and legend, with a role per color. |
 | tool | `texel_diff` | Which faces a change touched, with a pixel mask. |
 | tool | `texel_get_example`, `texel_read_docs` | Offline examples and docs. |

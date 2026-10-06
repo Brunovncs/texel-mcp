@@ -18,6 +18,12 @@ import mudPig from '../../examples/mud-pig.json';
 import robot from '../../examples/robot.json';
 import wizard from '../../examples/wizard.json';
 import wingedPig from '../../examples/winged-pig.json';
+import zebra from '../../examples/zebra.json';
+import skyEvoker from '../../examples/sky-evoker.json';
+import ashLog from '../../examples/ash-log.json';
+import magmaPulse from '../../examples/magma-pulse.json';
+import stoneButton from '../../examples/stone-button.json';
+import spark from '../../examples/spark.json';
 import familySchema from '../../schema/skinfamily.v1.json';
 import { specSchema } from '../core/schema';
 
@@ -48,6 +54,12 @@ export const EXAMPLES = {
   'bronze-armor': bronzeArmor,
   'banner-cape': bannerCape,
   'ember-blade': emberBlade,
+  zebra,
+  'sky-evoker': skyEvoker,
+  'ash-log': ashLog,
+  'magma-pulse': magmaPulse,
+  'stone-button': stoneButton,
+  spark,
 } as const;
 export type ExampleId = keyof typeof EXAMPLES;
 export const EXAMPLE_IDS = Object.keys(EXAMPLES) as [ExampleId, ...ExampleId[]];

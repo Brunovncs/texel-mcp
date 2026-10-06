@@ -1,0 +1,69 @@
+{
+  "$schema": "https://www.texel.dev.br/schema/skinspec.v1.json",
+  "version": 1,
+  "name": "Magma Pulse",
+  "description": "A dark crust over glowing cracks that brighten and dim, animated: four frames, the bright cracks shifting each time.",
+  "layout": "block",
+  "asset": "block/magma_pulse",
+  "palette": { "crust": "#3b1d14", "crack": "#e2541b", "hot": "#ffb43a" },
+  "layers": [
+    { "op": "material", "target": "block", "color": "crust", "kind": "stone", "seed": 7 },
+    {
+      "op": "pixels",
+      "id": "cracks",
+      "target": "block",
+      "legend": { "C": "crack" },
+      "rows": [
+        "C.......C.......",
+        ".C.....C.......C",
+        "..CC..C.......C.",
+        "....CC.......C..",
+        "....C.......C...",
+        "...C.......C....",
+        "..C.....CCC.....",
+        "CC.....C...C....",
+        "......C.....CC..",
+        ".....C........CC",
+        "....C...........",
+        "...C.......CC...",
+        "..C.......C..C..",
+        ".C.......C....C.",
+        "C.......C......C",
+        ".......C........"
+      ]
+    },
+    {
+      "op": "noise",
+      "id": "embers",
+      "target": "block",
+      "colors": ["hot"],
+      "density": 0.04,
+      "seed": 1
+    }
+  ],
+  "animation": {
+    "frametime": 6,
+    "interpolate": true,
+    "frames": [
+      {},
+      {
+        "patch": [
+          { "do": "update", "id": "embers", "set": { "seed": 2 } },
+          { "do": "palette", "set": { "crack": "#f06a24" } }
+        ]
+      },
+      {
+        "patch": [
+          { "do": "update", "id": "embers", "set": { "seed": 3, "density": 0.08 } },
+          { "do": "palette", "set": { "crack": "#ff8a30" } }
+        ]
+      },
+      {
+        "patch": [
+          { "do": "update", "id": "embers", "set": { "seed": 4 } },
+          { "do": "palette", "set": { "crack": "#f06a24" } }
+        ]
+      }
+    ]
+  }
+}

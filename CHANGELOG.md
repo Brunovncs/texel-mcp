@@ -2,6 +2,10 @@
 
 Each release's section is published as `notes` in `/version.json`, and installed tools show it in their update notice, so the agent knows what changed and whether to redo anything. Keep it to one or two lines (under 600 characters, where installed copies cut it), and say whether specs still render the same PNGs. A test fails when the current version has no section.
 
+## 0.9.0
+
+36 new mob layouts (horse, llama, fox, bee, illager, warden…), blocks with top and side files, plants, GUI sprites (`bevel`, nine-slice), particles and paintings. `animation` frames, `emissive` glow (`_eyes.png`), `asset`, `size`. Families `patch` base layers by id. New `pack` and `check-pack` (`texel_pack`, `texel_check_pack`), `import --pixelize`, stable issue codes. Existing specs render the same PNGs.
+
 ## 0.8.1
 
 The art guide has face templates for characters that aren't human (a dog or bear muzzle, big cartoon eyes, notes for cats, robots and monsters) and a section on matching the source's style: cartoon characters flat with cel shading, texture only where the material has it. Docs only: specs render the same PNGs.

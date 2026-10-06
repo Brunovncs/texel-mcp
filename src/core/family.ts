@@ -1,4 +1,5 @@
 import { suggestHint } from './color.js';
+import { applyPatch as patchSpec, type PatchEntry } from './patch.js';
 import type { ColorExpr, Issue, Model, Op, SkinSpec } from './types.js';
 
 /** A change applied to the family's base spec to produce one member. */
@@ -15,6 +16,12 @@ export interface VariantPatch {
   enable?: string[];
   /** Layer ids to disable. */
   disable?: string[];
+  /**
+   * Changes to the base layers by id, as in a patch: "update" a layer's fields, "replace" or
+   * "remove" it, "add" one next to another. This is what makes members different characters, not
+   * only recolors. Applied after enable/disable, before `layers`.
+   */
+  patch?: PatchEntry[];
   /** Layers appended after the base layers. */
   layers?: Op[];
 }
@@ -50,7 +57,7 @@ export interface FamilyExpansion {
 
 export const MAX_FAMILY_SIZE = 256;
 const FAMILY_KEYS = ['$schema', 'version', 'kind', 'name', 'description', 'base', 'variants', 'matrix'];
-const PATCH_KEYS = ['name', 'description', 'model', 'tags', 'palette', 'legend', 'enable', 'disable', 'layers'];
+const PATCH_KEYS = ['name', 'description', 'model', 'tags', 'palette', 'legend', 'enable', 'disable', 'patch', 'layers'];
 const ID = /^[a-z0-9][a-z0-9-]*$/;
 
 type Json = Record<string, unknown>;
@@ -83,8 +90,18 @@ function applyPatch(spec: SkinSpec, patch: VariantPatch, path: string, issues: I
   };
   toggle(patch.enable, 'enable');
   toggle(patch.disable, 'disable');
-  if (patch.layers) out.layers.push(...clone(patch.layers));
-  return out;
+  let result = out;
+  if (patch.patch !== undefined) {
+    if (!Array.isArray(patch.patch)) issues.push({ level: 'error', code: 'bad-variant', path: `${path}.patch`, message: '"patch" is a list of patch entries ({ "do": "update", "id": …, "set": … })' });
+    else {
+      // A member that silently lost a change would look like the base, so every skipped entry is an error here.
+      const p = patchSpec(out, { patch: clone(patch.patch) });
+      for (const i of p.issues) issues.push({ ...i, level: 'error', code: 'variant-patch', path: `${path}.patch${i.path.replace(/^\$\.patch/, '')}` });
+      result = p.spec;
+    }
+  }
+  if (patch.layers) result.layers.push(...clone(patch.layers));
+  return result;
 }
 
 function checkPatch(raw: unknown, path: string, issues: Issue[]): raw is VariantPatch {

@@ -1,9 +1,10 @@
+import { rigFor } from '../../core/layout';
 import type { Model } from '../../core/types';
 import { fitModel, SkinModel, type ModelView } from '../../web/model3d';
 import { HostBridge } from './host-bridge';
 
 interface RenderResult {
-  structuredContent?: { name?: string; model?: Model; layout?: string; score?: number; ok?: boolean; issues?: { level: string; code: string; message: string }[] };
+  structuredContent?: { name?: string; model?: Model; layout?: string; size?: [number, number]; score?: number; ok?: boolean; issues?: { level: string; code: string; message: string }[] };
   _meta?: Record<string, unknown>;
 }
 
@@ -38,7 +39,7 @@ function show(result: RenderResult) {
     return;
   }
   current = { name: s.name ?? 'Skin', texture };
-  model.setSkin(texture, s.model ?? 'classic', s.layout ?? 'player');
+  model.setSkin(texture, s.model ?? 'classic', s.layout ?? 'player', s.size && rigFor(s.layout ?? 'player', s.model ?? 'classic', s.size));
   $('name').textContent = current.name;
   $('score').textContent = s.score === undefined ? '' : `${s.score}/100`;
   $('score').dataset.tone = !s.ok ? 'bad' : (s.score ?? 0) >= 90 ? 'good' : 'mid';

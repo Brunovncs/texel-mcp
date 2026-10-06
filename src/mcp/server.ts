@@ -1,16 +1,22 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import { deflateSync, inflateSync } from 'node:zlib';
 import { McpServer, ResourceTemplate, type CallToolResult } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import {
   applyPatch,
+  buildPack,
   compile,
+  isFamily,
+  packReportToMarkdown,
+  pixelize,
+  resolveLayout,
+  validatePack,
   CRAFT_ADVICE_CODES,
   type CompileResult,
   decodePNG,
   diffTextures,
   diffToMarkdown,
-  encodePNG,
   expandFamily,
   extractPalette,
   formatSpec,
@@ -36,6 +42,7 @@ import {
 } from '../core';
 import { DOC_PAGES, DOCS, EXAMPLE_IDS, EXAMPLES, FAMILY_EXAMPLES, SCHEMAS } from './content';
 import { Workspace } from './workspace';
+import { png, readPack, writePack, writeTextures } from '../live/files';
 import { openBrowser, startLive, type LiveSession } from '../live/server';
 import { SITE_ORIGIN } from '../live/site';
 import { TEXEL_VERSION, updateNotice, type Update } from '../live/update';
@@ -46,7 +53,8 @@ export const VIEWER_MIME = 'text/html;profile=mcp-app';
 /** Key under which render results carry the texture for the MCP App viewer (kept out of model context). */
 export const TEXTURE_META_KEY = 'texel/texture';
 
-const INSTRUCTIONS = `Texel compiles Minecraft skin specs (JSON: palette + ordered drawing ops) into PNGs: 64×64 player skins by default, and with "layout" also mobs (zombies, skeletons, creepers, pigs, cows, wolves, cats, iron golems…), armor, capes/elytra, items and blocks (texel://docs/spec, section "Layouts"). Protocol ${PROTOCOL}.
+const INSTRUCTIONS = `Texel compiles Minecraft skin specs (JSON: palette + ordered drawing ops) into PNGs: 64×64 player skins by default, and with "layout" also mobs (zombies, horses, foxes, illagers, golems… 57 mob layouts), armor, capes/elytra, items, blocks with their top and side files, plants, GUI sprites, particles and paintings (texel://docs/spec, section "Layouts"). Protocol ${PROTOCOL}.
+Beyond one texture: "animation" (frames as patches) gives animated items, blocks, GUI sprites and particles; "emissive": true on an op writes the glowing pixels to <name>_eyes.png; texel_pack builds a resource pack from specs and texel_check_pack checks any pack; texel_import_png with pixelize turns a picture into an editable spec.
 Workflow: read the "spec" docs (texel_read_docs or resource texel://docs/spec), draft a spec, call texel_render, look at the returned review sheet image and the issues, fix the weakest area (texel_patch changes a few layers by id), render again, then texel_save and texel_share. To judge one area up close, pass focus (e.g. ["head"]) to texel_render; to match a reference image, start the palette with texel_palette.
 Keep the spec in a workspace file and pass "file" instead of "spec" to texel_render, texel_patch and texel_validate: texel_patch then edits the file in place and replies with only the review, so the spec isn't resent on every iteration.
 When a person is waiting on the result, call texel_live first and give them the URL: every texel_render then appears in their open studio tab, so they can watch and steer while you work.
@@ -79,6 +87,7 @@ const reviewShape = z.object({
   name: z.string(),
   model: z.enum(['classic', 'slim']),
   layout: z.string().describe('Texture layout: player, zombie, humanoid (armor), skeleton, item…'),
+  size: z.tuple([z.number(), z.number()]).describe('Texture size in pixels: [width, height].'),
   score: z.number(),
   art: z.object({
     score: z.number().describe('0–100 from the art checks: face, silhouette, shading, texture, back, depth, colors.'),
@@ -96,19 +105,29 @@ const reviewShape = z.object({
       .describe('Classic pixel-art mistakes found in the texture, with the faces where they show. Advisory: never changes a score.'),
   }),
   issues: z.array(issueShape),
-  stats: z.object({ layers: z.number(), disabledLayers: z.number(), colorsUsed: z.number(), baseCoverage: z.number(), overlayPixels: z.number(), paletteSize: z.number() }),
+  stats: z.object({
+    layers: z.number(),
+    disabledLayers: z.number(),
+    colorsUsed: z.number(),
+    baseCoverage: z.number(),
+    overlayPixels: z.number(),
+    paletteSize: z.number(),
+    seams: z.record(z.string(), z.object({ horizontal: z.number(), vertical: z.number() })).optional().describe('Tiling layouts: how much each edge breaks where copies meet (1 = seamless, over 2.5 shows).'),
+    frames: z.number().optional(),
+    distinctFrames: z.number().optional(),
+    emissivePixels: z.number().optional(),
+  }),
   next: z.array(z.string()),
 });
 
 const base64 = (bytes: Uint8Array) => Buffer.from(bytes).toString('base64');
-const png = (img: Image) => encodePNG(img, (raw) => deflateSync(raw, { level: 9 }));
 const imageBlock = (img: Image) => ({ type: 'image' as const, data: base64(png(img)), mimeType: 'image/png' });
 const textBlock = (text: string) => ({ type: 'text' as const, text });
 
 function reviewPayload(result: CompileResult, r: Review) {
   const { model: _model, layout: _layout, ...stats } = r.stats;
   void _model, void _layout;
-  return { ok: r.ok, name: String(result.spec?.name ?? 'Untitled'), model: result.model, layout: result.layout, score: r.score, art: r.art, issues: r.issues, stats, next: r.next };
+  return { ok: r.ok, name: String(result.spec?.name ?? 'Untitled'), model: result.model, layout: result.layout, size: [result.texture.width, result.texture.height] as [number, number], score: r.score, art: r.art, issues: r.issues, stats, next: r.next };
 }
 
 function toolError(message: string): CallToolResult {
@@ -162,7 +181,7 @@ export function createTexelServer(workspace = new Workspace(), update?: Promise<
     const r = review(result);
     if (live && result.spec) live.push(formatSpec(result.spec));
     const content: CallToolResult['content'] = [textBlock(before + reviewToMarkdown(r, { includeAscii: include.includes('ascii') }))];
-    if (include.includes('sheet')) content.push(imageBlock(renderSheet(result.texture, result.rig).image));
+    if (include.includes('sheet')) content.push(imageBlock(renderSheet(result.texture, result.rig, result).image));
     if (parts?.ok) content.push(textBlock(`Close-up of ${parts.parts.join(', ')}: front | back | right | left | top | bottom.`), imageBlock(renderCloseUp(result.texture, result.rig, parts.parts).image));
     if (include.includes('texture')) content.push(imageBlock(scaleImage(result.texture, 4)));
     return {
@@ -249,7 +268,7 @@ export function createTexelServer(workspace = new Workspace(), update?: Promise<
     'texel_save',
     {
       title: 'Save skin',
-      description: `Compile a spec and write <path>.png (the skin), <path>.skin.json (the source) and optionally <path>.sheet.png into the workspace (${workspace.root}). Refuses specs with errors.`,
+      description: `Compile a spec and write <path>.png (the texture), <path>.skin.json (the source) and optionally <path>.sheet.png into the workspace (${workspace.root}). Also writes every other file the texture is in game: a block's <path>_top.png / _side.png…, an animation's strip with <path>.png.mcmeta, a particle's <path>_0.png…, the glowing pixels as <path>_eyes.png. Refuses specs with errors.`,
       inputSchema: z.object({
         spec: specInput,
         path: z.string().min(1).describe('Output path without extension, relative to the workspace, e.g. "skins/frost-mage".'),
@@ -263,8 +282,8 @@ export function createTexelServer(workspace = new Workspace(), update?: Promise<
       if (!result.ok || !result.spec) return toolError(`Not saved: the spec has errors.\n\n${reviewToMarkdown(review(result), { includeAscii: false })}`);
       const stem = path.replace(/\.(png|json)$/i, '').replace(/\.skin$/i, '');
       try {
-        const files = [workspace.write(`${stem}.png`, png(result.texture)), workspace.write(`${stem}.skin.json`, formatSpec(result.spec))];
-        if (sheet) files.push(workspace.write(`${stem}.sheet.png`, png(renderSheet(result.texture, result.rig).image)));
+        const files = [...writeTextures(`${stem}.png`, result, (p, d) => workspace.write(p, d)), workspace.write(`${stem}.skin.json`, formatSpec(result.spec))];
+        if (sheet) files.push(workspace.write(`${stem}.sheet.png`, png(renderSheet(result.texture, result.rig, result).image)));
         const shown = files.map((f) => workspace.display(f));
         return { content: [textBlock(`Saved:\n${shown.map((f) => `- ${f}`).join('\n')}`)], structuredContent: { files: shown, score: review(result).score } };
       } catch (e) {
@@ -385,7 +404,7 @@ Give this URL to the user. Each texel_render now updates their page (${live.clie
       try {
         const files: string[] = [];
         for (const { m, result } of built) {
-          files.push(workspace.write(`${directory}/${m.id}.png`, png(result.texture)));
+          files.push(...writeTextures(`${directory}/${m.id}.png`, result, (p, d) => workspace.write(p, d)));
           files.push(workspace.write(`${directory}/${m.id}.skin.json`, formatSpec(m.spec)));
         }
         files.push(workspace.write(`${directory}/lineup.png`, png(renderLineup(built.map(({ result }) => ({ texture: result.texture, model: result.model, rig: result.rig })), 6))));
@@ -401,20 +420,37 @@ Give this URL to the user. Each texel_render now updates their page (${live.clie
     'texel_import_png',
     {
       title: 'Import skin PNG',
-      description: 'Convert an existing PNG in the workspace into an editable spec, one layer per painted face, palette keys c01…cNN. A player skin (64×64 or legacy 64×32) by default; pass layout for a mob, armor, cape, item or block texture. Rename palette keys to material names before editing.',
+      description:
+        'Convert an existing PNG in the workspace into an editable spec, one layer per painted face, palette keys c01…cNN. A player skin (64×64 or legacy 64×32) by default; pass layout for a mob, armor, cape, item or block texture. With pixelize, any picture becomes a texture of the layout\'s size first (concept art or a render on a white background → a 16×16 item; an HD 128×128 skin → 64×64): background removed, colors reduced, specks cleaned. Rename palette keys to material names before editing.',
       inputSchema: z.object({
         path: z.string().min(1).describe('Path to a .png file, relative to the workspace.'),
         layout: z.string().optional().describe('Texture layout of the PNG, e.g. "zombie", "humanoid" (armor), "item". Default: player skin.'),
+        pixelize: z.boolean().default(false).describe('Scale and clean a picture of any size into the layout\'s texture size first.'),
+        size: z.tuple([z.number().int().min(1).max(512), z.number().int().min(1).max(512)]).optional().describe('With pixelize: the texture size for resizable layouts (gui, painting, HD items), e.g. [32, 32].'),
+        colors: z.number().int().min(0).max(64).optional().describe('With pixelize: colors to keep (default 16; 0 keeps every averaged color).'),
+        outline: z.string().optional().describe('With pixelize: a 1-pixel outline around the shape, "#rrggbb" or "auto" (items).'),
       }),
       outputSchema: z.object({ spec: z.record(z.string(), z.unknown()), lossy: z.boolean(), model: z.enum(['classic', 'slim']), layout: z.string() }),
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
     },
-    async ({ path, layout }) => {
+    async ({ path, layout, pixelize: px, size, colors, outline }) => {
       try {
+        const def = resolveLayout(layout);
+        if (!def) return toolError(`Unknown layout "${layout}". See texel_read_docs("spec"), section Layouts.`);
         const bytes = readFileSync(workspace.resolve(path));
-        const { spec, lossy } = textureToSpec(decodePNG(bytes, (d) => inflateSync(d)), path.split(/[\\/]/).pop()?.replace(/\.png$/i, ''), layout);
+        let image = decodePNG(bytes, (d) => inflateSync(d), px ? { maxSide: REFERENCE_MAX_SIDE } : undefined);
+        let notes: string[] = [];
+        if (px) {
+          const flat = Object.values(def.parts).every((p) => p.box[2] === 0);
+          const [w, h] = size ?? def.size;
+          const r = pixelize(image, w, h, { ...(colors !== undefined ? { colors } : {}), ...(outline ? { outline } : {}), ...(flat ? {} : { fit: 'stretch' as const, background: 'keep', cleanup: false }) });
+          image = r.image;
+          notes = r.notes;
+        }
+        const { spec, lossy } = textureToSpec(image, path.split(/[\\/]/).pop()?.replace(/\.png$/i, ''), layout);
+        const said = notes.length ? `Pixelized: ${notes.join('; ')}.\n` : '';
         return {
-          content: [textBlock(`${lossy ? 'Imported with color quantization.' : 'Imported losslessly.'}\n\n\`\`\`json\n${formatSpec(spec)}\`\`\``)],
+          content: [textBlock(`${said}${lossy ? 'Imported with color quantization.' : 'Imported losslessly.'}\n\n\`\`\`json\n${formatSpec(spec)}\`\`\``)],
           structuredContent: { spec: spec as unknown as Record<string, unknown>, lossy, model: spec.model ?? 'classic', layout: spec.layout ?? 'player' },
         };
       } catch (e) {
@@ -452,6 +488,85 @@ Give this URL to the user. Each texel_render now updates their page (${live.clie
       } catch (e) {
         return toolError(`Palette failed: ${(e as Error).message}`);
       }
+    },
+  );
+
+  server.registerTool(
+    'texel_pack',
+    {
+      title: 'Build resource pack',
+      description: `Build a Minecraft resource pack from spec files, family files and folders of them in the workspace (${workspace.root}): every texture at its "asset" path (or its layout's default: vanilla paths for mobs, item/<name> for items…), with .png.mcmeta, _eyes files, particle definitions, pack.mcmeta for the Minecraft version, and with models: true also the models, block states and item definitions items and blocks need. Writes a .zip or a folder, then checks the result like texel_check_pack.`,
+      inputSchema: z.object({
+        files: z.array(z.string().min(1)).min(1).describe('Spec files, family files or folders of .json specs, relative to the workspace.'),
+        out: z.string().min(1).default('texel-pack.zip').describe('Output .zip, or a folder, relative to the workspace.'),
+        namespace: z.string().optional().describe('Namespace for textures whose "asset" has none. Default "minecraft" (replaces vanilla textures); a mod uses its id.'),
+        mcVersion: z.string().optional().describe('Minecraft Java version, e.g. "1.21.4". Default: the latest Texel knows.'),
+        models: z.boolean().default(false).describe('Also write models, block states and item definitions for item, block and plant textures (new items and blocks need them; replaced vanilla textures don\'t).'),
+        description: z.string().optional(),
+      }),
+      outputSchema: z.object({ ok: z.boolean(), out: z.string(), format: z.number(), version: z.string(), files: z.number(), placed: z.array(z.object({ name: z.string(), files: z.array(z.string()) })), issues: z.array(issueShape) }),
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ files, out, namespace, mcVersion, models, description }) => {
+      const entries: { name: string; result: CompileResult }[] = [];
+      try {
+        const add = (full: string) => {
+          const data = JSON.parse(readFileSync(full, 'utf8'));
+          const stem = basename(full).replace(/\.json$/i, '').replace(/\.skin$/i, '');
+          if (isFamily(data)) for (const m of expandFamily(data).members) entries.push({ name: `${stem}_${m.id}`.replace(/-/g, '_'), result: compile(m.spec) });
+          else entries.push({ name: stem, result: compile(data) });
+        };
+        for (const f of files) {
+          const full = workspace.resolve(f);
+          if (!existsSync(full)) return toolError(`${f} does not exist in the workspace.`);
+          if (statSync(full).isDirectory()) for (const name of readdirSync(full).sort()) (/\.json$/i.test(name) ? add(join(full, name)) : null);
+          else add(full);
+        }
+      } catch (e) {
+        return toolError(`Could not read the specs: ${(e as Error).message}`);
+      }
+      const pack = buildPack(entries, { namespace, version: mcVersion, description, models, deflate: (raw) => deflateSync(raw, { level: 9 }) });
+      const issues = pack.issues.map((i) => `- ${i.level} \`${i.code}\` ${i.path}: ${i.message}${i.hint ? ` (${i.hint})` : ''}`).join('\n');
+      if (!pack.ok) return toolError(`Pack not written:\n${issues}`);
+      let written: string;
+      try {
+        written = workspace.display(writePack(workspace.resolve(out), pack.files));
+      } catch (e) {
+        return toolError((e as Error).message);
+      }
+      const check = validatePack(pack.files, { inflate: (d) => inflateSync(d), target: pack.version });
+      const all = [...pack.issues, ...check.issues.filter((i) => i.level !== 'info')];
+      const text = [
+        `Wrote ${written}: ${pack.placed.length} texture(s), ${pack.files.size} files, pack format ${pack.format} (Minecraft ${pack.version}).`,
+        ...pack.placed.map((p) => `- ${p.name}: ${p.files.join(', ')}`),
+        ...(issues ? ['', issues] : []),
+        ...(check.issues.some((i) => i.level !== 'info') ? ['', packReportToMarkdown(check)] : []),
+      ].join('\n');
+      return { content: [textBlock(text)], structuredContent: { ok: check.ok, out: written, format: pack.format, version: pack.version, files: pack.files.size, placed: pack.placed, issues: all } };
+    },
+  );
+
+  server.registerTool(
+    'texel_check_pack',
+    {
+      title: 'Check resource pack',
+      description: `Check a resource pack (a folder or a .zip in the workspace, ${workspace.root}), not only ones Texel made: pack.mcmeta and the versions its format covers, file and namespace names, PNGs, .mcmeta animations and GUI scaling, entity texture sizes against Texel's layouts, models, block states, item definitions and particles that point at missing files, and unused textures. Each issue has the file, a JSON path and a fix hint.`,
+      inputSchema: z.object({
+        path: z.string().min(1).describe('The pack folder or .zip, relative to the workspace.'),
+        mcVersion: z.string().optional().describe('Minecraft Java version the pack must work on, e.g. "1.21.4".'),
+      }),
+      outputSchema: z.object({ ok: z.boolean(), versions: z.array(z.string()), issues: z.array(issueShape), stats: z.record(z.string(), z.number()) }),
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ path, mcVersion }) => {
+      let files: Map<string, Uint8Array>;
+      try {
+        files = readPack(workspace.resolve(path));
+      } catch (e) {
+        return toolError(`Could not read ${path}: ${(e as Error).message}`);
+      }
+      const r = validatePack(files, { inflate: (d) => inflateSync(d), target: mcVersion });
+      return { content: [textBlock(packReportToMarkdown(r))], structuredContent: { ok: r.ok, versions: r.versions, issues: r.issues, stats: { ...r.stats } } };
     },
   );
 

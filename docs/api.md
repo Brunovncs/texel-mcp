@@ -83,14 +83,17 @@ node texel.mjs share spec.json                  # short share link
 node texel.mjs pull <link> -o spec.json         # spec behind a share link
 node texel.mjs family guild.json -o skins/ --lineup lineup.png
 node texel.mjs import skin.png -o spec.json     # existing PNG to an editable spec
+node texel.mjs import art.png --layout item --pixelize --outline auto -o sword.json   # any picture, pixelized first
 node texel.mjs diff before.json after.json      # which faces changed
+node texel.mjs pack specs/ -o pack.zip --namespace mymod --mc-version 1.21.4 --models   # resource pack
+node texel.mjs check-pack pack.zip --mc-version 1.21.4   # check any resource pack
 node texel.mjs format spec.json                 # canonical formatting
 cat spec.json | node texel.mjs build - -o skin.png
 ```
 
-Exit code `1` means the spec has errors. `patch` takes a [patch](/docs/spec.md#patches) file; without `-o` it prints the patched spec to stdout and the review to stderr. `-` reads the spec from stdin. Open `sheet.png` to look at the result (front | back | right | left | texture). `--focus` takes part or group names (`head`, `arms`, `body+legs`) and draws them alone on gray, from the front, back, sides, top and bottom; top and bottom read like face-local coordinates (back at the top). `palette` reads PNGs up to 2048×2048 and gives each color a role: `shadow`, `midtone`, `highlight`, `neutral` or `accent` (small, vivid, of a hue no larger color has).
+Exit codes: `0` done, `1` the spec, family or pack has errors, `2` bad usage. `build -o name.png` writes every file the texture is in game: a block's `name_top.png`/`name_side.png`…, an animation strip with `name.png.mcmeta`, a particle's `name_0.png`…, the glowing pixels as `name_eyes.png`. Files are written through a temporary file and a rename, so an interrupted run never leaves half a PNG. `patch` takes a [patch](/docs/spec.md#patches) file; without `-o` it prints the patched spec to stdout and the review to stderr. `-` reads the spec from stdin. Open `sheet.png` to look at the result (front | back | right | left | texture). `--focus` takes part or group names (`head`, `arms`, `body+legs`) and draws them alone on gray, from the front, back, sides, top and bottom; top and bottom read like face-local coordinates (back at the top). `palette` reads PNGs up to 2048×2048 and gives each color a role: `shadow`, `midtone`, `highlight`, `neutral` or `accent` (small, vivid, of a hue no larger color has).
 
-A DOM-free ES module with the compiler is also published at `/texel-core.mjs` (`compile`, `review`, `renderSheet`, `renderCloseUp`, `extractPalette`, `referencePalette`, `encodePNG`, `formatSpec`, …).
+A DOM-free ES module with the compiler is also published at `/texel-core.mjs` (`compile`, `review`, `renderSheet`, `renderCloseUp`, `textureFiles`, `buildPack`, `validatePack`, `pixelize`, `extractPalette`, `referencePalette`, `encodePNG`, `formatSpec`, `ISSUE_CODES`, …).
 
 ## 5. Live sessions
 

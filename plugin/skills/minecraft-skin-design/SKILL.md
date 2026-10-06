@@ -1,10 +1,10 @@
 ---
 name: minecraft-skin-design
-description: Design, render, review and export Minecraft skins (64×64 PNG, classic or slim) and other textures (zombie, skeleton, armor, creeper, enderman, spider, villager, cape/elytra, 16×16 items and blocks) as Texel JSON specs, including families of related skins (teams, factions, tiers). Use when the user asks for a Minecraft skin, a set of skins, a mob, armor, cape or item texture, to edit or remix an existing texture PNG, or mentions Texel.
+description: Design, render, review and export Minecraft skins (64×64 PNG, classic or slim) and other textures as Texel JSON specs, including families of related skins (teams, factions, tiers) and resource packs. 57 mob layouts (zombies, horses, foxes, bees, illagers, golems, wardens…), armor, cape/elytra, items, blocks with their top and side files, plants, GUI sprites (buttons, slots, panels), particles, paintings, animated textures and glowing _eyes maps. Use when the user asks for a Minecraft skin, a set of skins, a mob, armor, cape, item, block, GUI or particle texture, a resource pack, to check a resource pack, to edit or remix an existing texture PNG or turn a picture into one, or mentions Texel.
 license: MIT
 metadata:
   protocol: texel/1
-  version: 0.8.1
+  version: 0.9.0
 ---
 
 # Minecraft skin design with Texel
@@ -13,7 +13,7 @@ A skin is a JSON **spec**, a palette plus an ordered list of drawing operations 
 
 ## Tools
 
-Prefer the Texel MCP tools when they are available (`texel_render`, `texel_patch`, `texel_live`, `texel_share`, `texel_validate`, `texel_save`, `texel_render_family`, `texel_save_family`, `texel_import_png`, `texel_palette`, `texel_diff`, `texel_read_docs`, `texel_get_example`).
+Prefer the Texel MCP tools when they are available (`texel_render`, `texel_patch`, `texel_live`, `texel_share`, `texel_validate`, `texel_save`, `texel_render_family`, `texel_save_family`, `texel_import_png`, `texel_palette`, `texel_pack`, `texel_check_pack`, `texel_diff`, `texel_read_docs`, `texel_get_example`).
 
 Without MCP, use the CLI (Node 20+). Download https://www.texel.dev.br/texel.mjs once into this skill's folder, next to this SKILL.md (e.g. `~/.claude/skills/minecraft-skin-design/texel.mjs`), and run it from there in every project, so there is one copy to keep current; `node <path>/texel.mjs --version` prints its version. Below, `texel.mjs` stands for that path:
 
@@ -29,6 +29,9 @@ node texel.mjs share spec.json                # short share link
 node texel.mjs pull <link> -o spec.json       # continue an existing skin from its link
 node texel.mjs family family.json -o skins/ --lineup lineup.png
 node texel.mjs import existing.png -o spec.json [--layout zombie]
+node texel.mjs import art.png --layout item --pixelize --outline auto -o spec.json   # any picture
+node texel.mjs pack specs/ -o pack.zip [--namespace mymod] [--mc-version 1.21.4] [--models]
+node texel.mjs check-pack pack.zip            # check any resource pack
 node texel.mjs layouts                       # texture layouts and their part names
 ```
 
@@ -57,11 +60,16 @@ Given a share link (`/s/<id>`), load the spec (`texel_pull` or `texel.mjs pull <
 
 ## Families
 
-For several related skins, write one family document (`kind: "family"`) instead of copy-pasting specs: a `base` spec plus `variants` or a `matrix` of axes whose patches override the palette and toggle layers by id. Perfect the base first, then check the lineup for members that are too similar. Read docs page `families`.
+For several related skins, write one family document (`kind: "family"`) instead of copy-pasting specs: a `base` spec plus `variants` or a `matrix` of axes whose patches override the palette, toggle layers by id and change base layers by id (`"patch": [{ "do": "update", "id": "face", "set": { … } }]`), so members can be different characters, not only recolors. Perfect the base first, then check the lineup for members that are too similar. Read docs page `families`.
 
 ## Other textures
 
-Set `"layout"` in the spec to paint something other than a player skin: `zombie`, `drowned`, `humanoid` (armor layers), `skeleton`, `creeper`, `enderman`, `spider`, `villager`, `piglin`, `pig`, `cow` (also `cold_cow`, `warm_cow`), `sheep` and `sheep_wool`, `chicken` (also `cold_chicken`), `wolf`, `cat` (also ocelots), `hoglin`, `iron_golem`, `witch`, `cape` (with elytra), `item`, `block`. Each has its own part names and size; read the Layouts section of the spec reference (or `node texel.mjs layouts`) before the first draft, and fork the closest example (`miner-zombie`, `creeper`, `mud-pig`, `bronze-armor`, `banner-cape`, `ember-blade`). Mobs whose left limbs mirror the right ones only have `rightArm`/`rightLeg`. Armor, skeletons and items keep transparent pixels on purpose; items need an outline and a clear background. Ship the PNG under the path the game or mod expects (the layout table lists the vanilla paths).
+Set `"layout"` in the spec to paint something other than a player skin: 57 mobs (`zombie`, `skeleton`, `creeper`, `horse`, `llama`, `fox`, `bee`, `axolotl`, `illager`, `warden`, `iron_golem`…), `humanoid` (armor layers), `cape` (with elytra), `item`, `block`, `block_column` (logs), `block_bottom_top` (grass, sandstone), `block_orientable` (furnaces), `plant`, `gui`, `particle`, `painting`. Each has its own part names and size; read the Layouts section of the spec reference (or `node texel.mjs layouts`) before the first draft, and fork the closest example (`miner-zombie`, `creeper`, `mud-pig`, `zebra`, `sky-evoker`, `bronze-armor`, `banner-cape`, `ember-blade`, `ash-log`, `magma-pulse`, `stone-button`, `spark`). Mobs whose left limbs mirror the right ones only have `rightArm`/`rightLeg`. Armor, skeletons, items, plants, GUI sprites and particles keep transparent pixels on purpose; items need an outline and a clear background. Blocks must tile: fix every `tile-seam` and look at the tiled panel.
+- `"emissive": true` on an op writes its pixels to `<name>_eyes.png` too (glowing eyes); on `face`, only the eyes glow.
+- `animation.frames` animates items, blocks, plants, GUI sprites and particles: each frame is a patch by layer id.
+- GUI sprites take `"size"` (a button is `[200, 20]`) and `gui.scaling` (`nine_slice` borders); draw frames with the `bevel` op.
+- Set `"asset"` to the texture's place in a pack (`"item/ruby"`, `"mymod:entity/guard"`); mobs default to the vanilla file they replace.
+Ship with `texel_save` / `texel.mjs build`, which write every file the texture is in game (block parts, `.png.mcmeta`, `_eyes`), or build a whole resource pack with `texel_pack` / `texel.mjs pack` and check it with `texel_check_pack` / `texel.mjs check-pack` (it checks packs the user already has, too). To start from a picture the user gives, import it with `pixelize` and refine the spec.
 
 ## Pitfalls
 

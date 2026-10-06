@@ -34,23 +34,24 @@ const SWAP: Record<FaceName, FaceName> = { top: 'top', bottom: 'bottom', front: 
  * One textured box. `mirror` shows the part's texture flipped with right and left swapped (a
  * mirrored limb); `tile` wraps every face with the flat texture (a block shown as a cube).
  */
-function buildBox(rig: Rig, part: PartName, layer: LayerName, opts: { mirror?: boolean; tile?: boolean; inflate?: number } = {}): HTMLElement {
-  const [bw, bh, bd] = opts.tile ? [rig.part(part)!.box[0], rig.part(part)!.box[1], rig.part(part)!.box[0]] : rig.part(part)!.box;
+function buildBox(rig: Rig, part: PartName, layer: LayerName, opts: { mirror?: boolean; tile?: boolean; cube?: Partial<Record<FaceName, PartName>>; inflate?: number } = {}): HTMLElement {
+  const [bw, bh, bd] = opts.tile || opts.cube ? [rig.part(part)!.box[0], rig.part(part)!.box[1], rig.part(part)!.box[0]] : rig.part(part)!.box;
   const inf = layer === 'overlay' ? (opts.inflate ?? 0.25) : 0;
   const w = bw + inf * 2, h = bh + inf * 2, d = bd + inf * 2;
   const box = document.createElement('div');
   box.className = `sm-box sm-${layer}`;
-  const faces = opts.tile ? FACES : rig.faces(part).length === 1 ? (['front', 'back'] as FaceName[]) : rig.faces(part);
+  const faces = opts.tile || opts.cube ? FACES : rig.faces(part).length === 1 ? (['front', 'back'] as FaceName[]) : rig.faces(part);
   for (const face of faces) {
-    const src = opts.tile || rig.faces(part).length === 1 ? 'front' : opts.mirror ? SWAP[face] : face;
-    const flip = Boolean(opts.mirror) !== (rig.faces(part).length === 1 && face === 'back');
-    const r = rig.faceRect(part, src, layer);
+    const from = opts.cube?.[face] ?? part;
+    const src = opts.tile || opts.cube || rig.faces(part).length === 1 ? 'front' : opts.mirror ? SWAP[face] : face;
+    const flip = Boolean(opts.mirror) !== (rig.faces(part).length === 1 && face === 'back' && !opts.cube);
+    const r = rig.faceRect(from, src, layer);
     const dw = face === 'left' || face === 'right' ? d : w;
     const dh = face === 'top' || face === 'bottom' ? d : h;
     const sx = dw / r.w, sy = dh / r.h;
     const el = document.createElement('div');
     el.className = `sm-face sm-${face}`;
-    el.dataset.part = part;
+    el.dataset.part = from;
     el.dataset.face = src;
     el.dataset.layer = layer;
     el.style.cssText = [
@@ -123,11 +124,12 @@ export class SkinModel {
     visibility?.observe(this.root);
   }
 
-  setSkin(url: string, model: Model, layout = 'player') {
-    const key = `${layout}:${model}`;
+  /** `rig` gives the exact rig of a compiled texture (a resized GUI sprite); otherwise the layout's own. */
+  setSkin(url: string, model: Model, layout = 'player', rig?: Rig) {
+    const r = rig ?? rigFor(layout, model);
+    const key = `${r.layout}:${model}:${r.width}x${r.height}`;
     if (key !== this.key) {
       this.key = key;
-      const r = rigFor(layout, model);
       this.root.dataset.layout = r.layout;
       if (r.layout === 'player') this.rebuild(model);
       else this.rebuildBoxes(r);
@@ -139,15 +141,30 @@ export class SkinModel {
   /** Any layout other than the player: one static box per entry in the layout's box list. */
   private rebuildBoxes(r: Rig) {
     this.figure.replaceChildren();
+    const cube = r.def.cube;
+    if (cube) {
+      // A block with several textures is one cube: its top, bottom, front and sides.
+      this.extent = [16, 16];
+      const joint = document.createElement('div');
+      joint.className = 'sm-joint sm-part-block';
+      const holder = document.createElement('div');
+      holder.className = 'sm-holder';
+      holder.append(buildBox(r, cube.top, 'base', { cube: { top: cube.top, bottom: cube.bottom ?? cube.top, front: cube.left, back: cube.right, left: cube.right, right: cube.right } }));
+      joint.appendChild(holder);
+      this.figure.appendChild(joint);
+      return;
+    }
     const size = (b: BoxDef) => r.part(b.part)!.box;
     const flat = r.parts.every((p) => r.faces(p).length === 1);
+    // A one-texture block is drawn as a cube as deep as it is wide; other flat textures are planes.
+    const cubed = flat && r.layout === 'block';
     const lo = [0, 1, 2].map((i) => Math.min(...r.boxes.map((b) => b.at[i])));
-    const hi = [0, 1, 2].map((i) => Math.max(...r.boxes.map((b) => b.at[i] + (flat && i === 2 ? size(b)[0] : size(b)[i]))));
+    const hi = [0, 1, 2].map((i) => Math.max(...r.boxes.map((b) => b.at[i] + (cubed && i === 2 ? size(b)[0] : size(b)[i]))));
     const mid = lo.map((v, i) => (v + hi[i]) / 2);
     this.extent = [Math.max(hi[0] - lo[0], hi[2] - lo[2]), hi[1] - lo[1]];
     for (const b of r.boxes) {
       const [w, h, d] = size(b);
-      const tile = flat && r.layout === 'block';
+      const tile = cubed;
       const depth = tile ? w : d;
       const joint = document.createElement('div');
       joint.className = `sm-joint sm-part-${b.part}`;
@@ -252,7 +269,7 @@ export function fitModel(model: SkinModel, host: HTMLElement, max = Infinity) {
   const fit = () => {
     const { width, height } = host.getBoundingClientRect();
     const [w, h] = model.extent;
-    model.root.style.setProperty('--u', `${Math.max(4, Math.min(width / (w + 6), height / (h + 6), max)).toFixed(2)}px`);
+    model.root.style.setProperty('--u', `${Math.max(1, Math.min(width / (w + 6), height / (h + 6), max)).toFixed(2)}px`);
   };
   model.onExtent = fit;
   new ResizeObserver(fit).observe(host);

@@ -38,6 +38,8 @@ export interface OpBase {
   id?: string;
   note?: string;
   enabled?: boolean;
+  /** The pixels this op paints glow: they also go to the emissive texture (<name>_eyes.png). On "face", only the eyes. */
+  emissive?: boolean;
 }
 
 export interface AreaOpts {
@@ -120,6 +122,18 @@ export interface HairOp extends OpBase {
   layer?: LayerName | 'both';
 }
 export interface LightingOp extends OpBase { op: 'lighting'; target?: Selector; strength?: number }
+/** A frame in the vanilla GUI style: light top-left and dark bottom-right edges (raised), or the reverse (inset). */
+export interface BevelOp extends OpBase, AreaOpts {
+  op: 'bevel';
+  target: Selector;
+  color: ColorExpr;
+  style?: 'raised' | 'inset';
+  light?: ColorExpr;
+  dark?: ColorExpr;
+  /** A 1-pixel border around the bevel with its corner pixels left out, like vanilla panels and buttons. */
+  outline?: ColorExpr;
+  depth?: number;
+}
 
 export type Op =
   | FillOp
@@ -138,7 +152,8 @@ export type Op =
   | MaterialOp
   | FaceOp
   | HairOp
-  | LightingOp;
+  | LightingOp
+  | BevelOp;
 
 export interface SkinSpec {
   $schema?: string;
@@ -154,7 +169,41 @@ export interface SkinSpec {
   palette?: Record<string, ColorExpr>;
   legend?: Record<string, ColorExpr>;
   layers: Op[];
+  /** Texture size, [width, height], for layouts that take one (gui, painting, particle, HD items and blocks). */
+  size?: [number, number];
+  /** Where the texture goes in a resource pack: "item/ruby" or "mymod:item/ruby" (under textures/, no .png). */
+  asset?: string;
+  /** Frames for item, block, GUI and particle textures: each one a patch over the layers. */
+  animation?: Animation;
+  /** GUI sprites: how the game resizes the sprite, written to its .png.mcmeta. */
+  gui?: { scaling: GuiScaling };
 }
+
+export interface AnimationFrame {
+  /** Changes from the spec's own layers for this frame (patch entries, by layer id). Empty or missing: the spec as it is. */
+  patch?: unknown[];
+  /** Ticks this frame shows, overriding "frametime". */
+  time?: number;
+}
+
+export interface Animation {
+  /** Ticks per frame (20 ticks = 1 second). Default 1. */
+  frametime?: number;
+  /** Blend between frames (vanilla does it for magma and prismarine). */
+  interpolate?: boolean;
+  frames: AnimationFrame[];
+}
+
+export type GuiScaling =
+  | { type: 'stretch' }
+  | { type: 'tile'; width?: number; height?: number }
+  | {
+      type: 'nine_slice';
+      width?: number;
+      height?: number;
+      border: number | { left: number; top: number; right: number; bottom: number };
+      stretch_inner?: boolean;
+    };
 
 export type IssueLevel = 'error' | 'warning' | 'info';
 

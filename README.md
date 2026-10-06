@@ -7,11 +7,14 @@ reads, the same bytes every time, and a review returns what is wrong with it as 
 hints, an art score and pixel-art advice. The tools are built for AI agents: an MCP server, a
 command-line tool and an Agent Skill, also packaged as a Claude Code plugin.
 
-It covers player skins (classic and slim) and, through layouts, 25 other textures: mobs such as
-zombies, skeletons, creepers, pigs, wolves and iron golems, armor layers, capes with elytra, and
-16 × 16 items and blocks, all in the Java Edition 1.21 texture layouts.
+It covers player skins (classic and slim) and, through layouts, 68 other textures, all in the Java
+Edition 1.21 texture layouts: 57 mob textures (zombies, skeletons, creepers, horses, llamas, foxes,
+bees, axolotls, illagers, wardens, golems and more), armor layers, capes with elytra, items,
+blocks with their top and side files (logs, grass, furnaces), plants, GUI sprites, particles and
+paintings. Textures can animate and glow, and a set of specs builds a resource pack that Texel
+also checks.
 
-Texel is open source (MIT) and in development, at version 0.8.0. The format is versioned (`version: 1`)
+Texel is open source (MIT) and in development, at version 0.9.0. The format is versioned (`version: 1`)
 but may still change between minor releases. Treat everything as a beta. The site
 [texel.dev.br](https://www.texel.dev.br) is built on this toolchain.
 
@@ -112,8 +115,9 @@ bundled, and runs from anywhere with plain `node`.
 
 **CLI.** `npx -y -p texel-mcp texel-cli build skin.json -o skin.png --sheet sheet.png`, or
 `node dist/texel.mjs ...` from a build. It has no dependencies. `--help` lists the
-commands: `build`, `review`, `patch`, `sheet`, `palette`, `family`, `import`, `diff`, `share`,
-`pull`, `live`, `format`, `layouts` and `init`.
+commands: `build`, `review`, `patch`, `sheet`, `palette`, `family`, `import`, `diff`, `pack`,
+`check-pack`, `share`, `pull`, `live`, `format`, `layouts` and `init`. Exit codes: 0 done, 1 the
+spec, family or pack has errors, 2 bad usage.
 
 All writes go to one workspace directory: `--workspace`, `$TEXEL_WORKSPACE`, or the directory the
 server was started in. Paths that resolve outside it are refused. [docs/install.md](docs/install.md)
@@ -123,10 +127,12 @@ has the details, including installing the skill by hand.
 
 A spec has a `palette` (names for colors, with derived tones such as `robe~-1`, a step darker and
 cooler), an optional `legend` (one character per color, for pixel rows) and `layers`, which run in
-order. Each layer is one of 17 operations. Twelve are plain drawing (`fill`, `rect`, `clear`,
+order. Each layer is one of 18 operations. Twelve are plain drawing (`fill`, `rect`, `clear`,
 `pixels`, `points`, `line`, `gradient`, `pattern`, `noise`, `shade`, `copy`, `mirror`), one fixes
-symmetry (`symmetrize`) and four are higher level: `material` (fabric, leather, metal, fur, knit
-and other surfaces), `face`, `hair` and `lighting`.
+symmetry (`symmetrize`) and five are higher level: `material` (fabric, leather, metal, fur, knit
+and other surfaces), `face`, `hair`, `lighting` and `bevel` (raised and inset frames in the
+vanilla GUI style). Any operation marked `"emissive": true` also paints the texture's glow map,
+`<name>_eyes.png`.
 
 A layer's `target` is a selector: parts, faces and a layer, as in `head.front`, `legs.sides`,
 `body.front+back@overlay` or `arms.top@both`. Coordinates are local to each face: `(0, 0)` is the
@@ -137,16 +143,27 @@ the way around both legs. Named regions (`belt`, `cuffs`, `boots`, `hands`, `col
 row numbers.
 
 Changes are made with patches by layer id (`{ "patch": [{ "do": "update", "id": "hair", "set": {
-"style": "ponytail" } }] }`), so a fix round touches only the layers it names. A family document
-expands one base spec into variants or a matrix of axes (teams, ranks, factions) by swapping
-palettes, turning layers on and off and appending layers. An existing PNG can be imported into an editable spec, one
-layer per painted face.
+"style": "ponytail" } }] }`), so a fix round touches only the layers it names. The same patches
+make animation frames (`"animation": { "frames": [{}, { "patch": [...] }] }` compiles to a strip
+and its `.png.mcmeta`, or one file per frame for particles) and family members: a family expands
+one base spec into variants or a matrix of axes (teams, ranks, factions) by swapping palettes,
+turning layers on and off, patching base layers by id and appending layers, so its members can be
+different characters, not only recolors. An existing PNG can be imported into an editable spec,
+one layer per painted face, and `import --pixelize` first turns any picture (concept art, an HD
+skin) into a texture of the layout's size.
+
+`asset` says where a texture goes in a resource pack (mobs default to the vanilla file they
+replace). `pack` builds the pack from specs and families, with `pack.mcmeta` for a Minecraft
+version (1.21 to 1.21.11) and, on request, the models, block states and item definitions a new item
+or block needs; `check-pack` checks any pack: its format and versions, file names, PNGs, `.mcmeta`
+animations and GUI scaling, entity texture sizes, references to missing models or textures and
+unused textures.
 
 The full reference is [docs/spec.md](docs/spec.md), with a JSON Schema in
 [schema/skinspec.v1.json](schema/skinspec.v1.json). [docs/protocol.md](docs/protocol.md) describes
 the loop an agent is expected to follow (brief, draft, render, review, patch, ship), and
 [docs/art-guide.md](docs/art-guide.md) what makes a skin read well at 64 × 64. The same pages are
-available to the agent through `texel_read_docs` and the `texel://docs/{page}` resources, and the 13
+available to the agent through `texel_read_docs` and the `texel://docs/{page}` resources, and the 19
 examples in [examples/](examples) through `texel_get_example`.
 
 ## What the review returns
@@ -171,7 +188,10 @@ part of the answer is:
 ```
 
 Errors and warnings point at the JSON path or the face that caused them, and most carry a hint
-that names the fix. The `score` (0 to 100) only measures technical hygiene: errors, holes in the
+that names the fix. Codes are stable across releases and listed with their meaning in
+[docs/spec.md](docs/spec.md#review-issue-codes) (`ISSUE_CODES` in code); a test keeps the list equal
+to what the source can report. Block textures also get their tiling measured: how much harder each
+edge breaks than the texture's own neighbors where copies meet (`stats.seams`, `tile-seam`). The `score` (0 to 100) only measures technical hygiene: errors, holes in the
 base layer, blank faces, flat surfaces, too few colors. The `art` part of the review has its own
 score from seven measured checks: R2 to R7 (face readability, lightness contrast between parts,
 light from above, surface texture, a designed back, use of the overlay for depth) and a color
@@ -182,12 +202,14 @@ a band that stops at a cube corner) with the faces where they show; it never cha
 
 Whether the texture matches the brief (R1) is never measured. The MCP tools return a review sheet
 image (front, back, both sides and the texture, as above) so an agent with vision can judge that
-itself, and a text render for models without vision. In clients that support MCP Apps,
+itself, and a text render for models without vision. The sheet adds what a texture needs: a block
+tiled 3 × 3 and in 3D, a GUI sprite resized the way the game resizes it, every animation frame,
+the glowing pixels on black. In clients that support MCP Apps,
 `texel_render` also opens an interactive 3D preview.
 
 ## Tools
 
-The MCP server has 14 tools, resources for the docs, examples and schemas, the `ui://texel/viewer`
+The MCP server has 16 tools, resources for the docs, examples and schemas, the `ui://texel/viewer`
 MCP App and 4 prompts (`design_skin`, `continue_skin`, `design_family`, `critique_skin`).
 
 | Tool | What it does |
@@ -195,14 +217,16 @@ MCP App and 4 prompts (`design_skin`, `continue_skin`, `design_family`, `critiqu
 | `texel_render` | Compile and review a spec (inline, or a workspace `file`); returns the review, the sheet image, optionally a close-up of some parts and the texture. |
 | `texel_patch` | Apply a patch by layer id and render the result. Given a workspace `file`, it edits the file in place and returns only the review, so the spec isn't resent on every iteration. |
 | `texel_validate` | Errors and warnings only, no images. |
-| `texel_save` | Write the PNG, the `.skin.json` source and optionally the sheet to the workspace. |
+| `texel_save` | Write every file the texture is in game (block parts, animation strip and `.png.mcmeta`, particle frames, `_eyes`), the `.skin.json` source and optionally the sheet to the workspace. |
 | `texel_live` | Start a live session: a page served on 127.0.0.1 that shows every render as it happens (the texel.dev.br studio can follow it too, for editing). |
 | `texel_share` | Store the spec on texel.dev.br and return a short link; falls back to a long self-contained link offline. |
 | `texel_pull` | Load the spec behind a share link, to keep working on it. |
 | `texel_render_family` | Expand a family and return a lineup image and a score per member. |
 | `texel_save_family` | Write every member of a family plus `lineup.png`. |
-| `texel_import_png` | Turn an existing texture PNG into an editable spec. |
+| `texel_import_png` | Turn an existing texture PNG into an editable spec; with `pixelize`, any picture. |
 | `texel_palette` | The main colors of a reference image as a palette and legend, with a role per color. |
+| `texel_pack` | Build a resource pack (.zip or folder) from specs, families and folders of them, and check it. |
+| `texel_check_pack` | Check any resource pack, with the file, JSON path and a fix hint for each issue. |
 | `texel_diff` | Which faces and pixels differ between two specs, with a mask image. |
 | `texel_get_example` | One of the bundled example specs, or the example family. |
 | `texel_read_docs` | A documentation page as markdown. |
@@ -228,69 +252,85 @@ seeded generator (the seed defaults to the layer's position), so the same spec g
 PNG, byte for byte. That makes a spec something that can be reviewed in a diff, kept in version
 control and regenerated in a build.
 
-The code is in `src/core` (compiler, layouts, review, views, PNG encoding and decoding; no
-dependencies and no DOM), `src/mcp` (the server and the MCP App viewer), `src/cli`, and `src/live`
+Every mob layout was checked against the decompiled Java model code (`texOffs` and `addBox`) and
+by running the vanilla textures of 1.21.1, 1.21.5 and 1.21.11 through it: every opaque pixel of
+the vanilla file must fall on a face, and the views must show the mob. The few pixels a layout
+leaves out are listed in its note (an easter egg, a stray pixel, a saddle that moved to its own
+file in 1.21.5).
+
+The code is in `src/core` (compiler, layouts, review, views, PNG and zip encoding and decoding,
+resource packs; no dependencies and no DOM), `src/mcp` (the server and the MCP App viewer), `src/cli`, and `src/live`
 (live sessions and the update check). The MCP server depends on `@modelcontextprotocol/server`
 and `zod`; the CLI has no dependencies.
 
 ## Measurements
 
 Measured on an AMD Ryzen 5 7600 (12 threads), Windows 11, Node 22.13.1, with `npm run measure`
-(`scripts/measure.ts`): each of the 13 bundled examples was compiled 210 times in one process,
+(`scripts/measure.ts`): each of the 19 bundled examples was compiled 210 times in one process,
 the first 10 runs as warm-up, and the table shows the median of the other 200. "Compile + PNG" is
 the spec text to an encoded PNG. "Full render" is what `texel_render` computes: compile, the full
 review with art checks and advice, the review sheet and both PNGs. Spec size is the example
-file minified with `JSON.stringify`; PNGs are encoded at zlib level 9, as the tools do.
+file minified with `JSON.stringify`; PNGs are encoded at zlib level 9, as the tools do. An animated
+example compiles every frame.
 
 | Example | Layout | Texture | Spec (bytes) | PNG (bytes) | Compile + PNG | Full render |
 |---|---|---|---|---|---|---|
-| explorer | player | 64 × 64 | 2 958 | 1 246 | 1.36 ms | 19.55 ms |
-| knight | player | 64 × 64 | 3 006 | 1 090 | 1.43 ms | 15.61 ms |
-| robot | player | 64 × 64 | 2 537 | 1 473 | 2.12 ms | 15.68 ms |
-| astronaut | player (slim) | 64 × 64 | 3 134 | 865 | 1.39 ms | 17.87 ms |
-| wizard | player | 64 × 64 | 1 908 | 2 968 | 3.05 ms | 21.18 ms |
-| cozy | player (slim) | 64 × 64 | 1 639 | 2 949 | 2.91 ms | 20.48 ms |
-| winged-pig | player | 64 × 64 | 3 272 | 2 467 | 3.31 ms | 22.94 ms |
-| miner-zombie | zombie | 64 × 64 | 1 518 | 2 198 | 1.92 ms | 17.31 ms |
-| creeper | creeper | 64 × 32 | 1 156 | 1 058 | 1.37 ms | 11.58 ms |
-| mud-pig | pig | 64 × 64 | 1 970 | 1 477 | 1.98 ms | 16.49 ms |
-| bronze-armor | humanoid (armor) | 64 × 32 | 1 605 | 1 719 | 1.54 ms | 13.37 ms |
-| banner-cape | cape | 64 × 32 | 1 236 | 1 300 | 1.23 ms | 13.97 ms |
-| ember-blade | item | 16 × 16 | 1 058 | 160 | 0.06 ms | 4.01 ms |
+| explorer | player | 64 × 64 | 2 958 | 1 246 | 1.45 ms | 19.75 ms |
+| knight | player | 64 × 64 | 3 006 | 1 090 | 1.47 ms | 16.13 ms |
+| robot | player | 64 × 64 | 2 537 | 1 473 | 2.59 ms | 16.01 ms |
+| astronaut | player (slim) | 64 × 64 | 3 134 | 865 | 1.29 ms | 18.41 ms |
+| wizard | player | 64 × 64 | 1 908 | 2 968 | 3.22 ms | 21.62 ms |
+| cozy | player (slim) | 64 × 64 | 1 639 | 2 949 | 3.07 ms | 20.74 ms |
+| winged-pig | player | 64 × 64 | 3 272 | 2 467 | 3.40 ms | 23.09 ms |
+| miner-zombie | zombie | 64 × 64 | 1 518 | 2 198 | 2.02 ms | 17.23 ms |
+| creeper | creeper | 64 × 32 | 1 156 | 1 058 | 0.98 ms | 11.45 ms |
+| mud-pig | pig | 64 × 64 | 1 970 | 1 477 | 2.01 ms | 16.60 ms |
+| bronze-armor | humanoid (armor) | 64 × 32 | 1 605 | 1 719 | 1.66 ms | 13.38 ms |
+| banner-cape | cape | 64 × 32 | 1 236 | 1 300 | 1.32 ms | 14.35 ms |
+| ember-blade | item | 16 × 16 | 1 058 | 160 | 0.10 ms | 4.21 ms |
+| zebra | horse | 64 × 64 | 1 605 | 2 302 | 4.30 ms | 24.30 ms |
+| sky-evoker | illager (with `_eyes`) | 64 × 64 | 1 237 | 3 126 | 3.84 ms | 28.58 ms |
+| ash-log | block_column | 32 × 16 | 1 255 | 666 | 0.47 ms | 11.49 ms |
+| magma-pulse | block, 4 frames | 16 × 16 | 1 275 | 472 | 1.12 ms | 11.00 ms |
+| stone-button | gui | 200 × 20 | 735 | 1 569 | 2.87 ms | 17.76 ms |
+| spark | particle, 4 frames | 8 × 8 | 958 | 110 | 0.10 ms | 1.33 ms |
 
-Across the examples the median is 1.54 ms to compile and encode and 16.5 ms for a full render.
+Across the examples the median is 1.66 ms to compile and encode and 16.6 ms for a full render.
 Startup of the MCP server and the transfer of the sheet image to the client are not included.
 
 A spec is not smaller than the image it produces: the median minified spec is 1.33 times the size
-of its PNG, between 1 058 and 3 272 bytes. At a rough 4 bytes per token that is about 265 to 820
+of its PNG, between 735 and 3 272 bytes. At a rough 4 bytes per token that is about 180 to 820
 tokens per spec; this was not checked with a tokenizer, and JSON usually takes more tokens per byte
 than prose. The point of the format is not size. A PNG is compressed binary an agent cannot write
 or edit by hand, while each line of a spec is a decision that can be read, patched and reviewed.
 
 Determinism was checked three ways. Within one process, all 210 runs of each example produced
-byte-identical PNGs (one distinct SHA-256 per example). A second process gave the same 13 hashes.
-The CLI, built and installed from the packed npm tarball, produced the same hashes for the four
-examples that were compared (explorer, knight, creeper, ember-blade). All of this ran on one
-Windows machine; the CI workflow runs the same test suite on Linux, but identical bytes across
-operating systems have not been compared directly.
+byte-identical PNGs (one distinct SHA-256 per example). A test keeps a hash of every example's
+texture, so a change in what an existing spec renders fails the suite. For 0.8.0, the CLI built
+and installed from the packed npm tarball produced the same hashes for the four examples that were
+compared (explorer, knight, creeper, ember-blade). All of this ran on one Windows machine; the CI
+workflow runs the same test suite on Linux, but identical bytes across operating systems have not
+been compared directly.
 
-Other counts at version 0.7.0 (0.8.0 adds no layouts or operations): 13 example specs and 1 example family (6 members), 26 layouts plus
-25 aliases (`husk`, `stray`, `elytra`, `zombified_piglin`, `mooshroom` and others), 17 operations,
-and 113 tests in 10 files.
+Other counts at version 0.9.0: 19 example specs and 1 example family (6 members), 69 layouts plus
+74 aliases (`husk`, `stray`, `elytra`, `mooshroom`, `vindicator`, `elder_guardian`, `log` and
+others), 18 operations, 116 issue codes, and 180 tests in 14 files.
 
 ## Limitations
 
 - Java Edition only. Bedrock skins and Bedrock geometry are not supported.
-- Only the vanilla box models. There are no custom 3D models or geometry, no HD skins (textures
-  are the vanilla sizes) and no emissive maps.
-- Layouts follow the Java Edition 1.21 model code: the UV maps were taken from 1.21.4 and 1.21.11
-  and checked by running vanilla textures through the views. Other versions are not checked.
-  Mobs without a layout (horses, llamas, fish and many others) cannot be painted yet.
-- The views and the 3D preview only model 90° turns. Tilted parts, such as the hoglin's head or
-  the witch's hat, are drawn untilted.
-- A family can recolor, switch layers on and off and append layers, but it cannot change or
-  remove a layer of the base, so its members share one design: closer to a set of uniforms than a
-  cast of different characters.
+- Only the vanilla box models. There are no custom 3D models or geometry, and no HD skins: mob
+  and skin textures are the vanilla sizes (items, blocks and plants can be HD).
+- Layouts follow the Java Edition 1.21 model code: the UV maps were checked against the decompiled
+  code and the vanilla textures of 1.21.1, 1.21.5 and 1.21.11. No texture made with them has been
+  loaded in the game by this project; the checks are the code and the vanilla files. Mobs without
+  a layout (fish, the sniffer, the breeze, the creaking and some others) and saddles cannot be
+  painted yet.
+- The views and the 3D preview only model 90° turns. Tilted parts, such as the hoglin's head, a
+  horse's neck or a strider's bristles, are drawn untilted or left out of the views (each layout's
+  note says which).
+- `check-pack` knows the resource pack formats of 1.21 to 1.21.11. It checks structure and
+  references, not how a model or a texture looks in game, and it does not check data packs.
 - The art score and the craft advice are heuristics. They have not been validated against human
   judgment, and they say nothing about whether the texture matches the brief. How good a texture looks depends mostly on the agent writing the spec.
 - `texel_share`, `texel_pull` and the short links need texel.dev.br: share links are stored there.
@@ -308,7 +348,7 @@ You need Node 20 or later.
 ```sh
 npm install
 npm run typecheck        # tsc --noEmit
-npm test                 # vitest: 113 tests, including spawned CLI and MCP server bundles
+npm test                 # vitest: 180 tests, including spawned CLI and MCP server bundles
 npm run build            # dist/texel-mcp.mjs and dist/texel.mjs (the npm package)
 npm run build:plugin     # plugin/server/texel-mcp.mjs and its THIRD_PARTY_NOTICES.md
 npm run measure          # the numbers in Measurements
