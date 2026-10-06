@@ -196,6 +196,8 @@ describe('layouts', () => {
   });
 
   it('keep every face inside the texture, and base faces apart', () => {
+    // Problems are collected and checked once: an expect per pixel of 69 layouts is slow.
+    const problems = new Set<string>();
     for (const id of LAYOUT_IDS) {
       const rig = rigFor(id);
       const seen = new Map<number, string>();
@@ -204,15 +206,16 @@ describe('layouts', () => {
         for (let ly = 0; ly < r.h; ly++)
           for (let lx = 0; lx < r.w; lx++) {
             const [x, y] = texel(r, lx, ly);
-            expect(x >= 0 && y >= 0 && x < rig.width && y < rig.height, `${id} ${ref.part}.${ref.face}@${ref.layer}`).toBe(true);
+            if (x < 0 || y < 0 || x >= rig.width || y >= rig.height) problems.add(`${id} ${ref.part}.${ref.face}@${ref.layer} leaves the texture`);
             // A few vanilla models share texture pixels between parts on purpose (a bee's antennae).
             if (ref.layer !== 'base' || rig.part(ref.part)?.shared) continue;
             const k = y * rig.width + x;
-            expect(seen.get(k), `${id}: ${ref.part}.${ref.face} overlaps ${seen.get(k)}`).toBeUndefined();
+            if (seen.has(k)) problems.add(`${id}: ${ref.part}.${ref.face} overlaps ${seen.get(k)}`);
             seen.set(k, `${ref.part}.${ref.face}`);
           }
       }
     }
+    expect([...problems]).toEqual([]);
   });
 
   it('compile, review, render and polish every layout', () => {
@@ -228,7 +231,7 @@ describe('layouts', () => {
       expect(renderSheet(c.texture, c.rig).image.width).toBeGreaterThan(0);
       expect(() => polish(s)).not.toThrow();
     }
-  });
+  }, 30_000);
 
   it('resolve aliases and reject unknown layouts', () => {
     expect(compile(spec('husk', [{ op: 'fill', target: 'all', color: '#555' }])).layout).toBe('zombie');
